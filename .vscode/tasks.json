@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Sauvegarder sur GitHub",
+      "detail": "Vérifie le code, crée un commit et pousse vers GitHub (déclenche le déploiement Vercel).",
+      "type": "shell",
+      "command": "npm run save -- \"${input:commitMessage}\"",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Sauvegarder sur GitHub (sans vérification)",
+      "detail": "Comme ci-dessus mais sans typecheck ni eslint. À n'utiliser qu'en dépannage.",
+      "type": "shell",
+      "command": "npm run save -- --no-check \"${input:commitMessage}\"",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Message de commit (laisser vide pour un message automatique)",
+      "default": ""
+    }
+  ]
+}
