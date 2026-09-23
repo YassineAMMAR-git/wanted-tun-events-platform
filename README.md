@@ -83,6 +83,33 @@ npm run build && npm start
 
 Les données de démonstration (8 catégories dont 3 « à venir », 5 activités, 7 offres, 22 séances, 3 comptes) sont insérées automatiquement au premier chargement si la base est vide.
 
+## Déploiement (Vercel + Neon)
+
+1. **Base** : créer un projet Neon, copier la chaîne de connexion (avec `?sslmode=require`).
+2. **Schéma** : depuis le poste de développement, `DATABASE_URL="<url Neon>" npx drizzle-kit push`.
+   Il n'y a pas de fichiers de migration : le schéma est appliqué par `push`.
+3. **Variables** sur Vercel (*Settings → Environment Variables*) : `DATABASE_URL`, `APP_URL`,
+   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CRON_SECRET`, puis `RESEND_API_KEY` / `MAIL_FROM`.
+4. **Premier chargement** : le catalogue de démonstration et le compte administrateur sont créés
+   automatiquement. Sans `ADMIN_EMAIL` / `ADMIN_PASSWORD`, aucun compte n'est créé et le journal
+   Vercel le signale.
+5. **Rappels** : `vercel.json` déclare un cron quotidien sur `/api/cron/reminders`. Vercel y ajoute
+   de lui-même l'en-tête `Authorization: Bearer $CRON_SECRET` dès que la variable existe.
+   Le plan gratuit est limité à un passage par jour : chaque séance reçoit donc sa vague de rappels
+   entre 24 h et 48 h avant. Pour une granularité horaire, appeler l'URL depuis un service de cron
+   externe (cron-job.org par exemple) avec l'en-tête `x-cron-secret`.
+
+### Sauvegarder son travail
+
+```bash
+npm run save                  # vérifie (types + eslint), commit, pousse → déploiement Vercel
+npm run save -- "mon message" # avec un message de commit choisi
+```
+
+Le script refuse de pousser si le typecheck ou eslint échoue, et s'arrête si un fichier sensible
+(`.env`, clés `.pem`) s'apprête à être publié. Dans VS Code : **Terminal → Run Task → Sauvegarder
+sur GitHub** (ou `Ctrl+Shift+B`).
+
 ## Catégories gérées
 
 1. Concerts et spectacles 🎤
