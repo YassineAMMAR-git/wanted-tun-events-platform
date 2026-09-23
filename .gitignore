@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# env files (keep the documented template)
+.env
+.env*.local
+!.env.example
+
+# logs & OS
+npm-debug.log*
+.DS_Store
+Thumbs.db
