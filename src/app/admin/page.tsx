@@ -12,7 +12,7 @@ import { Flash } from "@/components/flash";
 
 export const dynamic = "force-dynamic";
 
-const PAYMENT_STATUSES = ["pending", "paid", "cancelled"] as const;
+const PAYMENT_STATUSES = ["pending", "declared", "paid", "cancelled"] as const;
 const toPaymentStatus = (value: string) =>
   (PAYMENT_STATUSES as readonly string[]).includes(value) ? (value as (typeof PAYMENT_STATUSES)[number]) : "pending";
 
