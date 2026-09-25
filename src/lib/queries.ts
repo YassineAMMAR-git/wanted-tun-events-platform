@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
@@ -263,4 +263,76 @@ export async function getAdminStats() {
     })
     .from(sql`(select 1) as one`);
   return counts;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Administration : listes filtrées                                           */
+/* -------------------------------------------------------------------------- */
+
+export type AdminClientFilters = {
+  q?: string;
+  role?: string;
+  verifie?: string;
+  abo?: string;
+  tri?: string;
+};
+
+/** Vrai dès qu'un critère est posé : sert à afficher le bouton « Réinitialiser ». */
+export function hasClientFilters(filters: AdminClientFilters): boolean {
+  return Boolean(filters.q?.trim() || filters.role || filters.verifie || filters.abo || filters.tri);
+}
+
+/**
+ * Liste des clients pour l'administration.
+ *
+ * Partagée par la page et par l'export Excel : le fichier téléchargé contient
+ * donc exactement les lignes affichées, avec le même tri.
+ */
+export async function listAdminClients(filters: AdminClientFilters) {
+  const search = filters.q?.trim().slice(0, 100);
+  const conditions: SQL[] = [];
+
+  if (search) {
+    const like = `%${search}%`;
+    conditions.push(
+      or(
+        ilike(users.firstName, like),
+        ilike(users.lastName, like),
+        ilike(users.email, like),
+        ilike(users.phone, like),
+        ilike(users.city, like),
+      )!,
+    );
+  }
+  if (filters.role === "admin" || filters.role === "client") conditions.push(eq(users.role, filters.role));
+  if (filters.verifie === "oui") conditions.push(isNotNull(users.emailVerifiedAt));
+  if (filters.verifie === "non") conditions.push(isNull(users.emailVerifiedAt));
+  if (filters.abo === "actif") {
+    conditions.push(sql`exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.status = 'active')`);
+  }
+  if (filters.abo === "aucun") {
+    conditions.push(sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id})`);
+  }
+
+  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id})::int`;
+  const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.status = 'active')::int`;
+  const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = ${users.id})::int`;
+
+  const order = {
+    ancien: [asc(users.createdAt)],
+    nom: [asc(users.lastName), asc(users.firstName)],
+    abonnements: [desc(subscriptionCount), desc(users.createdAt)],
+    seances: [desc(attendanceCount), desc(users.createdAt)],
+  }[filters.tri ?? ""] ?? [desc(users.createdAt)];
+
+  return db
+    .select({
+      user: users,
+      subscriptions: subscriptionCount,
+      active: activeCount,
+      attendances: attendanceCount,
+    })
+    .from(users)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(...order);
 }

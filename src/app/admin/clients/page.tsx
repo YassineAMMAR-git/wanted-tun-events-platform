@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { desc, ilike, or, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { createClientAction, deleteClientAction } from "@/app/actions/admin";
+import { hasClientFilters, listAdminClients } from "@/lib/queries";
+import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 import { formatDate } from "@/lib/format";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/validation/constants";
 import { localeNames, locales } from "@/i18n/config";
@@ -15,9 +14,17 @@ export const dynamic = "force-dynamic";
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string; q?: string }>;
+  searchParams: Promise<{
+    ok?: string;
+    erreur?: string;
+    q?: string;
+    role?: string;
+    verifie?: string;
+    abo?: string;
+    tri?: string;
+  }>;
 }) {
-  const { ok, erreur, q } = await searchParams;
+  const { ok, erreur, ...filters } = await searchParams;
   const [locale, t, tCommon, tStatus, tAuth, tDetail] = await Promise.all([
     getLocale(),
     getTranslations("admin.clients"),
@@ -26,21 +33,11 @@ export default async function AdminClientsPage({
     getTranslations("auth"),
     getTranslations("admin.clientDetail"),
   ]);
-  const search = q?.trim().slice(0, 100);
-  const where = search
-    ? or(ilike(users.firstName, `%${search}%`), ilike(users.lastName, `%${search}%`), ilike(users.email, `%${search}%`))
-    : undefined;
-
-  const clients = await db
-    .select({
-      user: users,
-      subscriptions: sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id})::int`,
-      active: sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.status = 'active')::int`,
-      attendances: sql<number>`(select count(*) from attendances a where a.user_id = ${users.id})::int`,
-    })
-    .from(users)
-    .where(where)
-    .orderBy(desc(users.createdAt));
+  const clients = await listAdminClients(filters);
+  const filtered = hasClientFilters(filters);
+  const exportHref = `/admin/clients/export${new URLSearchParams(
+    Object.entries(filters).filter(([, value]) => value) as [string, string][],
+  ).toString().replace(/^(.)/, "?$1")}`;
 
   return (
     <div className="space-y-8">
@@ -48,24 +45,68 @@ export default async function AdminClientsPage({
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
-      <Card>
-        <form className="flex flex-col gap-3 sm:flex-row sm:items-end" action="/admin/clients">
-          <div className="flex-1">
-            <label className="label" htmlFor="q">
-              {t("searchLabel")}
-            </label>
-            <input id="q" name="q" maxLength={100} defaultValue={search ?? ""} className="input" placeholder={t("searchPlaceholder")} />
-          </div>
-          <button className="btn btn-primary" type="submit">
-            {tCommon("search")}
-          </button>
-          {search ? (
-            <Link href="/admin/clients" className="btn btn-ghost">
-              {tCommon("reset")}
-            </Link>
-          ) : null}
-        </form>
-      </Card>
+      <FilterBar
+        action="/admin/clients"
+        active={filtered}
+        submitLabel={tCommon("search")}
+        resetLabel={tCommon("reset")}
+      >
+        <FilterText
+          name="q"
+          label={t("searchLabel")}
+          defaultValue={filters.q}
+          placeholder={t("searchPlaceholder")}
+        />
+        <FilterSelect
+          name="role"
+          label={t("filterRole")}
+          defaultValue={filters.role}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "client", label: tStatus("role.client") },
+            { value: "admin", label: tStatus("role.admin") },
+          ]}
+        />
+        <FilterSelect
+          name="verifie"
+          label={t("filterVerified")}
+          defaultValue={filters.verifie}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "oui", label: t("verifiedYes") },
+            { value: "non", label: t("verifiedNo") },
+          ]}
+        />
+        <FilterSelect
+          name="abo"
+          label={t("filterSubscription")}
+          defaultValue={filters.abo}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "actif", label: t("subActive") },
+            { value: "aucun", label: t("subNone") },
+          ]}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={filters.tri}
+          options={[
+            { value: "recent", label: t("sortRecent") },
+            { value: "ancien", label: t("sortOldest") },
+            { value: "nom", label: t("sortName") },
+            { value: "abonnements", label: t("sortSubscriptions") },
+            { value: "seances", label: t("sortSessions") },
+          ]}
+        />
+      </FilterBar>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-400">{t("resultCount", { count: clients.length })}</p>
+        <a className="btn btn-ghost sm:w-auto" href={exportHref} download>
+          {t("exportExcel")}
+        </a>
+      </div>
 
       <div className="card scroll-x">
         <table className="data">
