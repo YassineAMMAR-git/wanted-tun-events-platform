@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const links = [
   { href: "/admin", key: "dashboard", icon: "📊" },
   { href: "/admin/clients", key: "clients", icon: "👥" },
+  { href: "/admin/categories", key: "categories", icon: "🗂️" },
   { href: "/admin/activites", key: "activities", icon: "🎯" },
   { href: "/admin/seances", key: "sessions", icon: "🗓️" },
   { href: "/admin/abonnements", key: "plans", icon: "💳" },
