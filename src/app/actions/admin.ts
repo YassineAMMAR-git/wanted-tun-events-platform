@@ -3,14 +3,16 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
+  CATEGORY_TRANSLATABLE,
   PLAN_TRANSLATABLE,
   SESSION_TRANSLATABLE,
   activities,
   attendances,
+  categories,
   notificationRules,
   plans,
   sessions,
@@ -146,6 +148,71 @@ export async function deleteClientAction(formData: FormData): Promise<void> {
   if (id === admin.id) redirect(withMessage("/admin/clients", "erreur", "cannotDeleteSelf"));
   await db.delete(users).where(eq(users.id, id));
   redirect(withMessage("/admin/clients", "ok", "clientDeleted"));
+}
+
+/* ------------------------------ catégories ------------------------------ */
+
+const ACCENTS = ["amber", "violet", "emerald", "indigo", "teal", "sky", "rose", "orange"] as const;
+
+function categoryValues(formData: FormData) {
+  const accent = str(formData, "accent");
+  return {
+    name: str(formData, "name").slice(0, 120),
+    description: str(formData, "description") || null,
+    emoji: str(formData, "emoji").slice(0, 8) || "✨",
+    accent: (ACCENTS as readonly string[]).includes(accent) ? accent : "amber",
+    position: Math.round(num(formData, "position")),
+    comingSoon: bool(formData, "comingSoon"),
+    translations: readTranslations(formData, CATEGORY_TRANSLATABLE),
+  };
+}
+
+export async function createCategoryAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const values = categoryValues(formData);
+  if (!values.name) redirect(withMessage("/admin/categories", "erreur", "categoryNameRequired"));
+
+  const slug = slugify(values.name) || `categorie-${Date.now()}`;
+  const inserted = await db
+    .insert(categories)
+    .values({ ...values, slug })
+    .onConflictDoNothing({ target: categories.slug })
+    .returning({ id: categories.id });
+
+  if (!inserted[0]) redirect(withMessage("/admin/categories", "erreur", "categorySlugTaken"));
+  revalidatePath("/activites");
+  redirect(withMessage("/admin/categories", "ok", "categoryCreated"));
+}
+
+export async function updateCategoryAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = num(formData, "id");
+  const values = categoryValues(formData);
+  if (!values.name) redirect(withMessage("/admin/categories", "erreur", "categoryNameRequired"));
+
+  await db.update(categories).set(values).where(eq(categories.id, id));
+  revalidatePath("/activites");
+  revalidatePath("/admin/categories");
+  redirect(withMessage("/admin/categories", "ok", "categoryUpdated"));
+}
+
+/**
+ * Suppression refusée tant que des activités y sont rattachées : la clé étrangère
+ * est en `cascade`, un effacement emporterait donc activités, séances et abonnements.
+ */
+export async function deleteCategoryAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = num(formData, "id");
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(activities)
+    .where(eq(activities.categoryId, id));
+  if (count > 0) redirect(withMessage("/admin/categories", "erreur", "categoryHasActivities"));
+
+  await db.delete(categories).where(eq(categories.id, id));
+  revalidatePath("/activites");
+  redirect(withMessage("/admin/categories", "ok", "categoryDeleted"));
 }
 
 /* ------------------------------ activités ------------------------------- */
