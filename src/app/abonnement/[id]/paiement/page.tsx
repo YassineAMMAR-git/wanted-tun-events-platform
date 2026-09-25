@@ -5,17 +5,24 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, PLAN_TRANSLATABLE, activities, plans, subscriptions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { confirmPaymentAction } from "@/app/actions/booking";
+import { declarePaymentAction } from "@/app/actions/booking";
 import { formatDate, formatPrice } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaymentPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PaymentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ declare?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const { id } = await params;
+  const { declare } = await searchParams;
   const subscriptionId = Number(id);
   if (!Number.isFinite(subscriptionId)) notFound();
 
@@ -36,6 +43,7 @@ export default async function PaymentPage({ params }: { params: Promise<{ id: st
   const plan = localize(row.plan, locale, PLAN_TRANSLATABLE);
   const activity = localize(row.activity, locale, ACTIVITY_TRANSLATABLE);
   const alreadyPaid = subscription.paymentStatus === "paid";
+  const awaitingCheck = subscription.paymentStatus === "declared";
   const price = formatPrice(plan.priceCents, locale);
 
   return (
@@ -53,6 +61,12 @@ export default async function PaymentPage({ params }: { params: Promise<{ id: st
         <h1 className="mt-2 text-3xl font-black text-white">{t("title")}</h1>
         <p className="mt-2 text-sm text-zinc-400">{t("intro")}</p>
       </div>
+
+      {declare ? (
+        <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {t("declaredFlash")}
+        </div>
+      ) : null}
 
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -103,30 +117,44 @@ export default async function PaymentPage({ params }: { params: Promise<{ id: st
           </div>
         ) : (
           <div className="mt-6 space-y-3">
+            {awaitingCheck ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <p className="text-sm font-semibold text-amber-200">{t("awaitingTitle")}</p>
+                <p className="mt-1 text-xs text-zinc-300">{t("awaitingText")}</p>
+                {subscription.paymentReference ? (
+                  <p className="mt-2 text-xs text-zinc-400">
+                    {t("reference")} : <span dir="ltr">{subscription.paymentReference}</span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <a href={plan.paymentUrl ?? "#"} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">
               {t("pay", { price })}
             </a>
 
-            <form action={confirmPaymentAction} className="card border-amber-300/20 p-4">
-              <input type="hidden" name="subscriptionId" value={subscription.id} />
-              <label className="label" htmlFor="reference">
-                {t("reference")}
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  id="reference"
-                  name="reference"
-                  className="input"
-                  maxLength={120}
-                  placeholder={t("referencePlaceholder")}
-                  defaultValue={subscription.paymentReference ?? ""}
-                />
-                <button className="btn btn-ghost sm:w-auto" type="submit">
-                  {t("paid")}
-                </button>
-              </div>
-              <p className="mt-2 text-[11px] text-zinc-500">{t("paidHint")}</p>
-            </form>
+            {awaitingCheck ? null : (
+              <form action={declarePaymentAction} className="card border-amber-300/20 p-4">
+                <input type="hidden" name="subscriptionId" value={subscription.id} />
+                <label className="label" htmlFor="reference">
+                  {t("reference")}
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="reference"
+                    name="reference"
+                    className="input"
+                    maxLength={120}
+                    placeholder={t("referencePlaceholder")}
+                    defaultValue={subscription.paymentReference ?? ""}
+                  />
+                  <button className="btn btn-ghost sm:w-auto" type="submit">
+                    {t("paid")}
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-500">{t("paidHint")}</p>
+              </form>
+            )}
           </div>
         )}
       </Card>

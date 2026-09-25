@@ -44,7 +44,7 @@ function isLocked(lockedUntil: Date | null): boolean {
   return lockedUntil !== null && lockedUntil.getTime() > Date.now();
 }
 
-const PAYMENT_STATUSES = ["pending", "paid", "cancelled"] as const;
+const PAYMENT_STATUSES = ["pending", "declared", "paid", "cancelled"] as const;
 const toPaymentStatus = (value: string) =>
   (PAYMENT_STATUSES as readonly string[]).includes(value) ? (value as (typeof PAYMENT_STATUSES)[number]) : "pending";
 const RESPONSE_CHANNELS = ["email", "espace-personnel", "administration"] as const;

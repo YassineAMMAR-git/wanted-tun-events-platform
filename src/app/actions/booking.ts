@@ -6,7 +6,6 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, attendances, plans, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
-import { activateSubscription } from "@/lib/subscriptions";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -51,12 +50,19 @@ export async function subscribeAction(formData: FormData): Promise<void> {
   redirect(`/abonnement/${inserted[0]!.id}/paiement`);
 }
 
-/** Confirmation du retour de paiement : active l'abonnement et génère les séances. */
-export async function confirmPaymentAction(formData: FormData): Promise<void> {
+/**
+ * Le client déclare avoir réglé sur la plateforme externe.
+ *
+ * Cette déclaration n'active **rien** : elle ne fait que signaler l'abonnement à
+ * l'administration, qui vérifie l'encaissement puis le marque payé (`/admin`).
+ * Activer ici sur la seule parole du client reviendrait à distribuer des
+ * abonnements gratuits à qui clique sur le bouton.
+ */
+export async function declarePaymentAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const subscriptionId = Number(formData.get("subscriptionId") ?? 0);
-  const reference = String(formData.get("reference") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim().slice(0, 120);
 
   const subscription = (
     await db
@@ -67,17 +73,20 @@ export async function confirmPaymentAction(formData: FormData): Promise<void> {
   )[0];
   if (!subscription) redirect("/espace-personnel?erreur=subscriptionNotFound");
 
-  await activateSubscription(subscription.id);
-  if (reference) {
+  // Un abonnement déjà encaissé ne redescend pas en « déclaré ».
+  if (subscription.paymentStatus !== "paid") {
     await db
       .update(subscriptions)
-      .set({ paymentReference: reference })
+      .set({
+        paymentStatus: "declared",
+        ...(reference ? { paymentReference: reference } : {}),
+      })
       .where(eq(subscriptions.id, subscription.id));
   }
 
   revalidatePath("/espace-personnel");
   revalidatePath("/admin");
-  redirect("/espace-personnel?abonnement=actif");
+  redirect(`/abonnement/${subscription.id}/paiement?declare=1`);
 }
 
 /** Réponse à un rappel depuis l'espace personnel. */

@@ -42,7 +42,9 @@ export default async function DashboardPage({
   const past = sessionRows.filter((row) => row.session.startsAt.getTime() < now.getTime()).reverse();
   const activeSubscriptions = subscriptionRows.filter((row) => row.subscription.status === "active");
   const pendingPayments = subscriptionRows.filter(
-    (row) => row.subscription.paymentStatus === "pending" && row.subscription.status === "pending",
+    (row) =>
+      (row.subscription.paymentStatus === "pending" || row.subscription.paymentStatus === "declared") &&
+      row.subscription.status === "pending",
   );
   const remaining = activeSubscriptions.reduce(
     (total, row) => total + Math.max(row.plan.sessionsIncluded - row.attendedCount, 0),
