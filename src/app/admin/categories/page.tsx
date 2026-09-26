@@ -48,8 +48,10 @@ export default async function AdminCategoriesPage({
   const rows = await db
     .select({
       category: categories,
-      activityCount: sql<number>`(select count(*) from activities a where a.category_id = ${categories.id})::int`,
-      sessionCount: sql<number>`(select count(*) from sessions s join activities a on a.id = s.activity_id where a.category_id = ${categories.id})::int`,
+      // « categories.id » est écrit en toutes lettres : sans jointure dans la requête
+      // principale, Drizzle rendrait un « id » nu, ambigu avec le « id » de l'alias a.
+      activityCount: sql<number>`(select count(*) from activities a where a.category_id = categories.id)::int`,
+      sessionCount: sql<number>`(select count(*) from sessions s join activities a on a.id = s.activity_id where a.category_id = categories.id)::int`,
     })
     .from(categories)
     .where(conditions.length ? and(...conditions) : undefined)
