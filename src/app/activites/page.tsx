@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 export default async function ActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categorie?: string; q?: string }>;
+  searchParams: Promise<{ categorie?: string; q?: string; tri?: string }>;
 }) {
   await ensureSeeded();
   const params = await searchParams;
   const [locale, t, tCommon] = await Promise.all([getLocale(), getTranslations("activities"), getTranslations("common")]);
   const [categories, activities] = await Promise.all([
     getCategoriesWithCounts(locale),
-    listActivities(locale, { categorySlug: params.categorie, search: params.q }),
+    listActivities(locale, { categorySlug: params.categorie, search: params.q, sort: params.tri }),
   ]);
 
   const current = categories.find((category) => category.slug === params.categorie);
@@ -58,10 +58,21 @@ export default async function ActivitiesPage({
             className="input"
           />
         </div>
+        <div className="flex-1">
+          <label className="label" htmlFor="tri">
+            {tCommon("sortBy")}
+          </label>
+          <select id="tri" name="tri" defaultValue={params.tri ?? ""} className="select">
+            <option value="">{t("sortDefault")}</option>
+            <option value="nom">{t("sortName")}</option>
+            <option value="prix">{t("sortPrice")}</option>
+            <option value="prochaine">{t("sortNext")}</option>
+          </select>
+        </div>
         <button className="btn btn-primary sm:w-auto" type="submit">
           {tCommon("filter")}
         </button>
-        {params.categorie || params.q ? (
+        {params.categorie || params.q || params.tri ? (
           <Link href="/activites" className="btn btn-ghost">
             {tCommon("reset")}
           </Link>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, CATEGORY_TRANSLATABLE, activities, categories } from "@/db/schema";
@@ -7,6 +7,7 @@ import { createActivityAction, deleteActivityAction } from "@/app/actions/admin"
 import { formatPrice } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle } from "@/components/ui";
+import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
 
@@ -15,34 +16,101 @@ export const dynamic = "force-dynamic";
 export default async function AdminActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{
+    ok?: string;
+    erreur?: string;
+    q?: string;
+    categorie?: string;
+    statut?: string;
+    tri?: string;
+  }>;
 }) {
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, q, categorie, statut, tri } = await searchParams;
   const [locale, t, tCommon, tStatus] = await Promise.all([
     getLocale(),
     getTranslations("admin.activities"),
     getTranslations("common"),
     getTranslations("status"),
   ]);
+  const search = q?.trim().slice(0, 100);
+  const conditions: SQL[] = [];
+  if (search) {
+    const like = `%${search}%`;
+    conditions.push(or(ilike(activities.name, like), ilike(activities.city, like), ilike(activities.address, like))!);
+  }
+  if (categorie) conditions.push(eq(activities.categoryId, Number(categorie)));
+  if (statut === "active" || statut === "hidden") conditions.push(eq(activities.status, statut));
+
+  const sessionsCount = sql<number>`(select count(*) from sessions s where s.activity_id = ${activities.id})::int`;
+  const plansCount = sql<number>`(select count(*) from plans p where p.activity_id = ${activities.id})::int`;
+
+  const order = {
+    nom: [asc(activities.name)],
+    prix: [asc(activities.priceCents)],
+    seances: [desc(sessionsCount)],
+    recent: [desc(activities.id)],
+  }[tri ?? ""] ?? [asc(categories.position), asc(activities.name)];
+
   const [rows, categoryList] = await Promise.all([
     db
       .select({
         activity: activities,
         category: categories,
-        sessionsCount: sql<number>`(select count(*) from sessions s where s.activity_id = ${activities.id})::int`,
-        plansCount: sql<number>`(select count(*) from plans p where p.activity_id = ${activities.id})::int`,
+        sessionsCount,
+        plansCount,
       })
       .from(activities)
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .orderBy(asc(categories.position), asc(activities.name)),
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(...order),
     db.select().from(categories).orderBy(asc(categories.position)),
   ]);
+
+  const filtered = Boolean(search || categorie || statut || tri);
 
   return (
     <div className="space-y-8">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+
+      <FilterBar action="/admin/activites" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
+        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+        <FilterSelect
+          name="categorie"
+          label={t("filterCategory")}
+          defaultValue={categorie}
+          placeholder={tCommon("all")}
+          options={categoryList.map((category) => ({
+            value: String(category.id),
+            label: `${category.emoji} ${localize(category, locale, CATEGORY_TRANSLATABLE).name}`,
+          }))}
+        />
+        <FilterSelect
+          name="statut"
+          label={t("filterStatus")}
+          defaultValue={statut}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "active", label: tStatus("activity.active") },
+            { value: "hidden", label: tStatus("activity.hidden") },
+          ]}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={tri}
+          options={[
+            { value: "", label: t("sortCategory") },
+            { value: "nom", label: t("sortName") },
+            { value: "prix", label: t("sortPrice") },
+            { value: "seances", label: t("sortSessions") },
+            { value: "recent", label: t("sortRecent") },
+          ]}
+        />
+      </FilterBar>
+
+      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
 
       <div className="card scroll-x">
         <table className="data">

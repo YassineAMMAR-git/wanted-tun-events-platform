@@ -61,7 +61,10 @@ export async function getUpcomingSessions(locale: Locale, limit = 5) {
   }));
 }
 
-export async function listActivities(locale: Locale, options: { categorySlug?: string; search?: string } = {}) {
+export async function listActivities(
+  locale: Locale,
+  options: { categorySlug?: string; search?: string; sort?: string } = {},
+) {
   const filters = [eq(activities.status, "active")];
   if (options.categorySlug) filters.push(eq(categories.slug, options.categorySlug));
 
@@ -81,7 +84,14 @@ export async function listActivities(locale: Locale, options: { categorySlug?: s
     .from(activities)
     .innerJoin(categories, eq(categories.id, activities.categoryId))
     .where(and(...filters))
-    .orderBy(asc(categories.position), asc(activities.name));
+    .orderBy(
+      ...({
+        nom: [asc(activities.name)],
+        prix: [asc(activities.priceCents)],
+        // « Prochaine séance » : les activités sans séance à venir passent en dernier.
+        prochaine: [sql`(select min(s.starts_at) from sessions s where s.activity_id = ${activities.id} and s.starts_at >= now() and s.status = 'scheduled') asc nulls last`],
+      }[options.sort ?? ""] ?? [asc(categories.position), asc(activities.name)]),
+    );
 
   const normalized = rows.map(({ activity, category, ...rest }) => {
     const localizedCategory = localize(category, locale, CATEGORY_TRANSLATABLE);
@@ -168,14 +178,30 @@ export async function getActivityDetail(slug: string, locale: Locale) {
   };
 }
 
-export async function listActivePlans(locale: Locale) {
+export async function listActivePlans(
+  locale: Locale,
+  options: { search?: string; categorySlug?: string; sort?: string } = {},
+) {
+  const filters: SQL[] = [eq(plans.isActive, true)];
+  if (options.categorySlug) filters.push(eq(categories.slug, options.categorySlug));
+  if (options.search) {
+    const like = `%${options.search}%`;
+    filters.push(or(ilike(plans.name, like), ilike(activities.name, like))!);
+  }
+
   const rows = await db
     .select({ plan: plans, activity: activities, category: categories })
     .from(plans)
     .innerJoin(activities, eq(activities.id, plans.activityId))
     .innerJoin(categories, eq(categories.id, activities.categoryId))
-    .where(eq(plans.isActive, true))
-    .orderBy(asc(categories.position), asc(plans.priceCents));
+    .where(and(...filters))
+    .orderBy(
+      ...({
+        prix: [asc(plans.priceCents)],
+        prixDesc: [desc(plans.priceCents)],
+        seances: [desc(plans.sessionsIncluded)],
+      }[options.sort ?? ""] ?? [asc(categories.position), asc(plans.priceCents)]),
+    );
 
   return rows.map((row) => ({
     plan: localize(row.plan, locale, PLAN_TRANSLATABLE),

@@ -1,21 +1,57 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ensureSeeded } from "@/lib/seed";
-import { listActivePlans } from "@/lib/queries";
+import { getCategoriesWithCounts, listActivePlans } from "@/lib/queries";
 import { subscribeAction } from "@/app/actions/booking";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
+import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlansPage() {
+export default async function PlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; categorie?: string; tri?: string }>;
+}) {
   await ensureSeeded();
+  const params = await searchParams;
   const [locale, t, tCommon] = await Promise.all([getLocale(), getTranslations("plansPage"), getTranslations("common")]);
-  const rows = await listActivePlans(locale);
+  const search = params.q?.trim().slice(0, 100);
+  const [rows, categoryList] = await Promise.all([
+    listActivePlans(locale, { search, categorySlug: params.categorie, sort: params.tri }),
+    getCategoriesWithCounts(locale),
+  ]);
+  const filtered = Boolean(search || params.categorie || params.tri);
 
   return (
     <div className="space-y-8">
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+
+      <FilterBar action="/abonnements" active={filtered} submitLabel={tCommon("filter")} resetLabel={tCommon("reset")}>
+        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+        <FilterSelect
+          name="categorie"
+          label={t("filterCategory")}
+          defaultValue={params.categorie}
+          placeholder={tCommon("all")}
+          options={categoryList.map((category) => ({
+            value: category.slug,
+            label: `${category.emoji} ${category.name}`,
+          }))}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={params.tri}
+          options={[
+            { value: "", label: t("sortDefault") },
+            { value: "prix", label: t("sortPriceAsc") },
+            { value: "prixDesc", label: t("sortPriceDesc") },
+            { value: "seances", label: t("sortSessions") },
+          ]}
+        />
+      </FilterBar>
 
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />

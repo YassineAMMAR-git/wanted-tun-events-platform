@@ -114,6 +114,10 @@ const en: Messages = {
   },
 
   activities: {
+    sortDefault: "Category",
+    sortName: "Name (A → Z)",
+    sortPrice: "Price, lowest first",
+    sortNext: "Next session",
     eyebrow: "Programme",
     title: "All our activities",
     subtitle: "Classes, workshops and events: see practical details, scheduled sessions and available membership plans.",
@@ -164,6 +168,12 @@ const en: Messages = {
   },
 
   plansPage: {
+    searchPlaceholder: "Plan name or activity",
+    filterCategory: "Category",
+    sortDefault: "Category",
+    sortPriceAsc: "Price, lowest first",
+    sortPriceDesc: "Price, highest first",
+    sortSessions: "Sessions included",
     eyebrow: "Memberships",
     title: "All membership plans",
     subtitle:
@@ -475,6 +485,15 @@ const en: Messages = {
       },
     },
     activities: {
+      searchPlaceholder: "Name, city or address",
+      filterCategory: "Category",
+      filterStatus: "Status",
+      sortCategory: "Category then name",
+      sortName: "Name (A → Z)",
+      sortPrice: "Price, lowest first",
+      sortSessions: "Number of sessions",
+      sortRecent: "Recently added",
+      resultCount: "{count, plural, =0 {No activity} one {# activity} other {# activities}}",
       eyebrow: "Activity management",
       title: "Activities, classes and workshops",
       subtitle: "Create an activity and set its category, address, schedule and sessions.",
@@ -571,6 +590,14 @@ const en: Messages = {
       create: "Create plan",
     },
     sessions: {
+      searchPlaceholder: "Title, place or activity",
+      filterActivity: "Activity",
+      filterStatus: "Status",
+      filterFrom: "From",
+      filterTo: "Until",
+      sortSoonest: "Date (soonest)",
+      sortLatest: "Date (latest)",
+      resultCount: "{count, plural, =0 {No session} one {# session} other {# sessions}}",
       eyebrow: "Session management",
       title: "All sessions",
       subtitle: "Track participants and their attendance confirmations for each session.",
@@ -619,6 +646,15 @@ const en: Messages = {
       alreadyRegistered: " (already registered)",
     },
     plans: {
+      searchPlaceholder: "Plan name or activity",
+      filterActivity: "Activity",
+      filterState: "State",
+      sortDefault: "Category then price",
+      sortPriceAsc: "Price, lowest first",
+      sortPriceDesc: "Price, highest first",
+      sortSold: "Most subscribed",
+      sortName: "Name (A → Z)",
+      resultCount: "{count, plural, =0 {No plan} one {# plan} other {# plans}}",
       eyebrow: "Membership management",
       title: "Membership plans & payment links",
       subtitle:

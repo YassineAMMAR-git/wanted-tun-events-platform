@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, CATEGORY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, categories, sessions } from "@/db/schema";
-import { SESSION_STATUS_STYLES, formatDate, formatDuration, formatTime, isPast, toSessionStatus } from "@/lib/format";
+import { SESSION_STATUS_STYLES, formatDate, formatDuration, formatTime, isPast, parseParisDateTime, toSessionStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
+import { FilterBar, FilterDate, FilterSelect, FilterText } from "@/components/filter-bar";
 import { Flash } from "@/components/flash";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,19 @@ export const dynamic = "force-dynamic";
 export default async function AdminSessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string; vue?: string }>;
+  searchParams: Promise<{
+    ok?: string;
+    erreur?: string;
+    vue?: string;
+    q?: string;
+    activite?: string;
+    statut?: string;
+    du?: string;
+    au?: string;
+    tri?: string;
+  }>;
 }) {
-  const { ok, erreur, vue } = await searchParams;
+  const { ok, erreur, vue, q, activite, statut, du, au, tri } = await searchParams;
   const scope = vue === "passees" ? "past" : vue === "toutes" ? "all" : "upcoming";
   const [locale, t, tCommon, tStatus] = await Promise.all([
     getLocale(),
@@ -24,8 +35,25 @@ export default async function AdminSessionsPage({
     getTranslations("status"),
   ]);
 
-  const conditions =
+  const search = q?.trim().slice(0, 100);
+  const conditions: SQL[] =
     scope === "past" ? [lt(sessions.startsAt, new Date())] : scope === "all" ? [] : [gte(sessions.startsAt, new Date())];
+
+  if (search) {
+    const like = `%${search}%`;
+    conditions.push(or(ilike(sessions.title, like), ilike(sessions.location, like), ilike(activities.name, like))!);
+  }
+  if (activite) conditions.push(eq(sessions.activityId, Number(activite)));
+  if (statut) conditions.push(eq(sessions.status, statut));
+  // Les bornes sont interprétées en heure de Paris, comme le reste des dates de l'application.
+  const from = du ? parseParisDateTime(`${du}T00:00`) : null;
+  const to = au ? parseParisDateTime(`${au}T23:59`) : null;
+  if (from) conditions.push(gte(sessions.startsAt, from));
+  if (to) conditions.push(lte(sessions.startsAt, to));
+
+  const order = tri === "recent" ? [desc(sessions.startsAt)] : [asc(sessions.startsAt)];
+
+  const activityList = await db.select().from(activities).orderBy(asc(activities.name));
 
   const rows = await db
     .select({
@@ -40,7 +68,19 @@ export default async function AdminSessionsPage({
     .innerJoin(activities, eq(activities.id, sessions.activityId))
     .innerJoin(categories, eq(categories.id, activities.categoryId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(asc(sessions.startsAt));
+    .orderBy(...order);
+
+  const filtered = Boolean(search || activite || statut || du || au || tri);
+
+  /** Conserve les filtres courants quand on change d'onglet de vue. */
+  const viewHref = (view: string) => {
+    const params = new URLSearchParams();
+    params.set("vue", view);
+    for (const [key, value] of Object.entries({ q: search, activite, statut, du, au, tri })) {
+      if (value) params.set(key, value);
+    }
+    return `/admin/seances?${params.toString()}`;
+  };
 
   const totals = rows.reduce(
     (acc, row) => ({
@@ -74,13 +114,52 @@ export default async function AdminSessionsPage({
         {views.map((option) => (
           <Link
             key={option.key}
-            href={`/admin/seances?vue=${option.key}`}
+            href={viewHref(option.key)}
             className={`btn btn-sm ${scope === option.scope ? "btn-primary" : "btn-ghost"}`}
           >
             {option.label}
           </Link>
         ))}
       </div>
+
+      <FilterBar action="/admin/seances" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
+        {/* La vue courante suit le formulaire : filtrer ne renvoie pas sur « à venir ». */}
+        <input type="hidden" name="vue" value={vue ?? ""} />
+        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+        <FilterSelect
+          name="activite"
+          label={t("filterActivity")}
+          defaultValue={activite}
+          placeholder={tCommon("all")}
+          options={activityList.map((row) => ({
+            value: String(row.id),
+            label: localize(row, locale, ACTIVITY_TRANSLATABLE).name ?? "",
+          }))}
+        />
+        <FilterSelect
+          name="statut"
+          label={t("filterStatus")}
+          defaultValue={statut}
+          placeholder={tCommon("all")}
+          options={(["scheduled", "cancelled", "postponed", "done"] as const).map((value) => ({
+            value,
+            label: tStatus(`session.${value}`),
+          }))}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={tri}
+          options={[
+            { value: "", label: t("sortSoonest") },
+            { value: "recent", label: t("sortLatest") },
+          ]}
+        />
+        <FilterDate name="du" label={t("filterFrom")} defaultValue={du} />
+        <FilterDate name="au" label={t("filterTo")} defaultValue={au} />
+      </FilterBar>
+
+      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
 
       <div className="card scroll-x">
         <table className="data">
