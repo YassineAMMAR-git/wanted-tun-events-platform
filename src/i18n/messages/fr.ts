@@ -115,6 +115,10 @@ const fr = {
   },
 
   activities: {
+    sortDefault: "Catégorie",
+    sortName: "Nom (A → Z)",
+    sortPrice: "Prix croissant",
+    sortNext: "Prochaine séance",
     eyebrow: "Programme",
     title: "Toutes nos activités",
     subtitle:
@@ -166,6 +170,12 @@ const fr = {
   },
 
   plansPage: {
+    searchPlaceholder: "Nom de l’offre ou activité",
+    filterCategory: "Catégorie",
+    sortDefault: "Catégorie",
+    sortPriceAsc: "Prix croissant",
+    sortPriceDesc: "Prix décroissant",
+    sortSessions: "Séances incluses",
     eyebrow: "Abonnements",
     title: "Toutes les formules d’abonnement",
     subtitle:
@@ -479,6 +489,15 @@ const fr = {
       },
     },
     activities: {
+      searchPlaceholder: "Nom, ville ou adresse",
+      filterCategory: "Catégorie",
+      filterStatus: "Statut",
+      sortCategory: "Catégorie puis nom",
+      sortName: "Nom (A → Z)",
+      sortPrice: "Prix croissant",
+      sortSessions: "Nombre de séances",
+      sortRecent: "Ajoutées récemment",
+      resultCount: "{count, plural, =0 {Aucune activité} one {# activité} other {# activités}}",
       eyebrow: "Gestion des activités",
       title: "Activités, cours et ateliers",
       subtitle: "Créez une activité, définissez sa catégorie, son adresse, ses horaires et ses séances.",
@@ -576,6 +595,14 @@ const fr = {
       create: "Créer l’offre",
     },
     sessions: {
+      searchPlaceholder: "Titre, lieu ou activité",
+      filterActivity: "Activité",
+      filterStatus: "Statut",
+      filterFrom: "À partir du",
+      filterTo: "Jusqu’au",
+      sortSoonest: "Date (plus proche)",
+      sortLatest: "Date (plus récente)",
+      resultCount: "{count, plural, =0 {Aucune séance} one {# séance} other {# séances}}",
       eyebrow: "Gestion des séances",
       title: "Toutes les séances",
       subtitle: "Suivez les participants et leurs confirmations de présence pour chaque séance.",
@@ -624,6 +651,15 @@ const fr = {
       alreadyRegistered: " (déjà inscrit)",
     },
     plans: {
+      searchPlaceholder: "Nom de l’offre ou activité",
+      filterActivity: "Activité",
+      filterState: "État",
+      sortDefault: "Catégorie puis prix",
+      sortPriceAsc: "Prix croissant",
+      sortPriceDesc: "Prix décroissant",
+      sortSold: "Les plus souscrites",
+      sortName: "Nom (A → Z)",
+      resultCount: "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
       eyebrow: "Gestion des abonnements",
       title: "Offres d’abonnement & liens de paiement",
       subtitle:

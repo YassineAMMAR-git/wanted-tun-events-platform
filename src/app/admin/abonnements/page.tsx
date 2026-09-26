@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -17,15 +17,16 @@ import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
+import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPlansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; q?: string; activite?: string; etat?: string; tri?: string }>;
 }) {
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, q, activite, etat, tri } = await searchParams;
   const [locale, t, tCommon, tStatus, tPlan] = await Promise.all([
     getLocale(),
     getTranslations("admin.plans"),
@@ -33,18 +34,36 @@ export default async function AdminPlansPage({
     getTranslations("status"),
     getTranslations("admin.planForm"),
   ]);
+  const search = q?.trim().slice(0, 100);
+  const conditions: SQL[] = [];
+  if (search) conditions.push(or(ilike(plans.name, `%${search}%`), ilike(activities.name, `%${search}%`))!);
+  if (activite) conditions.push(eq(plans.activityId, Number(activite)));
+  if (etat === "active") conditions.push(eq(plans.isActive, true));
+  if (etat === "inactive") conditions.push(eq(plans.isActive, false));
+
+  const soldCount = sql<number>`(select count(*) from subscriptions s where s.plan_id = ${plans.id})::int`;
+  const planOrder = {
+    prix: [asc(plans.priceCents)],
+    prixDesc: [desc(plans.priceCents)],
+    vendus: [desc(soldCount)],
+    nom: [asc(plans.name)],
+  }[tri ?? ""] ?? [asc(categories.position), asc(activities.name), asc(plans.priceCents)];
+
+  const filtered = Boolean(search || activite || etat || tri);
+
   const [rows, activityList, sold] = await Promise.all([
     db
       .select({
         plan: plans,
         activity: activities,
         category: categories,
-        sold: sql<number>`(select count(*) from subscriptions s where s.plan_id = ${plans.id})::int`,
+        sold: soldCount,
       })
       .from(plans)
       .innerJoin(activities, eq(activities.id, plans.activityId))
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .orderBy(asc(categories.position), asc(activities.name), asc(plans.priceCents)),
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(...planOrder),
     db
       .select({ activity: activities, category: categories })
       .from(activities)
@@ -58,6 +77,44 @@ export default async function AdminPlansPage({
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+
+      <FilterBar action="/admin/abonnements" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
+        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+        <FilterSelect
+          name="activite"
+          label={t("filterActivity")}
+          defaultValue={activite}
+          placeholder={tCommon("all")}
+          options={activityList.map((row) => ({
+            value: String(row.activity.id),
+            label: localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
+          }))}
+        />
+        <FilterSelect
+          name="etat"
+          label={t("filterState")}
+          defaultValue={etat}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "active", label: tStatus("plan.active") },
+            { value: "inactive", label: tStatus("plan.inactive") },
+          ]}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={tri}
+          options={[
+            { value: "", label: t("sortDefault") },
+            { value: "prix", label: t("sortPriceAsc") },
+            { value: "prixDesc", label: t("sortPriceDesc") },
+            { value: "vendus", label: t("sortSold") },
+            { value: "nom", label: t("sortName") },
+          ]}
+        />
+      </FilterBar>
+
+      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
 
       <section className="grid gap-4 sm:grid-cols-3">
         <Stat
