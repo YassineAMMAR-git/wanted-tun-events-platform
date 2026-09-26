@@ -185,8 +185,10 @@ export async function listActivePlans(
   const filters: SQL[] = [eq(plans.isActive, true)];
   if (options.categorySlug) filters.push(eq(categories.slug, options.categorySlug));
   if (options.search) {
+    // La catégorie est incluse : chercher « Coran » doit remonter ses offres,
+    // même si le mot n'apparaît dans aucun nom d'offre ni d'activité.
     const like = `%${options.search}%`;
-    filters.push(or(ilike(plans.name, like), ilike(activities.name, like))!);
+    filters.push(or(ilike(plans.name, like), ilike(activities.name, like), ilike(categories.name, like))!);
   }
 
   const rows = await db
