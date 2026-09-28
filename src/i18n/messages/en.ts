@@ -191,6 +191,13 @@ const en: Messages = {
     noUpcoming: "The schedule of upcoming sessions will be published soon.",
     pastTitle: "⚪ Past sessions",
     noPast: "No past sessions for this activity.",
+    filterFrom: "From",
+    filterTo: "To",
+    filterPlace: "Place",
+    allPlaces: "All places",
+    noUpcomingFiltered: "No session matches these criteria. Widen the dates or choose another place.",
+    upcomingCountLabel: "{count, plural, one {# scheduled session} other {# scheduled sessions}}",
+    upcomingFiltered: "{shown} of {total} sessions",
   },
 
   plansPage: {

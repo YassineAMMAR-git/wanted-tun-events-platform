@@ -4,19 +4,39 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ensureSeeded } from "@/lib/seed";
 import { getActivityDetail } from "@/lib/queries";
 import { subscribeAction } from "@/app/actions/booking";
-import { formatDate, formatDuration, formatPrice, formatTime } from "@/lib/format";
+import { formatDate, formatDuration, formatPrice, formatTime, parseParisDateTime, toDateTimeLocalValue } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function ActivityDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function ActivityDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ du?: string; au?: string; lieu?: string }>;
+}) {
   await ensureSeeded();
-  const { slug } = await params;
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
   const [locale, t, tCommon] = await Promise.all([getLocale(), getTranslations("activity"), getTranslations("common")]);
-  const detail = await getActivityDetail(slug, locale);
+
+  // Dates saisies en heure de Paris : du début du premier jour à la fin du dernier.
+  const du = query.du && DAY.test(query.du) ? query.du : undefined;
+  const au = query.au && DAY.test(query.au) ? query.au : undefined;
+  const lieu = query.lieu?.trim().slice(0, 240) || undefined;
+  const detail = await getActivityDetail(slug, locale, {
+    from: du ? parseParisDateTime(`${du}T00:00`) : null,
+    to: au ? parseParisDateTime(`${au}T23:59`) : null,
+    place: lieu,
+  });
   if (!detail) notFound();
 
-  const { activity, categoryName, categoryEmoji, plans, upcoming, past } = detail;
+  const { activity, categoryName, categoryEmoji, plans, upcoming, past, upcomingTotal, upcomingPlaces } = detail;
+  const filtered = Boolean(du || au || lieu);
+  const today = toDateTimeLocalValue(new Date()).slice(0, 10);
+  const pagePath = `/activites/${activity.slug}`;
   const address = [activity.address, activity.city].filter(Boolean).join(", ");
 
   return (
@@ -76,7 +96,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               [t("sessionDuration"), formatDuration(activity.durationMinutes, locale)],
               [t("pricePerSession"), formatPrice(activity.priceCents, locale)],
               ...(detail.offersMemberships ? [[t("plans"), tCommon("plansCount", { count: plans.length })]] : []),
-              [t("upcomingCount"), String(upcoming.length)],
+              [t("upcomingCount"), String(upcomingTotal)],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
                 <dt className="text-zinc-500">{label}</dt>
@@ -95,16 +115,19 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <p className="text-sm text-zinc-600">{t("noPlans")}</p>
             </Card>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
               {plans.map((plan) => (
-                <div key={plan.id} className="card card-hover flex flex-col p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-base font-bold text-zinc-900">{plan.name}</h3>
+                <div key={plan.id} className="card card-hover flex h-full flex-col p-5">
+                  {/* Hauteurs fixes (titre, description) : prix et boutons alignés d'une carte à l'autre. */}
+                  <div className="flex min-h-12 items-start justify-between gap-3">
+                    <h3 className="line-clamp-2 text-base font-bold text-zinc-900">{plan.name}</h3>
                     <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
                       {tCommon("sessions", { count: plan.sessionsIncluded })}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-zinc-600">{plan.description}</p>
+                  <p className="mt-1 line-clamp-2 min-h-10 text-sm text-zinc-600" title={plan.description ?? undefined}>
+                    {plan.description}
+                  </p>
                   <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
                   <p className="text-xs text-zinc-500">
                     {t("perSession", {
@@ -112,14 +135,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     })}
                   </p>
 
-                  <ul className="mt-4 space-y-1.5 text-sm text-zinc-700">
+                  <ul className="mt-4 flex-1 space-y-1.5 text-sm text-zinc-700">
                     <li>📍 {plan.address ?? address}</li>
                     <li>🕒 {plan.scheduleText ?? activity.scheduleText}</li>
                     <li>{t("validity", { days: tCommon("days", { count: plan.validityDays }) })}</li>
                     <li>{t("included", { count: plan.sessionsIncluded })}</li>
                   </ul>
                   {plan.extraInfo ? (
-                    <p className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+                    <p className="mt-3 line-clamp-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
                       ℹ️ {plan.extraInfo}
                     </p>
                   ) : null}
@@ -140,28 +163,76 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </section>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card>
-          <h2 className="text-lg font-bold text-zinc-900">{t("upcomingTitle")}</h2>
+          <div id="seances" className="flex scroll-mt-20 flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-bold text-zinc-900">{t("upcomingTitle")}</h2>
+            <p className="text-xs text-zinc-500">
+              {filtered
+                ? t("upcomingFiltered", { shown: upcoming.length, total: upcomingTotal })
+                : t("upcomingCountLabel", { count: upcomingTotal })}
+            </p>
+          </div>
+
+          {upcomingTotal > 0 ? (
+            <form
+              action={`${pagePath}#seances`}
+              className="mt-3 grid items-end gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:grid-cols-[1fr_1fr_1.4fr_auto]"
+            >
+              <div>
+                <label className="label" htmlFor="du">
+                  {t("filterFrom")}
+                </label>
+                <input id="du" name="du" type="date" min={today} defaultValue={du ?? ""} className="input" />
+              </div>
+              <div>
+                <label className="label" htmlFor="au">
+                  {t("filterTo")}
+                </label>
+                <input id="au" name="au" type="date" min={du ?? today} defaultValue={au ?? ""} className="input" />
+              </div>
+              <div>
+                <label className="label" htmlFor="lieu">
+                  {t("filterPlace")}
+                </label>
+                <select id="lieu" name="lieu" defaultValue={lieu ?? ""} className="select">
+                  <option value="">{t("allPlaces")}</option>
+                  {upcomingPlaces.map((place) => (
+                    <option key={place} value={place}>
+                      {place}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn btn-primary" type="submit">
+                  {tCommon("filter")}
+                </button>
+                {filtered ? (
+                  <Link href={`${pagePath}#seances`} className="btn btn-ghost" aria-label={tCommon("reset")}>
+                    ✕
+                  </Link>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
+
           {upcoming.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-600">{t("noUpcoming")}</p>
+            <p className="mt-3 text-sm text-zinc-600">{filtered ? t("noUpcomingFiltered") : t("noUpcoming")}</p>
           ) : (
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {upcoming.map((session) => (
                 <li
                   key={session.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3"
+                  className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900">{session.title ?? activity.name}</p>
-                    <p className="text-xs text-zinc-600">{session.location ?? address}</p>
-                  </div>
-                  <div className="text-end text-xs text-zinc-700">
-                    <p className="font-semibold text-emerald-700">🟢 {formatDate(session.startsAt, locale)}</p>
-                    <p>
-                      {formatTime(session.startsAt, locale)} · {formatDuration(session.durationMinutes, locale)}
-                    </p>
-                  </div>
+                  <p className="text-xs font-semibold text-emerald-700">
+                    🟢 {formatDate(session.startsAt, locale)} · {formatTime(session.startsAt, locale)}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-zinc-900">{session.title ?? activity.name}</p>
+                  <p className="truncate text-xs text-zinc-600">
+                    📍 {session.location || address} · {formatDuration(session.durationMinutes, locale)}
+                  </p>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
@@ -150,7 +150,10 @@ function toDate(value: Date | string | null): Date | null {
   return value instanceof Date ? value : new Date(value);
 }
 
-export async function getActivityDetail(slug: string, locale: Locale) {
+/** Filtres du bloc « Séances à venir » d'une fiche activité. */
+export type UpcomingFilters = { from?: Date | null; to?: Date | null; place?: string };
+
+export async function getActivityDetail(slug: string, locale: Locale, filters: UpcomingFilters = {}) {
   const row = (
     await db
       .select({ activity: activities, category: categories })
@@ -162,7 +165,20 @@ export async function getActivityDetail(slug: string, locale: Locale) {
   if (!row) return null;
 
   const memberships = offersMemberships(row.category.slug);
-  const [plansList, upcoming, past] = await Promise.all([
+  // Une séance sans lieu propre se tient à l'adresse de l'activité : c'est ce lieu qui est filtré et proposé.
+  const activityAddress = [row.activity.address, row.activity.city].filter(Boolean).join(", ");
+  const place = sql<string>`coalesce(nullif(${sessions.location}, ''), ${activityAddress})`;
+  const upcomingBase = and(
+    eq(sessions.activityId, row.activity.id),
+    eq(sessions.status, "scheduled"),
+    gte(sessions.startsAt, new Date()),
+  );
+  const upcomingFilters: SQL[] = [];
+  if (filters.from) upcomingFilters.push(gte(sessions.startsAt, filters.from));
+  if (filters.to) upcomingFilters.push(lte(sessions.startsAt, filters.to));
+  if (filters.place) upcomingFilters.push(eq(place, filters.place));
+
+  const [plansList, upcoming, past, places, upcomingTotal] = await Promise.all([
     memberships
       ? db
           .select()
@@ -173,15 +189,9 @@ export async function getActivityDetail(slug: string, locale: Locale) {
     db
       .select()
       .from(sessions)
-      .where(
-        and(
-          eq(sessions.activityId, row.activity.id),
-          eq(sessions.status, "scheduled"),
-          gte(sessions.startsAt, new Date()),
-        ),
-      )
+      .where(and(upcomingBase, ...upcomingFilters))
       .orderBy(asc(sessions.startsAt))
-      .limit(12),
+      .limit(24),
     db
       .select()
       .from(sessions)
@@ -194,6 +204,9 @@ export async function getActivityDetail(slug: string, locale: Locale) {
       )
       .orderBy(desc(sessions.startsAt))
       .limit(6),
+    // Dédoublonnage et tri côté serveur Node : l'adresse passée en paramètre empêche un DISTINCT … ORDER BY en SQL.
+    db.select({ place }).from(sessions).where(upcomingBase),
+    db.select({ count: sql<number>`count(*)::int` }).from(sessions).where(upcomingBase),
   ]);
 
   return {
@@ -204,6 +217,8 @@ export async function getActivityDetail(slug: string, locale: Locale) {
     offersMemberships: memberships,
     plans: plansList.map((plan) => localize(plan, locale, PLAN_TRANSLATABLE)),
     upcoming: upcoming.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
+    upcomingTotal: upcomingTotal[0]?.count ?? 0,
+    upcomingPlaces: [...new Set(places.map((row) => row.place).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale)),
     past: past.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
   };
 }

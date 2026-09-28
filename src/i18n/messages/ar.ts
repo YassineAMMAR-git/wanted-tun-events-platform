@@ -192,6 +192,13 @@ const ar: Messages = {
     noUpcoming: "سيُنشر جدول الحصص القادمة قريبًا.",
     pastTitle: "⚪ الحصص المنجزة",
     noPast: "لا توجد حصص سابقة لهذا النشاط.",
+    filterFrom: "من",
+    filterTo: "إلى",
+    filterPlace: "المكان",
+    allPlaces: "كل الأماكن",
+    noUpcomingFiltered: "لا توجد حصة تطابق هذه المعايير. وسّع نطاق التواريخ أو اختر مكانًا آخر.",
+    upcomingCountLabel: "{count, plural, zero {لا توجد حصص مبرمجة} one {حصة مبرمجة واحدة} two {حصتان مبرمجتان} few {# حصص مبرمجة} many {# حصة مبرمجة} other {# حصة مبرمجة}}",
+    upcomingFiltered: "{shown} من أصل {total} حصة",
   },
 
   plansPage: {
