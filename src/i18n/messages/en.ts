@@ -79,15 +79,8 @@ const en: Messages = {
   },
 
   home: {
-    eyebrow: "Official platform — WANTED TUN EVENTS",
-    titleLine1: "Your classes, workshops and events.",
-    titleLine2: "Your sessions under control.",
-    intro:
-      "Sign up for our activities, choose a membership, get automatic reminders 48 hours before each session and follow your progress from your personal space.",
-    discover: "Explore activities",
     createAccount: "Create my account",
-    mySpace: "My personal space",
-    stats: { categories: "categories", online: "online", reminderValue: "D-2", reminder: "auto reminder" },
+    upcomingEyebrow: "On the programme",
     upcomingTitle: "Upcoming sessions",
     noUpcoming: "No sessions scheduled yet.",
     seeProgram: "See the full programme",
@@ -111,6 +104,35 @@ const en: Messages = {
     ctaText:
       "Create your account in under a minute. You’ll automatically receive a reminder email 48 hours before each of your sessions, with a button to confirm your attendance.",
     ctaOffers: "See the plans",
+    carousel: {
+      label: "About WANTED TUN EVENTS",
+      slideOf: "Slide {current} of {total}",
+      goTo: "Show slide {number}",
+      previous: "Previous slide",
+      next: "Next slide",
+      pause: "Pause the carousel",
+      play: "Resume the carousel",
+      defaults: {
+        welcome: {
+          eyebrow: "Official platform — WANTED TUN EVENTS",
+          title: "Your classes, workshops and events. Your sessions under control.",
+          text: "Sign up for our activities, choose a membership and follow your progress from your personal space.",
+          cta: "Explore activities",
+        },
+        plans: {
+          eyebrow: "Memberships",
+          title: "A plan for every pace",
+          text: "Price, number of sessions and validity shown upfront. Pay online with a secure link.",
+          cta: "See the plans",
+        },
+        reminders: {
+          eyebrow: "Automatic reminders",
+          title: "Never miss a session again",
+          text: "A reminder email 48 hours before each session, with one-click attendance confirmation.",
+          cta: "Create my account",
+        },
+      },
+    },
   },
 
   activities: {
@@ -400,6 +422,7 @@ const en: Messages = {
     nav: {
       dashboard: "Dashboard",
       clients: "Clients",
+      carousel: "Carousel",
       categories: "Categories",
       activities: "Activities",
       sessions: "Sessions",
@@ -808,7 +831,41 @@ const en: Messages = {
       colResponse: "Response",
       noHistory: "No attendance recorded.",
     },
+    carousel: {
+      eyebrow: "Home page",
+      title: "Home carousel",
+      subtitle: "Active slides rotate every 5 seconds at the top of the home page, in the order shown.",
+      defaultsNotice:
+        "No active slide: the home page shows the 3 default introduction slides. They are replaced as soon as one slide is active.",
+      tableMissing:
+        "The carousel table does not exist on this database yet. Run “npx drizzle-kit push” to create it; meanwhile the home page shows the default slides.",
+      active: "Active",
+      inactive: "Hidden",
+      noLink: "No button",
+      fieldEyebrow: "Eyebrow",
+      fieldTitle: "Title",
+      fieldText: "Text",
+      fieldCtaLabel: "Button text",
+      fieldImageUrl: "Image address",
+      fieldImageHint: "Landscape image, at least 1600 × 900 px (https link).",
+      fieldCtaUrl: "Button link",
+      fieldCtaHint: "e.g. /activites, /abonnements or an https address.",
+      fieldPosition: "Order",
+      fieldActive: "Show on the home page",
+      preview: "Preview",
+      createTitle: "Add a slide",
+      createHint: "The button only appears when both its text and link are filled in.",
+      createSubmit: "Add the slide",
+      emptyTitle: "No slides yet",
+      emptyText: "Add your first slide with the form below.",
+    },
     flash: {
+      slideTitleRequired: "The slide title is required.",
+      slideImageInvalid: "The image must be a valid http(s) address or a path starting with “/”.",
+      slideLinkInvalid: "The button link must be an http(s) address or a path starting with “/”.",
+      slideCreated: "Slide added to the carousel.",
+      slideUpdated: "Slide updated.",
+      slideDeleted: "Slide deleted.",
       categoryNameRequired: "The category name is required.",
       categorySlugTaken: "A category with this name already exists.",
       categoryCreated: "Category created.",

@@ -79,15 +79,8 @@ const ar: Messages = {
   },
 
   home: {
-    eyebrow: "المنصة الرسمية — WANTED TUN EVENTS",
-    titleLine1: "دروسك وورشاتك وفعالياتك.",
-    titleLine2: "حصصك تحت السيطرة.",
-    intro:
-      "سجّل في أنشطتنا، واشترك في الصيغة التي تناسبك، واستلم تذكيرًا تلقائيًا قبل 48 ساعة من كل حصة، وتابع تقدّم برنامجك من مساحتك الشخصية.",
-    discover: "اكتشف الأنشطة",
     createAccount: "إنشاء حسابي",
-    mySpace: "مساحتي الشخصية",
-    stats: { categories: "فئات", online: "عبر الإنترنت", reminderValue: "قبل يومين", reminder: "تذكير تلقائي" },
+    upcomingEyebrow: "في البرنامج",
     upcomingTitle: "الحصص القادمة",
     noUpcoming: "لا توجد حصص مبرمجة حاليًا.",
     seeProgram: "عرض البرنامج كاملًا",
@@ -110,6 +103,35 @@ const ar: Messages = {
     ctaText:
       "أنشئ حسابك في أقل من دقيقة. ستتلقى تلقائيًا رسالة تذكير قبل 48 ساعة من كل حصة، مع زر لتأكيد حضورك.",
     ctaOffers: "عرض العروض",
+    carousel: {
+      label: "تعريف بـ WANTED TUN EVENTS",
+      slideOf: "الشريحة {current} من {total}",
+      goTo: "عرض الشريحة {number}",
+      previous: "الشريحة السابقة",
+      next: "الشريحة التالية",
+      pause: "إيقاف العرض مؤقتًا",
+      play: "استئناف العرض",
+      defaults: {
+        welcome: {
+          eyebrow: "المنصة الرسمية — WANTED TUN EVENTS",
+          title: "دروسك وورشاتك وفعالياتك. حصصك تحت السيطرة.",
+          text: "سجّل في أنشطتنا، واشترك في الصيغة التي تناسبك، وتابع تقدّم برنامجك من مساحتك الشخصية.",
+          cta: "اكتشف الأنشطة",
+        },
+        plans: {
+          eyebrow: "الاشتراكات",
+          title: "صيغة لكل إيقاع",
+          text: "السعر وعدد الحصص ومدة الصلاحية معروضة بوضوح. الدفع عبر الإنترنت برابط آمن.",
+          cta: "عرض العروض",
+        },
+        reminders: {
+          eyebrow: "تذكيرات تلقائية",
+          title: "لن تفوّتك أي حصة بعد اليوم",
+          text: "رسالة تذكير قبل 48 ساعة من كل حصة، مع تأكيد الحضور بنقرة واحدة.",
+          cta: "إنشاء حسابي",
+        },
+      },
+    },
   },
 
   activities: {
@@ -402,6 +424,7 @@ const ar: Messages = {
     nav: {
       dashboard: "لوحة التحكم",
       clients: "العملاء",
+      carousel: "العرض المتحرك",
       categories: "الفئات",
       activities: "الأنشطة",
       sessions: "الحصص",
@@ -808,7 +831,41 @@ const ar: Messages = {
       colResponse: "الرد",
       noHistory: "لا توجد مشاركات مسجّلة.",
     },
+    carousel: {
+      eyebrow: "الصفحة الرئيسية",
+      title: "العرض المتحرك للصفحة الرئيسية",
+      subtitle: "تتناوب الشرائح المفعّلة كل 5 ثوانٍ أعلى الصفحة الرئيسية، حسب الترتيب المحدد.",
+      defaultsNotice:
+        "لا توجد شريحة مفعّلة: تعرض الصفحة الرئيسية الشرائح التعريفية الثلاث الافتراضية، وتُستبدل فور تفعيل أي شريحة.",
+      tableMissing:
+        "جدول العرض المتحرك غير موجود بعد في قاعدة البيانات هذه. شغّل «npx drizzle-kit push» لإنشائه؛ وفي الأثناء تعرض الصفحة الرئيسية الشرائح الافتراضية.",
+      active: "مفعّلة",
+      inactive: "مخفية",
+      noLink: "بدون زر",
+      fieldEyebrow: "عنوان تمهيدي",
+      fieldTitle: "العنوان",
+      fieldText: "النص",
+      fieldCtaLabel: "نص الزر",
+      fieldImageUrl: "رابط الصورة",
+      fieldImageHint: "صورة أفقية لا تقل عن 1600 × 900 بكسل (رابط https).",
+      fieldCtaUrl: "رابط الزر",
+      fieldCtaHint: "مثال: /activites أو /abonnements أو عنوان https.",
+      fieldPosition: "الترتيب",
+      fieldActive: "عرضها في الصفحة الرئيسية",
+      preview: "معاينة",
+      createTitle: "إضافة شريحة",
+      createHint: "لا يظهر الزر إلا إذا تم ملء نصه ورابطه.",
+      createSubmit: "إضافة الشريحة",
+      emptyTitle: "لا توجد شرائح بعد",
+      emptyText: "أضف أول شريحة باستخدام النموذج أدناه.",
+    },
     flash: {
+      slideTitleRequired: "عنوان الشريحة إلزامي.",
+      slideImageInvalid: "يجب أن تكون الصورة عنوان http(s) صالحًا أو مسارًا يبدأ بـ «/».",
+      slideLinkInvalid: "يجب أن يكون رابط الزر عنوان http(s) أو مسارًا يبدأ بـ «/».",
+      slideCreated: "تمت إضافة الشريحة إلى العرض المتحرك.",
+      slideUpdated: "تم تحديث الشريحة.",
+      slideDeleted: "تم حذف الشريحة.",
       categoryNameRequired: "اسم الفئة مطلوب.",
       categorySlugTaken: "توجد فئة بهذا الاسم بالفعل.",
       categoryCreated: "تم إنشاء الفئة.",
