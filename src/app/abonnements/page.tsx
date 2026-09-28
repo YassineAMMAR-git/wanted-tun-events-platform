@@ -57,20 +57,20 @@ export default async function PlansPage({
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map(({ plan, activity }) => (
-            <div key={plan.id} className="card card-hover flex flex-col p-5">
+            <div key={plan.id} className="card card-hover flex h-full flex-col p-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
                   {tCommon("sessions", { count: plan.sessionsIncluded })}
                 </span>
               </div>
-              <h3 className="mt-3 text-base font-bold text-zinc-900">{plan.name}</h3>
+              <h3 className="mt-3 line-clamp-2 min-h-12 text-base font-bold text-zinc-900">{plan.name}</h3>
               <Link href={`/activites/${activity.slug}`} className="mt-1 text-sm text-gold-dark hover:underline">
                 {activity.name}
               </Link>
               <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
-              <dl className="mt-4 space-y-1.5 text-sm text-zinc-700">
+              <dl className="mt-4 flex-1 space-y-1.5 text-sm text-zinc-700">
                 <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">{t("validity")}</dt>
                   <dd>{tCommon("days", { count: plan.validityDays })}</dd>

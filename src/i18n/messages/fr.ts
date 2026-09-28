@@ -193,6 +193,13 @@ const fr = {
     noUpcoming: "Le calendrier des prochaines séances sera publié bientôt.",
     pastTitle: "⚪ Séances déjà réalisées",
     noPast: "Aucune séance passée pour cette activité.",
+    filterFrom: "Du",
+    filterTo: "Au",
+    filterPlace: "Lieu",
+    allPlaces: "Tous les lieux",
+    noUpcomingFiltered: "Aucune séance ne correspond à ces critères. Élargissez les dates ou choisissez un autre lieu.",
+    upcomingCountLabel: "{count, plural, one {# séance programmée} other {# séances programmées}}",
+    upcomingFiltered: "{shown} sur {total} séances",
   },
 
   plansPage: {
