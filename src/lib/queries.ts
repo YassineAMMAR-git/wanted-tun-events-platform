@@ -4,11 +4,13 @@ import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
   CATEGORY_TRANSLATABLE,
+  HERO_SLIDE_TRANSLATABLE,
   PLAN_TRANSLATABLE,
   SESSION_TRANSLATABLE,
   activities,
   attendances,
   categories,
+  heroSlides,
   notificationRules,
   notifications,
   plans,
@@ -39,6 +41,25 @@ export async function getCategoriesWithCounts(locale: Locale) {
     ...localize(category, locale, CATEGORY_TRANSLATABLE),
     activityCount,
   }));
+}
+
+/**
+ * Diapositives actives du carrousel d'accueil, dans la langue demandée.
+ * Une erreur (table pas encore créée sur la base, par exemple) renvoie une liste vide :
+ * la page d'accueil affiche alors ses diapositives par défaut au lieu d'échouer.
+ */
+export async function getHeroSlides(locale: Locale) {
+  try {
+    const rows = await db
+      .select()
+      .from(heroSlides)
+      .where(eq(heroSlides.isActive, true))
+      .orderBy(asc(heroSlides.position), asc(heroSlides.id));
+    return rows.map((row) => localize(row, locale, HERO_SLIDE_TRANSLATABLE));
+  } catch (error) {
+    console.error("[carrousel] lecture impossible, diapositives par défaut", error);
+    return [];
+  }
 }
 
 export async function getUpcomingSessions(locale: Locale, limit = 5) {

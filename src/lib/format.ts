@@ -144,6 +144,22 @@ export function slugify(value: string): string {
     .slice(0, 80);
 }
 
+/**
+ * Lien saisi par l'administration : chemin interne (« /activites ») ou adresse http(s).
+ * Tout le reste (javascript:, data:, « //hote »…) est refusé et renvoie null.
+ */
+export function safeLink(value: string | null | undefined): string | null {
+  const link = value?.trim();
+  if (!link) return null;
+  if (link.startsWith("/") && !link.startsWith("//") && !link.startsWith("/\\")) return link;
+  try {
+    const url = new URL(link);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Statuts : styles ici, libellés dans les traductions (status.*)             */
 /* -------------------------------------------------------------------------- */

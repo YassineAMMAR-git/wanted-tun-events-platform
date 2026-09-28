@@ -22,6 +22,7 @@ export const CATEGORY_TRANSLATABLE = ["name", "description"] as const;
 export const ACTIVITY_TRANSLATABLE = ["name", "shortDescription", "description", "scheduleText"] as const;
 export const PLAN_TRANSLATABLE = ["name", "description", "scheduleText", "extraInfo"] as const;
 export const SESSION_TRANSLATABLE = ["title", "notes"] as const;
+export const HERO_SLIDE_TRANSLATABLE = ["eyebrow", "title", "text", "ctaLabel"] as const;
 
 /* ------------------------------------------------------------------ */
 /* Utilisateurs (clients + administrateurs)                            */
@@ -309,6 +310,31 @@ export const notificationRules = pgTable(
   (table) => [uniqueIndex("notification_rules_type_unique").on(table.type)],
 );
 
+/* ------------------------------------------------------------------ */
+/* Carrousel de la page d'accueil                                      */
+/* ------------------------------------------------------------------ */
+export const heroSlides = pgTable(
+  "hero_slides",
+  {
+    id: serial("id").primaryKey(),
+    eyebrow: varchar("eyebrow", { length: 120 }),
+    title: varchar("title", { length: 180 }).notNull(),
+    text: text("text"),
+    imageUrl: text("image_url").notNull(),
+    ctaLabel: varchar("cta_label", { length: 60 }),
+    /** Chemin interne (« /activites ») ou adresse http(s). */
+    ctaUrl: text("cta_url"),
+    position: integer("position").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    translations: jsonb("translations")
+      .$type<ContentTranslations<(typeof HERO_SLIDE_TRANSLATABLE)[number]>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("hero_slides_position_idx").on(table.position)],
+);
+
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -319,3 +345,4 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
 export type NotificationRule = typeof notificationRules.$inferSelect;
+export type HeroSlide = typeof heroSlides.$inferSelect;

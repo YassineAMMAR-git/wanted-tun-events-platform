@@ -80,15 +80,8 @@ const fr = {
   },
 
   home: {
-    eyebrow: "Plateforme officielle — WANTED TUN EVENTS",
-    titleLine1: "Vos cours, ateliers et événements.",
-    titleLine2: "Vos séances sous contrôle.",
-    intro:
-      "Inscrivez-vous à nos activités, souscrivez à un abonnement, recevez vos rappels automatiques 48 h avant chaque séance et suivez l’avancement de votre programme depuis votre espace personnel.",
-    discover: "Découvrir les activités",
     createAccount: "Créer mon compte",
-    mySpace: "Mon espace personnel",
-    stats: { categories: "catégories", online: "en ligne", reminderValue: "J-2", reminder: "rappel auto" },
+    upcomingEyebrow: "Au programme",
     upcomingTitle: "Prochaines séances",
     noUpcoming: "Aucune séance programmée pour le moment.",
     seeProgram: "Voir tout le programme",
@@ -112,6 +105,35 @@ const fr = {
     ctaText:
       "Créez votre compte en moins d’une minute. Vous recevrez automatiquement un e-mail de rappel 48 h avant chacune de vos séances, avec un bouton de confirmation de participation.",
     ctaOffers: "Voir les offres",
+    carousel: {
+      label: "Présentation de WANTED TUN EVENTS",
+      slideOf: "Diapositive {current} sur {total}",
+      goTo: "Afficher la diapositive {number}",
+      previous: "Diapositive précédente",
+      next: "Diapositive suivante",
+      pause: "Mettre le carrousel en pause",
+      play: "Relancer le carrousel",
+      defaults: {
+        welcome: {
+          eyebrow: "Plateforme officielle — WANTED TUN EVENTS",
+          title: "Vos cours, ateliers et événements. Vos séances sous contrôle.",
+          text: "Inscrivez-vous à nos activités, souscrivez à un abonnement et suivez l’avancement de votre programme depuis votre espace personnel.",
+          cta: "Découvrir les activités",
+        },
+        plans: {
+          eyebrow: "Abonnements",
+          title: "Une formule pour chaque rythme",
+          text: "Prix, nombre de séances et durée de validité affichés clairement. Paiement en ligne par lien sécurisé.",
+          cta: "Voir les offres",
+        },
+        reminders: {
+          eyebrow: "Rappels automatiques",
+          title: "Ne manquez plus aucune séance",
+          text: "Un e-mail de rappel 48 h avant chaque séance, avec confirmation de présence en un clic.",
+          cta: "Créer mon compte",
+        },
+      },
+    },
   },
 
   activities: {
@@ -404,6 +426,7 @@ const fr = {
     nav: {
       dashboard: "Tableau de bord",
       clients: "Clients",
+      carousel: "Carrousel",
       categories: "Catégories",
       activities: "Activités",
       sessions: "Séances",
@@ -815,7 +838,41 @@ const fr = {
       noHistory: "Aucune participation enregistrée.",
     },
     /** Messages affichés après une action d’administration (paramètre ?ok= ou ?erreur= de l’URL). */
+    carousel: {
+      eyebrow: "Page d’accueil",
+      title: "Carrousel d’accueil",
+      subtitle: "Les diapositives actives défilent toutes les 5 secondes en haut de la page d’accueil, dans l’ordre indiqué.",
+      defaultsNotice:
+        "Aucune diapositive active : la page d’accueil affiche les 3 diapositives de présentation par défaut. Elles seront remplacées dès qu’une diapositive sera active.",
+      tableMissing:
+        "La table du carrousel n’existe pas encore sur cette base de données. Lancez « npx drizzle-kit push » pour la créer ; en attendant, la page d’accueil affiche les diapositives par défaut.",
+      active: "Active",
+      inactive: "Masquée",
+      noLink: "Sans bouton",
+      fieldEyebrow: "Surtitre",
+      fieldTitle: "Titre",
+      fieldText: "Texte",
+      fieldCtaLabel: "Texte du bouton",
+      fieldImageUrl: "Adresse de l’image",
+      fieldImageHint: "Image paysage d’au moins 1600 × 900 px (lien https).",
+      fieldCtaUrl: "Lien du bouton",
+      fieldCtaHint: "Ex. /activites, /abonnements ou une adresse https.",
+      fieldPosition: "Ordre",
+      fieldActive: "Afficher sur la page d’accueil",
+      preview: "Aperçu",
+      createTitle: "Ajouter une diapositive",
+      createHint: "Le bouton n’apparaît que si son texte et son lien sont renseignés.",
+      createSubmit: "Ajouter la diapositive",
+      emptyTitle: "Aucune diapositive pour le moment",
+      emptyText: "Ajoutez votre première diapositive avec le formulaire ci-dessous.",
+    },
     flash: {
+      slideTitleRequired: "Le titre de la diapositive est obligatoire.",
+      slideImageInvalid: "L’image doit être une adresse http(s) valide ou un chemin commençant par « / ».",
+      slideLinkInvalid: "Le lien du bouton doit être une adresse http(s) ou un chemin commençant par « / ».",
+      slideCreated: "Diapositive ajoutée au carrousel.",
+      slideUpdated: "Diapositive mise à jour.",
+      slideDeleted: "Diapositive supprimée.",
       categoryNameRequired: "Le nom de la catégorie est obligatoire.",
       categorySlugTaken: "Une catégorie porte déjà ce nom.",
       categoryCreated: "Catégorie créée.",

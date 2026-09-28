@@ -8,11 +8,13 @@ import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
   CATEGORY_TRANSLATABLE,
+  HERO_SLIDE_TRANSLATABLE,
   PLAN_TRANSLATABLE,
   SESSION_TRANSLATABLE,
   activities,
   attendances,
   categories,
+  heroSlides,
   notificationRules,
   plans,
   sessions,
@@ -24,7 +26,7 @@ import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema }
 import { firstIssueMessage, readFields } from "@/lib/validation/form";
 import { activateSubscription, attachSubscribersToSession, ensureAttendances } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
-import { formatDateTime, parseParisDateTime, slugify } from "@/lib/format";
+import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
 import { logAndSend } from "@/lib/mailer";
 import { translatorFor } from "@/i18n/translator";
@@ -213,6 +215,65 @@ export async function deleteCategoryAction(formData: FormData): Promise<void> {
   await db.delete(categories).where(eq(categories.id, id));
   revalidatePath("/activites");
   redirect(withMessage("/admin/categories", "ok", "categoryDeleted"));
+}
+
+/* ------------------------------ carrousel ------------------------------- */
+
+/** Valeurs d'une diapositive, ou la clé d'erreur à afficher. */
+function slideValues(formData: FormData) {
+  const rawImage = str(formData, "imageUrl");
+  const rawLink = str(formData, "ctaUrl");
+  const imageUrl = safeLink(rawImage);
+  const ctaUrl = safeLink(rawLink);
+  const values = {
+    eyebrow: str(formData, "eyebrow").slice(0, 120) || null,
+    title: str(formData, "title").slice(0, 180),
+    text: str(formData, "text").slice(0, 600) || null,
+    imageUrl: imageUrl ?? "",
+    ctaLabel: str(formData, "ctaLabel").slice(0, 60) || null,
+    ctaUrl,
+    position: Math.round(num(formData, "position")),
+    isActive: bool(formData, "isActive"),
+    translations: readTranslations(formData, HERO_SLIDE_TRANSLATABLE, 600),
+  };
+  let error: string | null = null;
+  if (!values.title) error = "slideTitleRequired";
+  else if (!imageUrl) error = "slideImageInvalid";
+  else if (rawLink && !ctaUrl) error = "slideLinkInvalid";
+  return { values, error };
+}
+
+function revalidateSlides() {
+  revalidatePath("/");
+  revalidatePath("/admin/carrousel");
+}
+
+export async function createSlideAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { values, error } = slideValues(formData);
+  if (error) redirect(withMessage("/admin/carrousel", "erreur", error));
+
+  await db.insert(heroSlides).values(values);
+  revalidateSlides();
+  redirect(withMessage("/admin/carrousel", "ok", "slideCreated"));
+}
+
+export async function updateSlideAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = num(formData, "id");
+  const { values, error } = slideValues(formData);
+  if (error) redirect(withMessage("/admin/carrousel", "erreur", error));
+
+  await db.update(heroSlides).set(values).where(eq(heroSlides.id, id));
+  revalidateSlides();
+  redirect(withMessage("/admin/carrousel", "ok", "slideUpdated"));
+}
+
+export async function deleteSlideAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await db.delete(heroSlides).where(eq(heroSlides.id, num(formData, "id")));
+  revalidateSlides();
+  redirect(withMessage("/admin/carrousel", "ok", "slideDeleted"));
 }
 
 /* ------------------------------ activités ------------------------------- */
