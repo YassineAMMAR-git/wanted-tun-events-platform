@@ -5,11 +5,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, PLAN_TRANSLATABLE, activities, plans, subscriptions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { declarePaymentAction } from "@/app/actions/booking";
+import { createPaymentLinkAction, declarePaymentAction } from "@/app/actions/booking";
 import { formatDate, formatPrice } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
+import { PaymentWatcher } from "@/components/payment-watcher";
+import { isLinkUsable, latestPaymentLink, qontoPaymentsEnabled } from "@/lib/qonto/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +20,12 @@ export default async function PaymentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ declare?: string }>;
+  searchParams: Promise<{ declare?: string; lien?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const { id } = await params;
-  const { declare } = await searchParams;
+  const { declare, lien } = await searchParams;
   const subscriptionId = Number(id);
   if (!Number.isFinite(subscriptionId)) notFound();
 
@@ -43,7 +45,13 @@ export default async function PaymentPage({
   const { subscription } = row;
   const plan = localize(row.plan, locale, PLAN_TRANSLATABLE);
   const activity = localize(row.activity, locale, ACTIVITY_TRANSLATABLE);
-  const alreadyPaid = subscription.paymentStatus === "paid";
+
+  // Paiement Qonto : le lien est relu chez Qonto à chaque affichage, ce qui active l'abonnement s'il vient d'être payé.
+  const qonto = await qontoPaymentsEnabled();
+  const link = qonto && subscription.paymentStatus !== "paid" ? await latestPaymentLink(subscription.id) : null;
+  const linkUsable = isLinkUsable(link);
+
+  const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
   const price = formatPrice(plan.priceCents, locale);
 
@@ -102,12 +110,14 @@ export default async function PaymentPage({
           <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
         ) : null}
 
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-semibold text-gold-dark">{t("externalLink")}</p>
-          <p className="mt-1 text-xs break-all text-zinc-600" dir="ltr">
-            {plan.paymentUrl ?? t("notConfigured")}
-          </p>
-        </div>
+        {qonto ? null : (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-gold-dark">{t("externalLink")}</p>
+            <p className="mt-1 text-xs break-all text-zinc-600" dir="ltr">
+              {plan.paymentUrl ?? t("notConfigured")}
+            </p>
+          </div>
+        )}
 
         {alreadyPaid ? (
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -115,6 +125,41 @@ export default async function PaymentPage({
               {t("seeSessions")}
             </Link>
             <span className="btn btn-ghost flex-1">{t("alreadyActive")}</span>
+          </div>
+        ) : qonto ? (
+          <div className="mt-5 space-y-3">
+            {lien === "erreur" ? (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                ⚠️ {t("qontoLinkError")}
+              </div>
+            ) : null}
+
+            {linkUsable && link ? (
+              <>
+                {link.status === "processing" ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-semibold text-gold-dark">{t("qontoProcessingTitle")}</p>
+                    <p className="mt-1 text-xs text-zinc-700">{t("qontoProcessingText")}</p>
+                  </div>
+                ) : (
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">
+                    🔒 {t("pay", { price })}
+                  </a>
+                )}
+                <p className="text-center text-xs text-zinc-600">{t("qontoHint")}</p>
+                <PaymentWatcher label={t("qontoWatching")} />
+              </>
+            ) : (
+              <form action={createPaymentLinkAction} className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+                <input type="hidden" name="subscriptionId" value={subscription.id} />
+                <p className="text-sm text-zinc-700">
+                  {link?.status === "expired" || link?.status === "canceled" ? t("qontoExpired") : t("qontoNoLink")}
+                </p>
+                <button className="btn btn-primary mt-3 w-full" type="submit">
+                  {t("qontoNewLink")}
+                </button>
+              </form>
+            )}
           </div>
         ) : (
           <div className="mt-5 space-y-3">

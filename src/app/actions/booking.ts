@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { activities, attendances, categories, plans, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
 import { offersMemberships } from "@/lib/memberships";
+import { ensurePaymentLink, qontoPaymentsEnabled } from "@/lib/qonto/payments";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -52,8 +53,38 @@ export async function subscribeAction(formData: FormData): Promise<void> {
     })
     .returning({ id: subscriptions.id });
 
+  // Paiement Qonto : le lien est préparé tout de suite. En cas d'échec, la page de paiement propose d'en générer un.
+  if (await qontoPaymentsEnabled()) {
+    await ensurePaymentLink(inserted[0]!.id).catch((error) => console.error("[qonto] création du lien impossible", error));
+  }
+
   revalidatePath("/espace-personnel");
   redirect(`/abonnement/${inserted[0]!.id}/paiement`);
+}
+
+/** Nouveau lien de paiement Qonto (le précédent a expiré, a été annulé ou n'a pas pu être créé). */
+export async function createPaymentLinkAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/connexion");
+  const subscriptionId = Number(formData.get("subscriptionId") ?? 0);
+
+  const owned = (
+    await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, user.id)))
+      .limit(1)
+  )[0];
+  if (!owned) redirect("/espace-personnel?erreur=subscriptionNotFound");
+
+  let failed = false;
+  try {
+    await ensurePaymentLink(owned.id);
+  } catch (error) {
+    console.error("[qonto] création du lien impossible", error);
+    failed = true;
+  }
+  redirect(`/abonnement/${owned.id}/paiement${failed ? "?lien=erreur" : ""}`);
 }
 
 /**
