@@ -1,5 +1,5 @@
 /** Coordonnées publiques affichées sur le site (pied de page, page de paiement). */
-export const CONTACT_EMAIL = "contact@wantedtun.tn";
+export const CONTACT_EMAIL = "contact@wantedtunevents.com";
 
 export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/wanted.tun.events/",
