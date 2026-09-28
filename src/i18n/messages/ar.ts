@@ -60,6 +60,9 @@ const ar: Messages = {
     contact: "اتصل بنا",
     city: "باريس، فرنسا",
     rights: "© {year} WANTED TUN EVENTS — جميع الحقوق محفوظة.",
+    follow: "تابعونا",
+    onInstagram: "WANTED TUN EVENTS على إنستغرام",
+    onFacebook: "WANTED TUN EVENTS على فيسبوك",
   },
 
   status: {
@@ -244,7 +247,7 @@ const ar: Messages = {
     awaitingTitle: "تم الإبلاغ عن الدفع — قيد التحقق",
     awaitingText: "نتحقق من استلام المبلغ لدى منصة الدفع. ستظهر حصصك في مساحتك الشخصية فور التفعيل.",
     declaredFlash: "شكرًا لك! تم الإبلاغ عن دفعتك. سنتحقق منها ثم نفعّل اشتراكك.",
-    help: "لديك سؤال؟ راسلنا على contact@wantedtun.tn — سيظهر اشتراكك في مساحتك الشخصية فور تفعيله.",
+    help: "لديك سؤال؟ راسلنا على {email} — سيظهر اشتراكك في مساحتك الشخصية فور تفعيله.",
   },
 
   dashboard: {
