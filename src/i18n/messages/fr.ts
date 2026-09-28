@@ -61,6 +61,9 @@ const fr = {
     contact: "Contact",
     city: "Paris, France",
     rights: "© {year} WANTED TUN EVENTS — Tous droits réservés.",
+    follow: "Suivez-nous",
+    onInstagram: "WANTED TUN EVENTS sur Instagram",
+    onFacebook: "WANTED TUN EVENTS sur Facebook",
   },
 
   status: {
@@ -245,7 +248,7 @@ const fr = {
     awaitingTitle: "Paiement signalé — vérification en cours",
     awaitingText: "Nous vérifions l’encaissement auprès de la plateforme de paiement. Vos séances apparaîtront dans votre espace personnel dès l’activation.",
     declaredFlash: "Merci ! Votre paiement a été signalé. Il sera vérifié puis votre abonnement activé.",
-    help: "Une question ? Écrivez-nous à contact@wantedtun.tn — votre abonnement apparaîtra dans votre espace personnel dès son activation.",
+    help: "Une question ? Écrivez-nous à {email} — votre abonnement apparaîtra dans votre espace personnel dès son activation.",
   },
 
   dashboard: {

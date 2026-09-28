@@ -60,6 +60,9 @@ const en: Messages = {
     contact: "Contact",
     city: "Paris, France",
     rights: "© {year} WANTED TUN EVENTS — All rights reserved.",
+    follow: "Follow us",
+    onInstagram: "WANTED TUN EVENTS on Instagram",
+    onFacebook: "WANTED TUN EVENTS on Facebook",
   },
 
   status: {
@@ -243,7 +246,7 @@ const en: Messages = {
     awaitingTitle: "Payment reported — being checked",
     awaitingText: "We are confirming the payment with the payment platform. Your sessions will appear in your personal space as soon as it is activated.",
     declaredFlash: "Thank you! Your payment has been reported. We will confirm it and activate your membership.",
-    help: "Any questions? Write to us at contact@wantedtun.tn — your membership will appear in your personal space as soon as it is active.",
+    help: "Any questions? Write to us at {email} — your membership will appear in your personal space as soon as it is active.",
   },
 
   dashboard: {

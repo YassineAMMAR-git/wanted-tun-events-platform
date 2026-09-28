@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { declarePaymentAction } from "@/app/actions/booking";
 import { formatDate, formatPrice } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
+import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -159,7 +160,7 @@ export default async function PaymentPage({
         )}
       </Card>
 
-      <p className="text-center text-xs text-zinc-500">{t("help")}</p>
+      <p className="text-center text-xs text-zinc-500">{t("help", { email: CONTACT_EMAIL })}</p>
     </div>
   );
 }
