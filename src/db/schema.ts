@@ -335,6 +335,51 @@ export const heroSlides = pgTable(
   (table) => [index("hero_slides_position_idx").on(table.position)],
 );
 
+/* ------------------------------------------------------------------ */
+/* Paiement en ligne via l'API Qonto                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Connexion OAuth au compte Qonto (une seule ligne, id = 1).
+ * Jetons et secret du webhook sont chiffrés (AES-256-GCM, clé dérivée de QONTO_CLIENT_SECRET).
+ */
+export const qontoConnection = pgTable("qonto_connection", {
+  id: integer("id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }).notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }).notNull(),
+  webhookSubscriptionId: varchar("webhook_subscription_id", { length: 64 }),
+  webhookSecret: text("webhook_secret"),
+  /** Dernière erreur de renouvellement : la connexion doit alors être refaite depuis l'administration. */
+  lastError: text("last_error"),
+  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Liens de paiement Qonto à usage unique, un par tentative de paiement d'un abonnement. */
+export const paymentLinks = pgTable(
+  "payment_links",
+  {
+    id: serial("id").primaryKey(),
+    subscriptionId: integer("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    externalId: varchar("external_id", { length: 64 }).notNull(),
+    url: text("url").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    /** Statut Qonto : open, processing, paid, expired, canceled. */
+    status: varchar("status", { length: 16 }).notNull().default("open"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_links_external_id_unique").on(table.externalId),
+    index("payment_links_subscription_idx").on(table.subscriptionId),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type UserSession = typeof userSessions.$inferSelect;
 export type Category = typeof categories.$inferSelect;
@@ -346,3 +391,5 @@ export type Attendance = typeof attendances.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
 export type NotificationRule = typeof notificationRules.$inferSelect;
 export type HeroSlide = typeof heroSlides.$inferSelect;
+export type QontoConnection = typeof qontoConnection.$inferSelect;
+export type PaymentLink = typeof paymentLinks.$inferSelect;

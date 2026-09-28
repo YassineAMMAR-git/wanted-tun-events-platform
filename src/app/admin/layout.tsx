@@ -14,6 +14,7 @@ const links = [
   { href: "/admin/activites", key: "activities", icon: "🎯" },
   { href: "/admin/seances", key: "sessions", icon: "🗓️" },
   { href: "/admin/abonnements", key: "plans", icon: "💳" },
+  { href: "/admin/paiements", key: "payments", icon: "💶" },
   { href: "/admin/notifications", key: "notifications", icon: "✉️" },
 ] as const;
 

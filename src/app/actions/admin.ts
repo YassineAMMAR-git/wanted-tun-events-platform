@@ -30,6 +30,8 @@ import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/for
 import { localize, readTranslations } from "@/lib/i18n/content";
 import { logAndSend } from "@/lib/mailer";
 import { offersMemberships } from "@/lib/memberships";
+import { disconnect as disconnectQonto, registerWebhook } from "@/lib/qonto/client";
+import { qontoWebhookUrl } from "@/lib/qonto/config";
 import { translatorFor } from "@/i18n/translator";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -641,4 +643,24 @@ export async function runRemindersAction(): Promise<void> {
   await runReminderJob();
   revalidatePath("/admin/notifications");
   redirect(withMessage("/admin/notifications", "ok", "remindersRun"));
+}
+
+/* ---------------------------------- Qonto --------------------------------- */
+
+export async function registerQontoWebhookAction(): Promise<void> {
+  await requireAdmin();
+  let failed = false;
+  try {
+    await registerWebhook(qontoWebhookUrl());
+  } catch (error) {
+    console.error("[qonto] abonnement au webhook impossible", error);
+    failed = true;
+  }
+  redirect(withMessage("/admin/paiements", failed ? "erreur" : "ok", failed ? "qontoWebhookFailed" : "qontoWebhookRegistered"));
+}
+
+export async function disconnectQontoAction(): Promise<void> {
+  await requireAdmin();
+  await disconnectQonto();
+  redirect(withMessage("/admin/paiements", "ok", "qontoDisconnected"));
 }

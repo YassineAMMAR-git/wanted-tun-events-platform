@@ -1,11 +1,14 @@
 import { runReminderJob } from "@/lib/reminders";
 import { ensureSeeded } from "@/lib/seed";
+import { reconcilePendingPayments } from "@/lib/qonto/payments";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Tâche planifiée : rappels automatiques J-2 (48 h avant chaque séance)
- * + expiration des abonnements arrivés à échéance.
+ * + expiration des abonnements arrivés à échéance
+ * + filet de sécurité des paiements Qonto (liens payés dont le webhook aurait été manqué) ;
+ *   ce passage renouvelle aussi le jeton Qonto, valable 90 jours sans utilisation.
  *
  * À appeler par un cron (par exemple toutes les heures) :
  *   curl -H "x-cron-secret: $CRON_SECRET" https://…/api/cron/reminders
@@ -24,7 +27,8 @@ export async function GET(request: Request) {
 
   try {
     const result = await runReminderJob();
-    return Response.json({ ok: true, ...result });
+    const payments = await reconcilePendingPayments();
+    return Response.json({ ok: true, ...result, payments });
   } catch (error) {
     return Response.json({ ok: false, error: String(error) }, { status: 500 });
   }
