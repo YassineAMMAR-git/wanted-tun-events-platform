@@ -8,7 +8,7 @@ export function FieldError({ id, errors }: { id: string; errors?: string[] }) {
   const t = useTranslations();
   if (!errors?.length) return null;
   return (
-    <ul id={id} className="mt-1.5 space-y-0.5 text-xs text-rose-300" aria-live="polite">
+    <ul id={id} className="mt-1.5 space-y-0.5 text-xs text-rose-700" aria-live="polite">
       {errors.map((error) => (
         <li key={error}>{translateKey(t, error, VALIDATION_MESSAGE_VALUES, t("validation.invalid"))}</li>
       ))}
@@ -26,8 +26,8 @@ export function FormMessage({ state }: { state: Pick<FormState, "status" | "mess
       role={isError ? "alert" : "status"}
       className={`rounded-xl border px-4 py-3 text-sm ${
         isError
-          ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
-          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+          ? "border-rose-200 bg-rose-50 text-rose-700"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700"
       }`}
     >
       {isError ? "⚠️ " : "✅ "}

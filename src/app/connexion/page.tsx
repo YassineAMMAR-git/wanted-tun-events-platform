@@ -32,8 +32,8 @@ export default async function LoginPage({
     <div className="mx-auto max-w-md space-y-5">
       <div className="text-center">
         <p className="eyebrow">{t("login.eyebrow")}</p>
-        <h1 className="mt-2 text-3xl font-black text-white">{t("login.title")}</h1>
-        <p className="mt-2 text-sm text-zinc-400">{t("login.intro")}</p>
+        <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{t("login.title")}</h1>
+        <p className="mt-2 text-sm text-zinc-600">{t("login.intro")}</p>
       </div>
 
       {result ? (
@@ -41,8 +41,8 @@ export default async function LoginPage({
           role={tone === "error" ? "alert" : "status"}
           className={`rounded-xl border px-4 py-3 text-sm ${
             tone === "error"
-              ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
           {t(`verification.${result}`)}
@@ -50,16 +50,16 @@ export default async function LoginPage({
       ) : null}
 
       {erreur === "loginToSubscribe" ? (
-        <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
           {t("login.loginToSubscribe")}
         </div>
       ) : null}
 
       <Card>
         <LoginForm next={safeNext} />
-        <p className="mt-4 text-center text-sm text-zinc-400">
+        <p className="mt-4 text-center text-sm text-zinc-600">
           {t("login.noAccount")}{" "}
-          <Link href="/inscription" className="font-semibold text-amber-300 hover:underline">
+          <Link href="/inscription" className="font-semibold text-gold-dark hover:underline">
             {t("login.createAccount")}
           </Link>
         </p>
@@ -68,14 +68,14 @@ export default async function LoginPage({
       {tone === "error" ? <ResendVerificationForm /> : null}
 
       {process.env.NODE_ENV !== "production" ? (
-        <Card className="border-amber-300/20">
-          <p className="text-xs font-bold tracking-wider text-amber-300 uppercase">{t("login.demoTitle")}</p>
-          <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+        <Card className="border-amber-200">
+          <p className="text-xs font-bold tracking-wider text-gold-dark uppercase">{t("login.demoTitle")}</p>
+          <ul className="mt-2 space-y-1 text-sm text-zinc-700">
             <li>
-              {t("login.demoClient")} <code className="text-amber-200">client@wantedtun.tn</code> / <code>***</code>
+              {t("login.demoClient")} <code className="text-gold-dark">client@wantedtun.tn</code> / <code>***</code>
             </li>
             <li>
-              {t("login.demoAdmin")} <code className="text-amber-200">admin@wantedtun.tn</code> / <code>***</code>
+              {t("login.demoAdmin")} <code className="text-gold-dark">admin@wantedtun.tn</code> / <code>***</code>
             </li>
           </ul>
         </Card>

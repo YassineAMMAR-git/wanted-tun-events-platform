@@ -69,7 +69,7 @@ export default async function AdminActivitiesPage({
   const filtered = Boolean(search || categorie || statut || tri);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
@@ -110,7 +110,7 @@ export default async function AdminActivitiesPage({
         />
       </FilterBar>
 
-      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
+      <p className="text-sm text-zinc-600">{t("resultCount", { count: rows.length })}</p>
 
       <div className="card scroll-x">
         <table className="data">
@@ -133,28 +133,28 @@ export default async function AdminActivitiesPage({
               return (
                 <tr key={activity.id}>
                   <td>
-                    <Link href={`/admin/activites/${activity.id}`} className="font-semibold text-white hover:text-amber-300">
+                    <Link href={`/admin/activites/${activity.id}`} className="font-semibold text-zinc-900 hover:text-gold-dark">
                       {activity.name}
                     </Link>
                     <span className="block text-xs text-zinc-500" dir="ltr">
                       /{activity.slug}
                     </span>
                   </td>
-                  <td className="text-zinc-400">{localize(row.category, locale, CATEGORY_TRANSLATABLE).name}</td>
-                  <td className="text-zinc-400">
+                  <td className="text-zinc-600">{localize(row.category, locale, CATEGORY_TRANSLATABLE).name}</td>
+                  <td className="text-zinc-600">
                     {activity.address}
                     <span className="block text-xs">{activity.city}</span>
                   </td>
-                  <td className="text-zinc-400">{activity.scheduleText}</td>
+                  <td className="text-zinc-600">{activity.scheduleText}</td>
                   <td className="whitespace-nowrap">{formatPrice(activity.priceCents, locale)}</td>
-                  <td className="text-zinc-200">{row.sessionsCount}</td>
-                  <td className="text-zinc-200">{row.plansCount}</td>
+                  <td className="text-zinc-800">{row.sessionsCount}</td>
+                  <td className="text-zinc-800">{row.plansCount}</td>
                   <td>
                     <span
                       className={`badge ${
                         activity.status === "active"
-                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                          : "border-zinc-500/30 bg-zinc-500/10 text-zinc-300"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-zinc-200 bg-zinc-100 text-zinc-700"
                       }`}
                     >
                       {tStatus(activity.status === "active" ? "activity.active" : "activity.hidden")}

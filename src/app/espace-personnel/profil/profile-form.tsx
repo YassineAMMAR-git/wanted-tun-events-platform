@@ -102,8 +102,8 @@ export function ProfileForm({ email, defaults }: Props) {
           <FieldError id="city-error" errors={errors.city} />
         </div>
 
-        <fieldset className="grid gap-4 rounded-xl border border-white/8 p-4 sm:col-span-2 sm:grid-cols-2">
-          <legend className="px-2 text-sm font-semibold text-zinc-200">{t("passwordSection")}</legend>
+        <fieldset className="grid gap-4 rounded-xl border border-zinc-200 p-4 sm:col-span-2 sm:grid-cols-2">
+          <legend className="px-2 text-sm font-semibold text-zinc-800">{t("passwordSection")}</legend>
           <div className="sm:col-span-2">
             <label className="label" htmlFor="currentPassword">
               {t("currentPassword")}

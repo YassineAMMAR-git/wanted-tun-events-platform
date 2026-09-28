@@ -59,7 +59,7 @@ export default async function AdminDashboard({
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -79,8 +79,8 @@ export default async function AdminDashboard({
 
       <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-bold text-white">{t("engineTitle")}</h2>
-          <p className="mt-1 text-sm text-zinc-400">{t("engineText")}</p>
+          <h2 className="text-base font-bold text-zinc-900">{t("engineTitle")}</h2>
+          <p className="mt-1 text-sm text-zinc-600">{t("engineText")}</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <form action={runRemindersAction}>
@@ -119,12 +119,12 @@ export default async function AdminDashboard({
                       {formatDate(session.startsAt, locale)}
                       <span className="block text-xs text-zinc-500">{formatTime(session.startsAt, locale)}</span>
                     </td>
-                    <td className="text-zinc-300">{localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}</td>
-                    <td className="text-zinc-400">{session.title ?? tCommon("none")}</td>
-                    <td className="font-semibold text-white">{row.total}</td>
-                    <td className="text-emerald-300">{row.confirmed}</td>
-                    <td className="text-amber-300">{Math.max(row.total - row.confirmed - row.declined, 0)}</td>
-                    <td className="text-rose-300">{row.declined}</td>
+                    <td className="text-zinc-700">{localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}</td>
+                    <td className="text-zinc-600">{session.title ?? tCommon("none")}</td>
+                    <td className="font-semibold text-zinc-900">{row.total}</td>
+                    <td className="text-emerald-700">{row.confirmed}</td>
+                    <td className="text-gold-dark">{Math.max(row.total - row.confirmed - row.declined, 0)}</td>
+                    <td className="text-rose-700">{row.declined}</td>
                     <td>
                       <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm">
                         {tCommon("manage")}
@@ -145,19 +145,19 @@ export default async function AdminDashboard({
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-2">
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white">{t("latestClients")}</h2>
-            <Link href="/admin/clients" className="text-xs font-semibold text-amber-300 hover:underline">
+            <h2 className="text-base font-bold text-zinc-900">{t("latestClients")}</h2>
+            <Link href="/admin/clients" className="text-xs font-semibold text-gold-dark hover:underline">
               {tCommon("seeAll")}
             </Link>
           </div>
           <ul className="mt-4 space-y-2">
             {latestClients.map((row) => (
-              <li key={row.user.id} className="flex items-center justify-between gap-3 border-b border-white/6 pb-2">
+              <li key={row.user.id} className="flex items-center justify-between gap-3 border-b border-zinc-200 pb-2">
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">
+                  <p className="text-sm font-semibold text-zinc-900">
                     {row.user.firstName} {row.user.lastName}
                   </p>
                   <p className="text-xs text-zinc-500" dir="ltr">
@@ -174,16 +174,16 @@ export default async function AdminDashboard({
 
         <Card>
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white">{t("latestSubs")}</h2>
-            <Link href="/admin/abonnements" className="text-xs font-semibold text-amber-300 hover:underline">
+            <h2 className="text-base font-bold text-zinc-900">{t("latestSubs")}</h2>
+            <Link href="/admin/abonnements" className="text-xs font-semibold text-gold-dark hover:underline">
               {t("offers")}
             </Link>
           </div>
           <ul className="mt-4 space-y-2">
             {latestSubs.map((row) => (
-              <li key={row.subscription.id} className="flex items-center justify-between gap-3 border-b border-white/6 pb-2">
+              <li key={row.subscription.id} className="flex items-center justify-between gap-3 border-b border-zinc-200 pb-2">
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">
+                  <p className="text-sm font-semibold text-zinc-900">
                     {row.userName} {row.userLast} — {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
                   </p>
                   <p className="text-xs text-zinc-500">

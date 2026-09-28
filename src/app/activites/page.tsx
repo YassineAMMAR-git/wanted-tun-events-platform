@@ -23,7 +23,7 @@ export default async function ActivitiesPage({
   const current = categories.find((category) => category.slug === params.categorie);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <SectionTitle
         eyebrow={t("eyebrow")}
         title={current ? current.name : t("title")}
@@ -82,47 +82,47 @@ export default async function ActivitiesPage({
       {activities.length === 0 ? (
         <EmptyState title={t("emptyTitle")} description={t("emptyText")} />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {activities.map(({ activity, categoryName, categoryEmoji, sessionCount, planCount, minPrice, nextSession }) => (
             <article key={activity.id} className="card card-hover overflow-hidden">
-              <div className="relative h-40 w-full overflow-hidden bg-[#15151a]">
+              <div className="relative h-36 w-full overflow-hidden bg-zinc-100">
                 {activity.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activity.imageUrl} alt={activity.name} className="h-full w-full object-cover opacity-85" />
+                  <img src={activity.imageUrl} alt={activity.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-amber-500/25 to-violet-600/20" />
+                  <div className="h-full w-full bg-gradient-to-br from-amber-100 to-rose-100" />
                 )}
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent p-3">
-                  <span className="badge border-white/20 bg-black/60">
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/35 to-transparent p-2.5">
+                  <span className="badge border-transparent bg-white/95 text-zinc-800 shadow-sm">
                     {categoryEmoji} {categoryName}
                   </span>
-                  <span className="badge border-white/20 bg-black/60">{t("upcomingSessions", { count: sessionCount })}</span>
+                  <span className="badge border-transparent bg-white/95 text-zinc-800 shadow-sm">{t("upcomingSessions", { count: sessionCount })}</span>
                 </div>
               </div>
 
-              <div className="p-5">
-                <h3 className="text-lg font-bold text-white">{activity.name}</h3>
-                <p className="mt-1.5 text-sm text-zinc-400">{activity.shortDescription}</p>
+              <div className="p-4">
+                <h3 className="text-base font-bold text-zinc-900">{activity.name}</h3>
+                <p className="mt-1.5 text-sm text-zinc-600">{activity.shortDescription}</p>
 
-                <dl className="mt-4 grid gap-2 text-sm">
+                <dl className="mt-3 grid gap-1.5 text-sm">
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-zinc-500">{t("location")}</dt>
-                    <dd className="text-zinc-300">
+                    <dd className="text-zinc-700">
                       {activity.address}
                       {activity.city ? `, ${activity.city}` : ""}
                     </dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-zinc-500">{t("schedule")}</dt>
-                    <dd className="text-zinc-300">{activity.scheduleText}</dd>
+                    <dd className="text-zinc-700">{activity.scheduleText}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-zinc-500">{t("duration")}</dt>
-                    <dd className="text-zinc-300">{formatDuration(activity.durationMinutes, locale)}</dd>
+                    <dd className="text-zinc-700">{formatDuration(activity.durationMinutes, locale)}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-zinc-500">{t("price")}</dt>
-                    <dd className="text-zinc-300">
+                    <dd className="text-zinc-700">
                       {minPrice
                         ? t("fromPrice", { price: formatPrice(minPrice, locale) })
                         : formatPrice(activity.priceCents, locale)}
@@ -131,7 +131,7 @@ export default async function ActivitiesPage({
                   {nextSession ? (
                     <div className="flex gap-2">
                       <dt className="shrink-0 text-zinc-500">{t("next")}</dt>
-                      <dd className="text-zinc-300">
+                      <dd className="text-zinc-700">
                         {tCommon("dateAtTime", {
                           date: formatDate(nextSession, locale),
                           time: formatTime(nextSession, locale),

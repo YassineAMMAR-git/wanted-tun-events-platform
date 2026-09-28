@@ -73,7 +73,7 @@ export default async function AdminPlansPage({
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
@@ -114,7 +114,7 @@ export default async function AdminPlansPage({
         />
       </FilterBar>
 
-      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
+      <p className="text-sm text-zinc-600">{t("resultCount", { count: rows.length })}</p>
 
       <section className="grid gap-4 sm:grid-cols-3">
         <Stat
@@ -133,21 +133,21 @@ export default async function AdminPlansPage({
             <Card key={row.plan.id}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-bold text-white">{localizedPlan.name}</h3>
+                  <h3 className="text-base font-bold text-zinc-900">{localizedPlan.name}</h3>
                   <p className="text-xs text-zinc-500">
-                    <Link href={`/admin/activites/${row.activity.id}`} className="hover:text-amber-300">
+                    <Link href={`/admin/activites/${row.activity.id}`} className="hover:text-gold-dark">
                       {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
                     </Link>{" "}
                     · {localize(row.category, locale, CATEGORY_TRANSLATABLE).name} · {t("sold", { count: row.sold })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-black text-amber-300">{formatPrice(row.plan.priceCents, locale)}</span>
+                  <span className="text-lg font-black text-gold-dark">{formatPrice(row.plan.priceCents, locale)}</span>
                   <span
                     className={`badge ${
                       row.plan.isActive
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                        : "border-zinc-500/30 bg-zinc-500/10 text-zinc-400"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-zinc-200 bg-zinc-100 text-zinc-600"
                     }`}
                   >
                     {tStatus(row.plan.isActive ? "plan.active" : "plan.inactive")}

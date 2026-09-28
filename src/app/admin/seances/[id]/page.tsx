@@ -80,15 +80,15 @@ export default async function AdminSessionDetail({
   const backTo = `/admin/seances/${session.id}`;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <nav className="text-sm text-zinc-500">
-        <Link href="/admin/seances" className="hover:text-amber-300">
+        <Link href="/admin/seances" className="hover:text-gold-dark">
           {t("breadcrumb")}
         </Link>
         <span className="px-2">/</span>
-        <span className="text-zinc-300">{session.title ?? activity.name}</span>
+        <span className="text-zinc-700">{session.title ?? activity.name}</span>
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -99,8 +99,8 @@ export default async function AdminSessionDetail({
       </section>
 
       <Card>
-        <h2 className="text-lg font-bold text-white">{t("title")}</h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <h2 className="text-lg font-bold text-zinc-900">{t("title")}</h2>
+        <p className="mt-1 text-sm text-zinc-600">
           {t("summary", {
             activity: activity.name,
             date: formatDateTime(session.startsAt, locale),
@@ -192,11 +192,11 @@ export default async function AdminSessionDetail({
                 return (
                   <tr key={participant.attendance.id}>
                     <td>
-                      <Link href={`/admin/clients/${participant.user.id}`} className="font-semibold text-white hover:text-amber-300">
+                      <Link href={`/admin/clients/${participant.user.id}`} className="font-semibold text-zinc-900 hover:text-gold-dark">
                         {participant.user.firstName} {participant.user.lastName}
                       </Link>
                     </td>
-                    <td className="text-zinc-400">
+                    <td className="text-zinc-600">
                       <span dir="ltr">{participant.user.email}</span>
                       {participant.user.phone ? (
                         <span className="block text-xs" dir="ltr">
@@ -257,7 +257,7 @@ export default async function AdminSessionDetail({
         </div>
 
         <Card className="mt-5">
-          <h3 className="text-base font-bold text-white">{t("addTitle")}</h3>
+          <h3 className="text-base font-bold text-zinc-900">{t("addTitle")}</h3>
           <form action={addParticipantAction} className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <input type="hidden" name="sessionId" value={session.id} />
             <div className="flex-1">

@@ -19,12 +19,12 @@ export function RegisterForm() {
   if (state.status === "success") {
     return (
       <div className="space-y-4 text-center" role="status">
-        <p className="text-4xl">📬</p>
-        <h2 className="text-xl font-bold text-white">{t("successTitle")}</h2>
-        <p className="text-sm text-zinc-300">
+        <p className="text-3xl">📬</p>
+        <h2 className="text-xl font-bold text-zinc-900">{t("successTitle")}</h2>
+        <p className="text-sm text-zinc-700">
           {t.rich("successText", {
             email: state.email ?? "",
-            strong: (chunks) => <strong className="text-amber-200">{chunks}</strong>,
+            strong: (chunks) => <strong className="text-gold-dark">{chunks}</strong>,
           })}
         </p>
         <p className="text-xs text-zinc-500">{t("successHint")}</p>

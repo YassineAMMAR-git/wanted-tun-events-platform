@@ -56,15 +56,15 @@ export default async function AdminActivityDetail({
   const backTo = `/admin/activites/${activity.id}`;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <nav className="text-sm text-zinc-500">
-        <Link href="/admin/activites" className="hover:text-amber-300">
+        <Link href="/admin/activites" className="hover:text-gold-dark">
           {t("breadcrumb")}
         </Link>
         <span className="px-2">/</span>
-        <span className="text-zinc-300">{activity.name}</span>
+        <span className="text-zinc-700">{activity.name}</span>
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -81,7 +81,7 @@ export default async function AdminActivityDetail({
       {/* ------------------------------ activité ------------------------------ */}
       <Card>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">{t("editTitle")}</h2>
+          <h2 className="text-lg font-bold text-zinc-900">{t("editTitle")}</h2>
           <Link href={`/activites/${activity.slug}`} className="btn btn-ghost btn-sm">
             {t("publicPage")}
           </Link>
@@ -366,7 +366,7 @@ export default async function AdminActivityDetail({
         </div>
 
         <Card className="mt-5">
-          <h3 className="text-base font-bold text-white">{t("addPlan")}</h3>
+          <h3 className="text-base font-bold text-zinc-900">{t("addPlan")}</h3>
           <form action={createPlanAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <input type="hidden" name="activityId" value={activity.id} />
             <input type="hidden" name="redirectTo" value={backTo} />

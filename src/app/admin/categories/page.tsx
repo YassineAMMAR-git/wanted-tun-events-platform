@@ -60,7 +60,7 @@ export default async function AdminCategoriesPage({
   const filtered = Boolean(search || etat);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
@@ -117,10 +117,10 @@ export default async function AdminCategoriesPage({
                     <span className="text-2xl">{category.emoji}</span>
                     <span className="flex items-center gap-2">
                       <span className={`inline-block size-2.5 rounded-full ${ACCENT_DOT[accent]}`} aria-hidden="true" />
-                      <span className="font-bold text-white">{translated.name}</span>
+                      <span className="font-bold text-zinc-900">{translated.name}</span>
                     </span>
                     {category.comingSoon ? (
-                      <span className="badge border-sky-400/30 bg-sky-400/10 text-sky-300">{t("comingSoon")}</span>
+                      <span className="badge border-sky-200 bg-sky-50 text-sky-700">{t("comingSoon")}</span>
                     ) : null}
                     <span className="text-xs text-zinc-500">
                       {t("counts", { activities: activityCount, sessions: sessionCount })}
@@ -130,7 +130,7 @@ export default async function AdminCategoriesPage({
                     </span>
                   </summary>
 
-                  <form action={updateCategoryAction} className="mt-5 space-y-4 border-t border-white/8 pt-5">
+                  <form action={updateCategoryAction} className="mt-5 space-y-4 border-t border-zinc-200 pt-5">
                     <input type="hidden" name="id" value={category.id} />
 
                     <TranslationFields
@@ -167,12 +167,12 @@ export default async function AdminCategoriesPage({
                           className="input"
                         />
                       </div>
-                      <label className="flex items-end gap-2 pb-2 text-sm text-zinc-300">
+                      <label className="flex items-end gap-2 pb-2 text-sm text-zinc-700">
                         <input
                           type="checkbox"
                           name="comingSoon"
                           defaultChecked={category.comingSoon}
-                          className="size-4 accent-amber-400"
+                          className="size-4 accent-amber-600"
                         />
                         {t("fieldComingSoon")}
                       </label>
@@ -188,7 +188,7 @@ export default async function AdminCategoriesPage({
                     </div>
                   </form>
 
-                  <form action={deleteCategoryAction} className="mt-3 border-t border-white/8 pt-3">
+                  <form action={deleteCategoryAction} className="mt-3 border-t border-zinc-200 pt-3">
                     <input type="hidden" name="id" value={category.id} />
                     <button className="btn btn-danger sm:w-auto" type="submit" disabled={activityCount > 0}>
                       {tCommon("delete")}
@@ -205,9 +205,9 @@ export default async function AdminCategoriesPage({
       )}
 
       {/* ------------------------------ création ----------------------------- */}
-      <Card className="border-amber-300/20">
-        <h2 className="text-base font-bold text-white">{t("createTitle")}</h2>
-        <p className="mt-1 text-sm text-zinc-400">{t("createHint")}</p>
+      <Card className="border-amber-200">
+        <h2 className="text-base font-bold text-zinc-900">{t("createTitle")}</h2>
+        <p className="mt-1 text-sm text-zinc-600">{t("createHint")}</p>
 
         <form action={createCategoryAction} className="mt-4 space-y-4">
           <TranslationFields
@@ -236,8 +236,8 @@ export default async function AdminCategoriesPage({
               <label className="label">{t("fieldPosition")}</label>
               <input name="position" type="number" min={0} defaultValue={rows.length + 1} className="input" />
             </div>
-            <label className="flex items-end gap-2 pb-2 text-sm text-zinc-300">
-              <input type="checkbox" name="comingSoon" className="size-4 accent-amber-400" />
+            <label className="flex items-end gap-2 pb-2 text-sm text-zinc-700">
+              <input type="checkbox" name="comingSoon" className="size-4 accent-amber-600" />
               {t("fieldComingSoon")}
             </label>
           </div>

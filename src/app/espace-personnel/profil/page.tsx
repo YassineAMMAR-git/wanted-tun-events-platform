@@ -14,17 +14,17 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <nav className="text-sm text-zinc-500">
-        <Link href="/espace-personnel" className="hover:text-amber-300">
+        <Link href="/espace-personnel" className="hover:text-gold-dark">
           {t("breadcrumbHome")}
         </Link>
         <span className="px-2">/</span>
-        <span className="text-zinc-300">{t("breadcrumb")}</span>
+        <span className="text-zinc-700">{t("breadcrumb")}</span>
       </nav>
 
       <div>
         <p className="eyebrow">{t("eyebrow")}</p>
-        <h1 className="mt-2 text-3xl font-black text-white">{t("title")}</h1>
-        <p className="mt-1.5 text-sm text-zinc-400">
+        <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{t("title")}</h1>
+        <p className="mt-1.5 text-sm text-zinc-600">
           {t("meta", { date: formatDate(user.createdAt, locale), role: tStatus(`role.${user.role}`) })}
         </p>
       </div>

@@ -26,9 +26,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="eyebrow">{t("eyebrow")}</p>
-          <h1 className="mt-1 text-2xl font-black text-white">{t("title")}</h1>
+          <h1 className="mt-1 text-2xl font-black text-zinc-900">{t("title")}</h1>
         </div>
-        <p className="text-sm text-zinc-400">{t("connectedAs", { name: `${admin.firstName} ${admin.lastName}` })}</p>
+        <p className="text-sm text-zinc-600">{t("connectedAs", { name: `${admin.firstName} ${admin.lastName}` })}</p>
       </div>
 
       <nav className="scroll-x">
@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-amber-300/40 hover:bg-amber-300/10 hover:text-amber-200"
+                className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-amber-300 hover:bg-amber-50 hover:text-gold-dark"
               >
                 <span>{link.icon}</span>
                 {t(`nav.${link.key}`)}
