@@ -7,7 +7,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 const publicLinks = [
   { href: "/", key: "home" },
   { href: "/activites", key: "activities" },
-  { href: "/abonnements", key: "plans" },
 ] as const;
 
 export default async function SiteHeader() {

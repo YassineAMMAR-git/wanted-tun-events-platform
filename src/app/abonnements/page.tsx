@@ -6,40 +6,41 @@ import { subscribeAction } from "@/app/actions/booking";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
+import { MEMBERSHIP_CATEGORY_SLUG } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; categorie?: string; tri?: string }>;
+  searchParams: Promise<{ q?: string; tri?: string }>;
 }) {
   await ensureSeeded();
   const params = await searchParams;
   const [locale, t, tCommon] = await Promise.all([getLocale(), getTranslations("plansPage"), getTranslations("common")]);
   const search = params.q?.trim().slice(0, 100);
   const [rows, categoryList] = await Promise.all([
-    listActivePlans(locale, { search, categorySlug: params.categorie, sort: params.tri }),
+    listActivePlans(locale, { search, sort: params.tri }),
     getCategoriesWithCounts(locale),
   ]);
-  const filtered = Boolean(search || params.categorie || params.tri);
+  const club = categoryList.find((category) => category.slug === MEMBERSHIP_CATEGORY_SLUG);
+  const filtered = Boolean(search || params.tri);
 
   return (
     <div className="space-y-6">
-      <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+      <SectionTitle
+        eyebrow={`${club?.emoji ?? "🎶"} ${club?.name ?? t("eyebrow")}`}
+        title={t("title")}
+        subtitle={t("subtitle")}
+        action={
+          <Link href={`/activites?categorie=${MEMBERSHIP_CATEGORY_SLUG}`} className="btn btn-ghost btn-sm self-start sm:self-auto">
+            {t("seeClub")}
+          </Link>
+        }
+      />
 
       <FilterBar action="/abonnements" active={filtered} submitLabel={tCommon("filter")} resetLabel={tCommon("reset")}>
         <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
-        <FilterSelect
-          name="categorie"
-          label={t("filterCategory")}
-          defaultValue={params.categorie}
-          placeholder={tCommon("all")}
-          options={categoryList.map((category) => ({
-            value: category.slug,
-            label: `${category.emoji} ${category.name}`,
-          }))}
-        />
         <FilterSelect
           name="tri"
           label={tCommon("sortBy")}
@@ -57,12 +58,9 @@ export default async function PlansPage({
         <EmptyState title={t("empty")} />
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map(({ plan, activity, categoryName, categoryEmoji }) => (
+          {rows.map(({ plan, activity }) => (
             <div key={plan.id} className="card card-hover flex flex-col p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="badge border-zinc-300 bg-zinc-50">
-                  {categoryEmoji} {categoryName}
-                </span>
                 <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
                   {tCommon("sessions", { count: plan.sessionsIncluded })}
                 </span>

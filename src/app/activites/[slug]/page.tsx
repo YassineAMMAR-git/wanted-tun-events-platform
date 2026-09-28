@@ -75,7 +75,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               [t("schedule"), activity.scheduleText ?? tCommon("none")],
               [t("sessionDuration"), formatDuration(activity.durationMinutes, locale)],
               [t("pricePerSession"), formatPrice(activity.priceCents, locale)],
-              [t("plans"), tCommon("plansCount", { count: plans.length })],
+              ...(detail.offersMemberships ? [[t("plans"), tCommon("plansCount", { count: plans.length })]] : []),
               [t("upcomingCount"), String(upcoming.length)],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
@@ -87,56 +87,58 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </Card>
       </section>
 
-      <section>
-        <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
-        {plans.length === 0 ? (
-          <Card>
-            <p className="text-sm text-zinc-600">{t("noPlans")}</p>
-          </Card>
-        ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {plans.map((plan) => (
-              <div key={plan.id} className="card card-hover flex flex-col p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-base font-bold text-zinc-900">{plan.name}</h3>
-                  <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
-                    {tCommon("sessions", { count: plan.sessionsIncluded })}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-600">{plan.description}</p>
-                <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
-                <p className="text-xs text-zinc-500">
-                  {t("perSession", {
-                    price: formatPrice(Math.round(plan.priceCents / Math.max(plan.sessionsIncluded, 1)), locale),
-                  })}
-                </p>
-
-                <ul className="mt-4 space-y-1.5 text-sm text-zinc-700">
-                  <li>📍 {plan.address ?? address}</li>
-                  <li>🕒 {plan.scheduleText ?? activity.scheduleText}</li>
-                  <li>{t("validity", { days: tCommon("days", { count: plan.validityDays }) })}</li>
-                  <li>{t("included", { count: plan.sessionsIncluded })}</li>
-                </ul>
-                {plan.extraInfo ? (
-                  <p className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-                    ℹ️ {plan.extraInfo}
+      {detail.offersMemberships ? (
+        <section>
+          <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
+          {plans.length === 0 ? (
+            <Card>
+              <p className="text-sm text-zinc-600">{t("noPlans")}</p>
+            </Card>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {plans.map((plan) => (
+                <div key={plan.id} className="card card-hover flex flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-base font-bold text-zinc-900">{plan.name}</h3>
+                    <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
+                      {tCommon("sessions", { count: plan.sessionsIncluded })}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-600">{plan.description}</p>
+                  <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
+                  <p className="text-xs text-zinc-500">
+                    {t("perSession", {
+                      price: formatPrice(Math.round(plan.priceCents / Math.max(plan.sessionsIncluded, 1)), locale),
+                    })}
                   </p>
-                ) : null}
 
-                <div className="mt-5 flex flex-col gap-2">
-                  <form action={subscribeAction}>
-                    <input type="hidden" name="planId" value={plan.id} />
-                    <button className="btn btn-primary w-full" type="submit">
-                      {t("choose", { price: formatPrice(plan.priceCents, locale) })}
-                    </button>
-                  </form>
-                  <p className="text-center text-[11px] text-zinc-500">{t("securePayment")}</p>
+                  <ul className="mt-4 space-y-1.5 text-sm text-zinc-700">
+                    <li>📍 {plan.address ?? address}</li>
+                    <li>🕒 {plan.scheduleText ?? activity.scheduleText}</li>
+                    <li>{t("validity", { days: tCommon("days", { count: plan.validityDays }) })}</li>
+                    <li>{t("included", { count: plan.sessionsIncluded })}</li>
+                  </ul>
+                  {plan.extraInfo ? (
+                    <p className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+                      ℹ️ {plan.extraInfo}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-5 flex flex-col gap-2">
+                    <form action={subscribeAction}>
+                      <input type="hidden" name="planId" value={plan.id} />
+                      <button className="btn btn-primary w-full" type="submit">
+                        {t("choose", { price: formatPrice(plan.priceCents, locale) })}
+                      </button>
+                    </form>
+                    <p className="text-center text-[11px] text-zinc-500">{t("securePayment")}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>
