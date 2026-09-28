@@ -98,7 +98,7 @@ export default async function AdminSessionsPage({
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
@@ -159,7 +159,7 @@ export default async function AdminSessionsPage({
         <FilterDate name="au" label={t("filterTo")} defaultValue={au} />
       </FilterBar>
 
-      <p className="text-sm text-zinc-400">{t("resultCount", { count: rows.length })}</p>
+      <p className="text-sm text-zinc-600">{t("resultCount", { count: rows.length })}</p>
 
       <div className="card scroll-x">
         <table className="data">
@@ -184,25 +184,25 @@ export default async function AdminSessionsPage({
               return (
                 <tr key={session.id}>
                   <td className="whitespace-nowrap">
-                    <span className={past ? "text-zinc-400" : "text-emerald-300"}>
+                    <span className={past ? "text-zinc-600" : "text-emerald-700"}>
                       {past ? "⚪" : "🟢"} {formatDate(session.startsAt, locale)}
                     </span>
                     <span className="block text-xs text-zinc-500">{formatTime(session.startsAt, locale)}</span>
                   </td>
                   <td>
-                    <Link href={`/admin/activites/${row.activity.id}`} className="text-zinc-200 hover:text-amber-300">
+                    <Link href={`/admin/activites/${row.activity.id}`} className="text-zinc-800 hover:text-gold-dark">
                       {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
                     </Link>
                     <span className="block text-xs text-zinc-500">{localize(row.category, locale, CATEGORY_TRANSLATABLE).name}</span>
                   </td>
-                  <td className="text-zinc-400">{session.title ?? tCommon("none")}</td>
-                  <td className="text-zinc-400">{session.location ?? tCommon("none")}</td>
-                  <td className="whitespace-nowrap text-zinc-400">{formatDuration(session.durationMinutes, locale)}</td>
-                  <td className="font-semibold text-white">{row.total}</td>
+                  <td className="text-zinc-600">{session.title ?? tCommon("none")}</td>
+                  <td className="text-zinc-600">{session.location ?? tCommon("none")}</td>
+                  <td className="whitespace-nowrap text-zinc-600">{formatDuration(session.durationMinutes, locale)}</td>
+                  <td className="font-semibold text-zinc-900">{row.total}</td>
                   <td className="whitespace-nowrap" dir="ltr">
-                    <span className="text-emerald-300">{row.confirmed}</span> /{" "}
-                    <span className="text-amber-300">{Math.max(row.total - row.confirmed - row.declined, 0)}</span> /{" "}
-                    <span className="text-rose-300">{row.declined}</span>
+                    <span className="text-emerald-700">{row.confirmed}</span> /{" "}
+                    <span className="text-gold-dark">{Math.max(row.total - row.confirmed - row.declined, 0)}</span> /{" "}
+                    <span className="text-rose-700">{row.declined}</span>
                   </td>
                   <td>
                     <span className={`badge ${SESSION_STATUS_STYLES[status]}`}>{tStatus(`session.${status}`)}</span>
@@ -227,7 +227,7 @@ export default async function AdminSessionsPage({
       </div>
 
       <Card>
-        <p className="text-sm text-zinc-400">{t("tip")}</p>
+        <p className="text-sm text-zinc-600">{t("tip")}</p>
       </Card>
     </div>
   );

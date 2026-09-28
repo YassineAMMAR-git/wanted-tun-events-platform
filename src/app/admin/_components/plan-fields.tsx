@@ -55,7 +55,7 @@ export function PlanFields({ plan, defaults }: Props) {
       </div>
       <div>
         <label className="label">{t("active")}</label>
-        <label className="flex items-center gap-2 text-sm text-zinc-300">
+        <label className="flex items-center gap-2 text-sm text-zinc-700">
           <input type="checkbox" name="isActive" defaultChecked={plan?.isActive ?? true} className="h-4 w-4" />
           {t("visible")}
         </label>

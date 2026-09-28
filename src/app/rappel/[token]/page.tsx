@@ -42,8 +42,8 @@ export default async function ReminderPage({
     return (
       <div className="mx-auto max-w-lg">
         <Card>
-          <h1 className="text-2xl font-bold text-white">{t("invalidTitle")}</h1>
-          <p className="mt-2 text-sm text-zinc-400">{t("invalidText")}</p>
+          <h1 className="text-2xl font-bold text-zinc-900">{t("invalidTitle")}</h1>
+          <p className="mt-2 text-sm text-zinc-600">{t("invalidText")}</p>
         </Card>
       </div>
     );
@@ -60,61 +60,61 @@ export default async function ReminderPage({
     <div className="mx-auto max-w-xl space-y-5">
       <div className="text-center">
         <p className="eyebrow">{t("eyebrow")}</p>
-        <h1 className="mt-2 text-3xl font-black text-white">{activity.name}</h1>
+        <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{activity.name}</h1>
       </div>
 
       {fait === "confirme" ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {t("confirmed")}
         </div>
       ) : null}
       {fait === "absent" ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {t("declined")}
         </div>
       ) : null}
       {erreur ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
           {t("error")}
         </div>
       ) : null}
 
       <Card>
         <div className="flex items-center justify-between gap-3">
-          <span className="badge border-white/12 bg-white/5">{session.title ?? t("session")}</span>
+          <span className="badge border-zinc-300 bg-zinc-50">{session.title ?? t("session")}</span>
           <span className={`badge ${ATTENDANCE_STATUS[status].className}`}>
             {ATTENDANCE_STATUS[status].dot} {tStatus(`attendance.${status}`)}
           </span>
         </div>
         <dl className="mt-4 space-y-3 text-sm">
-          <div className="flex justify-between gap-4 border-b border-white/6 pb-2">
+          <div className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
             <dt className="text-zinc-500">{t("date")}</dt>
-            <dd className="font-semibold text-zinc-100">{formatDate(session.startsAt, locale)}</dd>
+            <dd className="font-semibold text-zinc-900">{formatDate(session.startsAt, locale)}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-white/6 pb-2">
+          <div className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
             <dt className="text-zinc-500">{t("time")}</dt>
-            <dd className="font-semibold text-zinc-100">
+            <dd className="font-semibold text-zinc-900">
               {formatTime(session.startsAt, locale)} · {formatDuration(session.durationMinutes, locale)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-white/6 pb-2">
+          <div className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
             <dt className="text-zinc-500">{t("place")}</dt>
-            <dd className="text-end font-semibold text-zinc-100">{session.location ?? activity.address}</dd>
+            <dd className="text-end font-semibold text-zinc-900">{session.location ?? activity.address}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-zinc-500">{t("activity")}</dt>
-            <dd className="text-end font-semibold text-zinc-100">{activity.name}</dd>
+            <dd className="text-end font-semibold text-zinc-900">{activity.name}</dd>
           </div>
         </dl>
 
         {cancelled ? (
-          <p className="mt-5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
+          <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             {session.status === "cancelled" ? t("cancelled") : t("postponed")}
           </p>
         ) : past ? (
-          <p className="mt-5 rounded-xl border border-white/10 bg-white/3 p-3 text-sm text-zinc-300">{t("past")}</p>
+          <p className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">{t("past")}</p>
         ) : (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <form
               action={async () => {
                 "use server";

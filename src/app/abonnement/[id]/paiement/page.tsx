@@ -49,21 +49,21 @@ export default async function PaymentPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <nav className="text-sm text-zinc-500">
-        <Link href={`/activites/${activity.slug}`} className="hover:text-amber-300">
+        <Link href={`/activites/${activity.slug}`} className="hover:text-gold-dark">
           {activity.name}
         </Link>
         <span className="px-2">/</span>
-        <span className="text-zinc-300">{t("breadcrumb")}</span>
+        <span className="text-zinc-700">{t("breadcrumb")}</span>
       </nav>
 
       <div className="text-center">
         <p className="eyebrow">{t("step")}</p>
-        <h1 className="mt-2 text-3xl font-black text-white">{t("title")}</h1>
-        <p className="mt-2 text-sm text-zinc-400">{t("intro")}</p>
+        <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{t("title")}</h1>
+        <p className="mt-2 text-sm text-zinc-600">{t("intro")}</p>
       </div>
 
       {declare ? (
-        <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {t("declaredFlash")}
         </div>
       ) : null}
@@ -72,16 +72,16 @@ export default async function PaymentPage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs tracking-wider text-zinc-500 uppercase">{t("selectedPlan")}</p>
-            <h2 className="mt-1 text-xl font-bold text-white">{plan.name}</h2>
-            <p className="text-sm text-zinc-400">{activity.name}</p>
+            <h2 className="mt-1 text-xl font-bold text-zinc-900">{plan.name}</h2>
+            <p className="text-sm text-zinc-600">{activity.name}</p>
           </div>
           <div className="text-end">
             <p className="text-xs tracking-wider text-zinc-500 uppercase">{t("price")}</p>
-            <p className="text-3xl font-black text-amber-300">{price}</p>
+            <p className="text-2xl font-black text-gold-dark">{price}</p>
           </div>
         </div>
 
-        <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2">
           {[
             [t("sessionsIncluded"), String(plan.sessionsIncluded)],
             [t("validity"), tCommon("days", { count: plan.validityDays })],
@@ -90,39 +90,39 @@ export default async function PaymentPage({
             [t("start"), formatDate(subscription.startsAt, locale)],
             [t("end"), formatDate(subscription.endsAt, locale)],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-xl border border-white/8 bg-white/3 p-3">
+            <div key={label} className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
               <dt className="text-xs tracking-wider text-zinc-500 uppercase">{label}</dt>
-              <dd className="mt-1 text-sm font-medium text-zinc-200">{value}</dd>
+              <dd className="mt-1 text-sm font-medium text-zinc-800">{value}</dd>
             </div>
           ))}
         </dl>
 
         {plan.extraInfo ? (
-          <p className="mt-4 rounded-xl border border-white/8 bg-white/3 p-3 text-xs text-zinc-400">ℹ️ {plan.extraInfo}</p>
+          <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
         ) : null}
 
-        <div className="mt-6 rounded-xl border border-amber-300/25 bg-amber-300/8 p-4">
-          <p className="text-sm font-semibold text-amber-200">{t("externalLink")}</p>
-          <p className="mt-1 text-xs break-all text-zinc-400" dir="ltr">
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-gold-dark">{t("externalLink")}</p>
+          <p className="mt-1 text-xs break-all text-zinc-600" dir="ltr">
             {plan.paymentUrl ?? t("notConfigured")}
           </p>
         </div>
 
         {alreadyPaid ? (
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Link href="/espace-personnel" className="btn btn-primary flex-1">
               {t("seeSessions")}
             </Link>
             <span className="btn btn-ghost flex-1">{t("alreadyActive")}</span>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
+          <div className="mt-5 space-y-3">
             {awaitingCheck ? (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                <p className="text-sm font-semibold text-amber-200">{t("awaitingTitle")}</p>
-                <p className="mt-1 text-xs text-zinc-300">{t("awaitingText")}</p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-gold-dark">{t("awaitingTitle")}</p>
+                <p className="mt-1 text-xs text-zinc-700">{t("awaitingText")}</p>
                 {subscription.paymentReference ? (
-                  <p className="mt-2 text-xs text-zinc-400">
+                  <p className="mt-2 text-xs text-zinc-600">
                     {t("reference")} : <span dir="ltr">{subscription.paymentReference}</span>
                   </p>
                 ) : null}
@@ -134,7 +134,7 @@ export default async function PaymentPage({
             </a>
 
             {awaitingCheck ? null : (
-              <form action={declarePaymentAction} className="card border-amber-300/20 p-4">
+              <form action={declarePaymentAction} className="card border-amber-200 p-4">
                 <input type="hidden" name="subscriptionId" value={subscription.id} />
                 <label className="label" htmlFor="reference">
                   {t("reference")}

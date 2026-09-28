@@ -42,18 +42,18 @@ export default async function AdminNotificationsPage({
   const typeLabel = (type: string) => (isKnownType(type) ? t(`types.${type}`) : type);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
       <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-bold text-white">{t("engineTitle")}</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-base font-bold text-zinc-900">{t("engineTitle")}</h2>
+          <p className="mt-1 text-sm text-zinc-600">
             {t.rich("engineText", {
               endpoint: (chunks) => (
-                <code dir="ltr" className="rounded bg-black/40 px-1.5 py-0.5 text-xs text-amber-200">
+                <code dir="ltr" className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-gold-dark">
                   {chunks}
                 </code>
               ),
@@ -90,9 +90,9 @@ export default async function AdminNotificationsPage({
             <Card key={rule.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-white">{rule.label}</p>
-                  <p className="mt-1 text-xs text-zinc-400">{rule.description}</p>
-                  <span className="badge mt-2 border-white/12 bg-white/5">
+                  <p className="text-sm font-bold text-zinc-900">{rule.label}</p>
+                  <p className="mt-1 text-xs text-zinc-600">{rule.description}</p>
+                  <span className="badge mt-2 border-zinc-300 bg-zinc-50">
                     {typeLabel(rule.type)} · {rule.channel}
                     {rule.offsetHours > 0 ? t("offset", { days: Math.round(rule.offsetHours / 24) }) : t("immediate")}
                   </span>
@@ -153,14 +153,14 @@ export default async function AdminNotificationsPage({
                 const status = toNotificationStatus(row.notification.status);
                 return (
                   <tr key={row.notification.id}>
-                    <td className="whitespace-nowrap text-zinc-400">
+                    <td className="whitespace-nowrap text-zinc-600">
                       {formatDate(row.notification.createdAt, locale)}
                       <span className="block text-xs">{formatTime(row.notification.createdAt, locale)}</span>
                     </td>
                     <td>
-                      <span className="badge border-white/12 bg-white/5">{typeLabel(row.notification.type)}</span>
+                      <span className="badge border-zinc-300 bg-zinc-50">{typeLabel(row.notification.type)}</span>
                     </td>
-                    <td className="text-zinc-300">
+                    <td className="text-zinc-700">
                       <span dir="ltr">{row.notification.recipient}</span>
                       {row.userName ? (
                         <span className="block text-xs text-zinc-500">
@@ -168,15 +168,15 @@ export default async function AdminNotificationsPage({
                         </span>
                       ) : null}
                     </td>
-                    <td className="max-w-[16rem] text-zinc-300">{row.notification.subject}</td>
+                    <td className="max-w-[16rem] text-zinc-700">{row.notification.subject}</td>
                     <td>
                       <span
                         className={`badge ${
                           status === "failed"
-                            ? "border-rose-400/30 bg-rose-400/10 text-rose-300"
+                            ? "border-rose-200 bg-rose-50 text-rose-700"
                             : status === "sent"
-                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                              : "border-amber-400/30 bg-amber-400/10 text-amber-200"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-amber-200 bg-amber-50 text-gold-dark"
                         }`}
                         title={row.notification.error ?? undefined}
                       >
@@ -202,7 +202,7 @@ export default async function AdminNotificationsPage({
       </section>
 
       <Card>
-        <h2 className="text-base font-bold text-white">{t("legend")}</h2>
+        <h2 className="text-base font-bold text-zinc-900">{t("legend")}</h2>
         <ul className="mt-3 flex flex-wrap gap-3 text-sm">
           {ATTENDANCE_STATUSES.map((key) => (
             <li key={key} className={`badge ${ATTENDANCE_STATUS[key].className}`}>

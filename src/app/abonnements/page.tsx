@@ -25,7 +25,7 @@ export default async function PlansPage({
   const filtered = Boolean(search || params.categorie || params.tri);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
       <FilterBar action="/abonnements" active={filtered} submitLabel={tCommon("filter")} resetLabel={tCommon("reset")}>
@@ -60,19 +60,19 @@ export default async function PlansPage({
           {rows.map(({ plan, activity, categoryName, categoryEmoji }) => (
             <div key={plan.id} className="card card-hover flex flex-col p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="badge border-white/12 bg-white/5">
+                <span className="badge border-zinc-300 bg-zinc-50">
                   {categoryEmoji} {categoryName}
                 </span>
-                <span className="badge border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
+                <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
                   {tCommon("sessions", { count: plan.sessionsIncluded })}
                 </span>
               </div>
-              <h3 className="mt-3 text-base font-bold text-white">{plan.name}</h3>
-              <Link href={`/activites/${activity.slug}`} className="mt-1 text-sm text-amber-300 hover:underline">
+              <h3 className="mt-3 text-base font-bold text-zinc-900">{plan.name}</h3>
+              <Link href={`/activites/${activity.slug}`} className="mt-1 text-sm text-gold-dark hover:underline">
                 {activity.name}
               </Link>
-              <p className="mt-4 text-3xl font-black text-amber-300">{formatPrice(plan.priceCents, locale)}</p>
-              <dl className="mt-4 space-y-1.5 text-sm text-zinc-300">
+              <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
+              <dl className="mt-4 space-y-1.5 text-sm text-zinc-700">
                 <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">{t("validity")}</dt>
                   <dd>{tCommon("days", { count: plan.validityDays })}</dd>

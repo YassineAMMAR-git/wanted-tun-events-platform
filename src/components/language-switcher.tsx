@@ -12,7 +12,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
       <div
         role="group"
         aria-label={t("label")}
-        className="inline-flex items-center gap-0.5 rounded-full border border-white/12 bg-white/4 p-0.5"
+        className="inline-flex items-center gap-0.5 rounded-full border border-zinc-300 bg-zinc-50 p-0.5"
       >
         <span aria-hidden className="px-1.5 text-sm">
           🌐
@@ -29,7 +29,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
               aria-pressed={active}
               title={t("switchTo", { language: localeNames[locale].native })}
               className={`rounded-full px-2.5 py-1 text-xs font-bold transition ${
-                active ? "bg-amber-300 text-[#1a1305]" : "text-zinc-300 hover:bg-white/8 hover:text-white"
+                active ? "bg-gold text-white" : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
               }`}
             >
               {localeNames[locale].short}

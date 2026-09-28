@@ -15,9 +15,9 @@ export function ResendVerificationForm({ email }: { email?: string }) {
   const errors = state.fieldErrors ?? {};
 
   return (
-    <div className="rounded-xl border border-amber-300/25 bg-amber-300/5 p-4">
-      <p className="text-sm font-semibold text-amber-200">{t("resend.title")}</p>
-      <p className="mt-1 text-xs text-zinc-400">{t("resend.text")}</p>
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-gold-dark">{t("resend.title")}</p>
+      <p className="mt-1 text-xs text-zinc-600">{t("resend.text")}</p>
       <form action={formAction} className="mt-3 flex flex-col gap-2 sm:flex-row">
         <div className="flex-1">
           <label className="sr-only" htmlFor="resend-email">

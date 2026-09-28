@@ -18,15 +18,15 @@ export default async function RegisterPage() {
     <div className="mx-auto max-w-xl space-y-5">
       <div className="text-center">
         <p className="eyebrow">{t("eyebrow")}</p>
-        <h1 className="mt-2 text-3xl font-black text-white">{t("title")}</h1>
-        <p className="mt-2 text-sm text-zinc-400">{t("intro")}</p>
+        <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{t("title")}</h1>
+        <p className="mt-2 text-sm text-zinc-600">{t("intro")}</p>
       </div>
 
       <Card>
         <RegisterForm />
-        <p className="mt-4 text-center text-sm text-zinc-400">
+        <p className="mt-4 text-center text-sm text-zinc-600">
           {t("already")}{" "}
-          <Link href="/connexion" className="font-semibold text-amber-300 hover:underline">
+          <Link href="/connexion" className="font-semibold text-gold-dark hover:underline">
             {t("login")}
           </Link>
         </p>

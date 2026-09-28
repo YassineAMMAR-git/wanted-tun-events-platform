@@ -42,7 +42,7 @@ export function TranslationFields({ fields, values = {}, translations, gridClass
     fields.some((field) => (values[field.name] ?? "").trim() !== "" && !translations?.[locale]?.[field.name]?.trim());
 
   return (
-    <div className="rounded-xl border border-white/8 bg-white/2 p-3">
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
       <div role="tablist" aria-label={t("tabsLabel")} className="mb-3 flex flex-wrap gap-1.5">
         {TAB_LOCALES.map((locale) => (
           <button

@@ -40,7 +40,7 @@ export default async function AdminClientsPage({
   ).toString().replace(/^(.)/, "?$1")}`;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
@@ -102,7 +102,7 @@ export default async function AdminClientsPage({
       </FilterBar>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-zinc-400">{t("resultCount", { count: clients.length })}</p>
+        <p className="text-sm text-zinc-600">{t("resultCount", { count: clients.length })}</p>
         <a className="btn btn-ghost sm:w-auto" href={exportHref} download>
           {t("exportExcel")}
         </a>
@@ -125,12 +125,12 @@ export default async function AdminClientsPage({
             {clients.map((row) => (
               <tr key={row.user.id}>
                 <td>
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-zinc-900">
                     {row.user.firstName} {row.user.lastName}
                   </span>
                   {row.user.city ? <span className="block text-xs text-zinc-500">{row.user.city}</span> : null}
                 </td>
-                <td className="text-zinc-400">
+                <td className="text-zinc-600">
                   <span dir="ltr">{row.user.email}</span>
                   {row.user.phone ? (
                     <span className="block text-xs" dir="ltr">
@@ -139,16 +139,16 @@ export default async function AdminClientsPage({
                   ) : null}
                 </td>
                 <td>
-                  <span className={`badge ${row.user.role === "admin" ? "border-violet-400/30 bg-violet-400/10 text-violet-200" : ""}`}>
+                  <span className={`badge ${row.user.role === "admin" ? "border-violet-200 bg-violet-50 text-violet-700" : ""}`}>
                     {tStatus(`role.${row.user.role}`)}
                   </span>
                 </td>
                 <td>
-                  <span className="text-zinc-200">{row.subscriptions}</span>
-                  <span className="ms-1 text-xs text-emerald-300">{t("activeCount", { count: row.active })}</span>
+                  <span className="text-zinc-800">{row.subscriptions}</span>
+                  <span className="ms-1 text-xs text-emerald-700">{t("activeCount", { count: row.active })}</span>
                 </td>
-                <td className="text-zinc-300">{row.attendances}</td>
-                <td className="whitespace-nowrap text-zinc-400">{formatDate(row.user.createdAt, locale)}</td>
+                <td className="text-zinc-700">{row.attendances}</td>
+                <td className="whitespace-nowrap text-zinc-600">{formatDate(row.user.createdAt, locale)}</td>
                 <td>
                   <div className="flex gap-2">
                     <Link href={`/admin/clients/${row.user.id}`} className="btn btn-ghost btn-sm">
