@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, attendances, plans, subscriptions } from "@/db/schema";
+import { activities, attendances, categories, plans, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
+import { offersMemberships } from "@/lib/memberships";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -16,16 +17,21 @@ export async function subscribeAction(formData: FormData): Promise<void> {
   const planId = Number(formData.get("planId") ?? 0);
   if (!planId) redirect("/activites");
 
-  const plan = (await db.select().from(plans).where(eq(plans.id, planId)).limit(1))[0];
-  if (!plan) redirect("/activites");
+  const row = (
+    await db
+      .select({ plan: plans, activitySlug: activities.slug, categorySlug: categories.slug })
+      .from(plans)
+      .innerJoin(activities, eq(activities.id, plans.activityId))
+      .innerJoin(categories, eq(categories.id, activities.categoryId))
+      .where(eq(plans.id, planId))
+      .limit(1)
+  )[0];
+  // Offre désactivée, ou ancienne offre d'une catégorie sans abonnement : plus en vente.
+  if (!row || !row.plan.isActive || !offersMemberships(row.categorySlug)) redirect("/abonnements");
+  const { plan } = row;
 
   if (!user) {
-    redirect(
-      `/connexion?erreur=loginToSubscribe&next=/activites/${
-        (await db.select({ slug: activities.slug }).from(activities).where(eq(activities.id, plan.activityId)).limit(1))[0]
-          ?.slug ?? ""
-      }`,
-    );
+    redirect(`/connexion?erreur=loginToSubscribe&next=/activites/${row.activitySlug}`);
   }
 
   const startsAt = new Date();

@@ -20,6 +20,7 @@ import {
 } from "@/db/schema";
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
+import { MEMBERSHIP_CATEGORY_SLUG, offersMemberships } from "@/lib/memberships";
 
 /*
  * Requêtes des pages publiques et de l'espace personnel : le contenu est renvoyé dans la langue demandée
@@ -116,8 +117,12 @@ export async function listActivities(
 
   const normalized = rows.map(({ activity, category, ...rest }) => {
     const localizedCategory = localize(category, locale, CATEGORY_TRANSLATABLE);
+    // Hors club de chant, d'anciennes offres peuvent subsister en base : elles ne sont plus proposées.
+    const memberships = offersMemberships(category.slug);
     return {
       ...rest,
+      planCount: memberships ? rest.planCount : 0,
+      minPrice: memberships ? rest.minPrice : null,
       activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
       categoryName: localizedCategory.name,
       categorySlug: category.slug,
@@ -156,12 +161,15 @@ export async function getActivityDetail(slug: string, locale: Locale) {
   )[0];
   if (!row) return null;
 
+  const memberships = offersMemberships(row.category.slug);
   const [plansList, upcoming, past] = await Promise.all([
-    db
-      .select()
-      .from(plans)
-      .where(and(eq(plans.activityId, row.activity.id), eq(plans.isActive, true)))
-      .orderBy(asc(plans.priceCents)),
+    memberships
+      ? db
+          .select()
+          .from(plans)
+          .where(and(eq(plans.activityId, row.activity.id), eq(plans.isActive, true)))
+          .orderBy(asc(plans.priceCents))
+      : [],
     db
       .select()
       .from(sessions)
@@ -193,27 +201,23 @@ export async function getActivityDetail(slug: string, locale: Locale) {
     categoryName: localize(row.category, locale, CATEGORY_TRANSLATABLE).name,
     categorySlug: row.category.slug,
     categoryEmoji: row.category.emoji,
+    offersMemberships: memberships,
     plans: plansList.map((plan) => localize(plan, locale, PLAN_TRANSLATABLE)),
     upcoming: upcoming.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
     past: past.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
   };
 }
 
-export async function listActivePlans(
-  locale: Locale,
-  options: { search?: string; categorySlug?: string; sort?: string } = {},
-) {
-  const filters: SQL[] = [eq(plans.isActive, true)];
-  if (options.categorySlug) filters.push(eq(categories.slug, options.categorySlug));
+/** Formules du club de chant (seule catégorie à proposer des abonnements). */
+export async function listActivePlans(locale: Locale, options: { search?: string; sort?: string } = {}) {
+  const filters: SQL[] = [eq(plans.isActive, true), eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG)];
   if (options.search) {
-    // La catégorie est incluse : chercher « Coran » doit remonter ses offres,
-    // même si le mot n'apparaît dans aucun nom d'offre ni d'activité.
     const like = `%${options.search}%`;
-    filters.push(or(ilike(plans.name, like), ilike(activities.name, like), ilike(categories.name, like))!);
+    filters.push(or(ilike(plans.name, like), ilike(activities.name, like))!);
   }
 
   const rows = await db
-    .select({ plan: plans, activity: activities, category: categories })
+    .select({ plan: plans, activity: activities })
     .from(plans)
     .innerJoin(activities, eq(activities.id, plans.activityId))
     .innerJoin(categories, eq(categories.id, activities.categoryId))
@@ -229,8 +233,6 @@ export async function listActivePlans(
   return rows.map((row) => ({
     plan: localize(row.plan, locale, PLAN_TRANSLATABLE),
     activity: localize(row.activity, locale, ACTIVITY_TRANSLATABLE),
-    categoryName: localize(row.category, locale, CATEGORY_TRANSLATABLE).name,
-    categoryEmoji: row.category.emoji,
   }));
 }
 

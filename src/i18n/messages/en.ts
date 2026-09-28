@@ -55,7 +55,7 @@ const en: Messages = {
     tagline: "Classes, workshops, events and memberships in France. Book, take part and track your progress.",
     platform: "Platform",
     allActivities: "All activities",
-    plans: "Membership plans",
+    plans: "Singing club memberships",
     mySpace: "My personal space",
     contact: "Contact",
     city: "Paris, France",
@@ -95,7 +95,7 @@ const en: Messages = {
     steps: {
       account: { title: "Create your account", text: "Your details, memberships and sessions in one place." },
       activity: { title: "Choose an activity", text: "Concerts, singing club, camping, Ramadan evenings, Quran…" },
-      plan: { title: "Pick a plan", text: "Price, number of sessions included and validity period shown upfront." },
+      plan: { title: "Singing club: pick a plan", text: "Price, number of sessions included and validity period shown upfront." },
       pay: { title: "Pay with the secure link", text: "Payment through an external link set up for each plan." },
       follow: { title: "Track your sessions", text: "🟢 upcoming session, ⚪ completed session: your progress at a glance." },
       confirm: { title: "Confirm your attendance", text: "An automatic reminder 48 hours before each session, with one-click confirmation." },
@@ -103,7 +103,7 @@ const en: Messages = {
     ctaTitle: "Ready to join the next session?",
     ctaText:
       "Create your account in under a minute. You’ll automatically receive a reminder email 48 hours before each of your sessions, with a button to confirm your attendance.",
-    ctaOffers: "See the plans",
+    ctaOffers: "See activities",
     carousel: {
       label: "About WANTED TUN EVENTS",
       slideOf: "Slide {current} of {total}",
@@ -120,10 +120,10 @@ const en: Messages = {
           cta: "Explore activities",
         },
         plans: {
-          eyebrow: "Memberships",
-          title: "A plan for every pace",
-          text: "Price, number of sessions and validity shown upfront. Pay online with a secure link.",
-          cta: "See the plans",
+          eyebrow: "Singing club",
+          title: "Join the choir all year round",
+          text: "The singing club meets every week: choose the plan that suits you and pay online with a secure link.",
+          cta: "See memberships",
         },
         reminders: {
           eyebrow: "Automatic reminders",
@@ -133,6 +133,7 @@ const en: Messages = {
         },
       },
     },
+    membershipsBadge: "Memberships available",
   },
 
   activities: {
@@ -159,6 +160,9 @@ const en: Messages = {
     next: "🟢 Next",
     planCount: "{count, plural, =0 {No membership plans} one {# membership plan} other {# membership plans}}",
     view: "View activity",
+    membershipsTitle: "Singing club memberships",
+    membershipsText: "Take part all year round with a multi-session plan.",
+    membershipsCta: "See the plans",
   },
 
   activity: {
@@ -190,22 +194,21 @@ const en: Messages = {
   },
 
   plansPage: {
-    searchPlaceholder: "Plan name or activity",
-    filterCategory: "Category",
-    sortDefault: "Category",
+    searchPlaceholder: "Plan name",
+    sortDefault: "Default",
     sortPriceAsc: "Price, lowest first",
     sortPriceDesc: "Price, highest first",
     sortSessions: "Sessions included",
     eyebrow: "Memberships",
-    title: "All membership plans",
-    subtitle:
-      "Each plan shows its price, the number of sessions included and its validity period. Payment is made through a secure external link.",
+    title: "Singing club memberships",
+    subtitle: "The singing club is our regular activity: each plan shows its price, the number of sessions included and its validity period. Payment is made through a secure external link.",
     empty: "No plans available at the moment",
     validity: "Validity",
     schedule: "Schedule",
     durationPerSession: "Length / session",
     location: "Place",
     subscribe: "Subscribe & pay",
+    seeClub: "See the club’s activities",
   },
 
   payment: {
@@ -594,6 +597,8 @@ const en: Messages = {
       plansSubtitle: "Price, sessions included, validity period and external payment link.",
       noPlans: "No plans for this activity.",
       addPlan: "Add a plan",
+      plansClubOnly: "Memberships are reserved for the singing club. This activity is a one-off event: no plan can be attached to it.",
+      plansLegacy: "{count, plural, one {# old plan is still stored (hidden from the public): manage it} other {# old plans are still stored (hidden from the public): manage them}}",
     },
     planForm: {
       name: "Plan name",
@@ -672,16 +677,15 @@ const en: Messages = {
       searchPlaceholder: "Plan name or activity",
       filterActivity: "Activity",
       filterState: "State",
-      sortDefault: "Category then price",
+      sortDefault: "Default",
       sortPriceAsc: "Price, lowest first",
       sortPriceDesc: "Price, highest first",
       sortSold: "Most subscribed",
       sortName: "Name (A → Z)",
       resultCount: "{count, plural, =0 {No plan} one {# plan} other {# plans}}",
-      eyebrow: "Membership management",
-      title: "Membership plans & payment links",
-      subtitle:
-        "Create a plan and set its price, sessions included, validity period and external payment link. Enable or disable a plan at any time.",
+      eyebrow: "Singing club",
+      title: "Singing club memberships",
+      subtitle: "Only the singing club offers memberships. Create plans, set price, included sessions, validity and payment link, and switch them on or off at any time.",
       statConfigured: "Plans set up",
       statConfiguredHint: "{count, plural, =0 {none active} one {# active} other {# active}}",
       statWithLink: "Plans with a payment link",
@@ -690,7 +694,12 @@ const en: Messages = {
       deactivate: "Disable",
       activate: "Enable",
       newEyebrow: "New plan",
-      newTitle: "Create a membership plan",
+      newTitle: "Create a singing club plan",
+      legacyEyebrow: "Other categories",
+      legacyTitle: "Old plans outside the singing club",
+      legacySubtitle: "These plans are no longer shown to the public and cannot be bought. Memberships already taken remain valid. You can deactivate or delete them.",
+      legacyHidden: "Hidden from public",
+      noClubActivity: "No activity belongs to the “Singing club” category: create one before adding a plan.",
     },
     notifications: {
       eyebrow: "Automatic notifications",
@@ -904,6 +913,7 @@ const en: Messages = {
       subscriptionUpdated: "Membership updated.",
       ruleUpdated: "Rule updated.",
       remindersRun: "D-2 reminders sent.",
+      planClubOnly: "Memberships are reserved for singing club activities.",
     },
   },
 

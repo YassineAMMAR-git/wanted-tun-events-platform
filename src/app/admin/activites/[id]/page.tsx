@@ -20,6 +20,7 @@ import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
+import { offersMemberships } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function AdminActivityDetail({
 
   const upcoming = sessionList.filter((s) => !isPast(s.startsAt) && s.status === "scheduled").length;
   const backTo = `/admin/activites/${activity.id}`;
+  const memberships = offersMemberships(categoryList.find((category) => category.id === activity.categoryId)?.slug);
 
   return (
     <div className="space-y-6">
@@ -347,37 +349,50 @@ export default async function AdminActivityDetail({
       {/* -------------------------------- offres -------------------------------- */}
       <section>
         <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
-        <div className="space-y-4">
-          {planList.map((plan) => (
-            <Card key={plan.id}>
-              <form action={updatePlanAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <input type="hidden" name="id" value={plan.id} />
+        {memberships ? (
+          <>
+            <div className="space-y-4">
+              {planList.map((plan) => (
+                <Card key={plan.id}>
+                  <form action={updatePlanAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <input type="hidden" name="id" value={plan.id} />
+                    <input type="hidden" name="redirectTo" value={backTo} />
+                    <PlanFields plan={plan} />
+                    <div className="sm:col-span-2 lg:col-span-4">
+                      <button className="btn btn-primary btn-sm" type="submit">
+                        {tPlan("save")}
+                      </button>
+                    </div>
+                  </form>
+                </Card>
+              ))}
+              {planList.length === 0 ? <p className="text-sm text-zinc-500">{t("noPlans")}</p> : null}
+            </div>
+
+            <Card className="mt-5">
+              <h3 className="text-base font-bold text-zinc-900">{t("addPlan")}</h3>
+              <form action={createPlanAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <input type="hidden" name="activityId" value={activity.id} />
                 <input type="hidden" name="redirectTo" value={backTo} />
-                <PlanFields plan={plan} />
+                <PlanFields defaults={{ address: activity.address, scheduleText: activity.scheduleText }} />
                 <div className="sm:col-span-2 lg:col-span-4">
-                  <button className="btn btn-primary btn-sm" type="submit">
-                    {tPlan("save")}
+                  <button className="btn btn-primary" type="submit">
+                    {tPlan("create")}
                   </button>
                 </div>
               </form>
             </Card>
-          ))}
-          {planList.length === 0 ? <p className="text-sm text-zinc-500">{t("noPlans")}</p> : null}
-        </div>
-
-        <Card className="mt-5">
-          <h3 className="text-base font-bold text-zinc-900">{t("addPlan")}</h3>
-          <form action={createPlanAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <input type="hidden" name="activityId" value={activity.id} />
-            <input type="hidden" name="redirectTo" value={backTo} />
-            <PlanFields defaults={{ address: activity.address, scheduleText: activity.scheduleText }} />
-            <div className="sm:col-span-2 lg:col-span-4">
-              <button className="btn btn-primary" type="submit">
-                {tPlan("create")}
-              </button>
-            </div>
-          </form>
-        </Card>
+          </>
+        ) : (
+          <Card className="border-amber-200 bg-gold-soft">
+            <p className="text-sm text-zinc-700">🎶 {t("plansClubOnly")}</p>
+            {planList.length > 0 ? (
+              <Link href="/admin/abonnements#anciennes-offres" className="mt-2 inline-block text-sm font-medium text-gold-dark hover:underline">
+                {t("plansLegacy", { count: planList.length })}
+              </Link>
+            ) : null}
+          </Card>
+        )}
       </section>
     </div>
   );

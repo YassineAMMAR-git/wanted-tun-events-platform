@@ -56,7 +56,7 @@ const fr = {
     tagline: "Cours, ateliers, événements et abonnements en France. Réservez, participez, suivez votre avancement.",
     platform: "Plateforme",
     allActivities: "Toutes les activités",
-    plans: "Formules d’abonnement",
+    plans: "Abonnements club de chant",
     mySpace: "Mon espace personnel",
     contact: "Contact",
     city: "Paris, France",
@@ -96,7 +96,7 @@ const fr = {
     steps: {
       account: { title: "Créez votre compte", text: "Vos informations, vos abonnements et vos séances au même endroit." },
       activity: { title: "Choisissez une activité", text: "Concerts, club de chant, campings, soirées ramadanesques, Coran…" },
-      plan: { title: "Sélectionnez une formule", text: "Prix, nombre de séances incluses et durée de validité affichés." },
+      plan: { title: "Club de chant : choisissez une formule", text: "Prix, nombre de séances incluses et durée de validité affichés." },
       pay: { title: "Payez via le lien sécurisé", text: "Paiement par lien externe configuré pour chaque offre." },
       follow: { title: "Suivez vos séances", text: "🟢 séance à venir, ⚪ séance réalisée : votre avancement en un coup d’œil." },
       confirm: { title: "Confirmez votre présence", text: "Un rappel automatique 48 h avant chaque séance, avec confirmation en 1 clic." },
@@ -104,7 +104,7 @@ const fr = {
     ctaTitle: "Prêt à rejoindre la prochaine séance ?",
     ctaText:
       "Créez votre compte en moins d’une minute. Vous recevrez automatiquement un e-mail de rappel 48 h avant chacune de vos séances, avec un bouton de confirmation de participation.",
-    ctaOffers: "Voir les offres",
+    ctaOffers: "Voir les activités",
     carousel: {
       label: "Présentation de WANTED TUN EVENTS",
       slideOf: "Diapositive {current} sur {total}",
@@ -121,10 +121,10 @@ const fr = {
           cta: "Découvrir les activités",
         },
         plans: {
-          eyebrow: "Abonnements",
-          title: "Une formule pour chaque rythme",
-          text: "Prix, nombre de séances et durée de validité affichés clairement. Paiement en ligne par lien sécurisé.",
-          cta: "Voir les offres",
+          eyebrow: "Club de chant",
+          title: "Rejoignez la chorale à l’année",
+          text: "Le club de chant se réunit chaque semaine : choisissez la formule qui vous convient et payez en ligne par lien sécurisé.",
+          cta: "Voir les abonnements",
         },
         reminders: {
           eyebrow: "Rappels automatiques",
@@ -134,6 +134,7 @@ const fr = {
         },
       },
     },
+    membershipsBadge: "Abonnements disponibles",
   },
 
   activities: {
@@ -161,6 +162,9 @@ const fr = {
     next: "🟢 Prochaine",
     planCount: "{count, plural, =0 {Aucune formule d’abonnement} one {# formule d’abonnement} other {# formules d’abonnement}}",
     view: "Voir l’activité",
+    membershipsTitle: "Abonnements au club de chant",
+    membershipsText: "Participez toute l’année avec une formule de plusieurs séances.",
+    membershipsCta: "Voir les formules",
   },
 
   activity: {
@@ -192,22 +196,21 @@ const fr = {
   },
 
   plansPage: {
-    searchPlaceholder: "Nom de l’offre ou activité",
-    filterCategory: "Catégorie",
-    sortDefault: "Catégorie",
+    searchPlaceholder: "Nom de la formule",
+    sortDefault: "Par défaut",
     sortPriceAsc: "Prix croissant",
     sortPriceDesc: "Prix décroissant",
     sortSessions: "Séances incluses",
     eyebrow: "Abonnements",
-    title: "Toutes les formules d’abonnement",
-    subtitle:
-      "Chaque offre indique son prix, le nombre de séances incluses et sa durée de validité. Le paiement se fait par lien externe sécurisé.",
+    title: "Abonnements au club de chant",
+    subtitle: "Le club de chant est notre activité régulière : chaque formule indique son prix, le nombre de séances incluses et sa durée de validité. Le paiement se fait par lien externe sécurisé.",
     empty: "Aucune offre disponible pour le moment",
     validity: "Validité",
     schedule: "Horaires",
     durationPerSession: "Durée / séance",
     location: "Lieu",
     subscribe: "Souscrire & payer",
+    seeClub: "Voir les activités du club",
   },
 
   payment: {
@@ -599,6 +602,8 @@ const fr = {
       plansSubtitle: "Prix, séances incluses, durée de validité et lien de paiement externe.",
       noPlans: "Aucune offre pour cette activité.",
       addPlan: "Ajouter une offre",
+      plansClubOnly: "Les abonnements sont réservés au club de chant. Cette activité est un événement ponctuel : aucune formule ne peut y être rattachée.",
+      plansLegacy: "{count, plural, one {# ancienne offre est encore enregistrée (masquée au public) : la gérer} other {# anciennes offres sont encore enregistrées (masquées au public) : les gérer}}",
     },
     planForm: {
       name: "Nom de l’offre",
@@ -677,16 +682,15 @@ const fr = {
       searchPlaceholder: "Nom de l’offre ou activité",
       filterActivity: "Activité",
       filterState: "État",
-      sortDefault: "Catégorie puis prix",
+      sortDefault: "Par défaut",
       sortPriceAsc: "Prix croissant",
       sortPriceDesc: "Prix décroissant",
       sortSold: "Les plus souscrites",
       sortName: "Nom (A → Z)",
       resultCount: "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
-      eyebrow: "Gestion des abonnements",
-      title: "Offres d’abonnement & liens de paiement",
-      subtitle:
-        "Créez une offre, définissez son prix, ses séances incluses, sa durée de validité et son lien de paiement externe. Activez ou désactivez une offre à tout moment.",
+      eyebrow: "Club de chant",
+      title: "Abonnements du club de chant",
+      subtitle: "Seul le club de chant propose des abonnements. Créez les formules, fixez prix, séances incluses, durée de validité et lien de paiement, et activez-les ou désactivez-les à tout moment.",
       statConfigured: "Offres configurées",
       statConfiguredHint: "{count, plural, =0 {aucune active} one {# active} other {# actives}}",
       statWithLink: "Offres avec lien de paiement",
@@ -695,7 +699,12 @@ const fr = {
       deactivate: "Désactiver",
       activate: "Activer",
       newEyebrow: "Nouvelle offre",
-      newTitle: "Créer une offre d’abonnement",
+      newTitle: "Créer une formule pour le club de chant",
+      legacyEyebrow: "Autres catégories",
+      legacyTitle: "Anciennes offres hors club de chant",
+      legacySubtitle: "Ces offres ne sont plus proposées au public ni achetables. Les abonnements déjà souscrits restent valables. Vous pouvez les désactiver ou les supprimer.",
+      legacyHidden: "Masquée au public",
+      noClubActivity: "Aucune activité n’est rattachée à la catégorie « Club de chant » : créez-en une avant d’ajouter une formule.",
     },
     notifications: {
       eyebrow: "Notifications automatiques",
@@ -911,6 +920,7 @@ const fr = {
       subscriptionUpdated: "Abonnement mis à jour.",
       ruleUpdated: "Règle mise à jour.",
       remindersRun: "Rappels J-2 exécutés.",
+      planClubOnly: "Les abonnements sont réservés aux activités du club de chant.",
     },
   },
 

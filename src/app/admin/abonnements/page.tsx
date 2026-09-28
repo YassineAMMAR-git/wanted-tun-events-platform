@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -18,6 +18,7 @@ import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
+import { MEMBERSHIP_CATEGORY_SLUG } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,8 @@ export default async function AdminPlansPage({
     getTranslations("admin.planForm"),
   ]);
   const search = q?.trim().slice(0, 100);
-  const conditions: SQL[] = [];
+  // Seules les offres du club de chant sont gérées ici ; les autres sont listées à part (anciennes offres).
+  const conditions: SQL[] = [eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG)];
   if (search) conditions.push(or(ilike(plans.name, `%${search}%`), ilike(activities.name, `%${search}%`))!);
   if (activite) conditions.push(eq(plans.activityId, Number(activite)));
   if (etat === "active") conditions.push(eq(plans.isActive, true));
@@ -51,7 +53,7 @@ export default async function AdminPlansPage({
 
   const filtered = Boolean(search || activite || etat || tri);
 
-  const [rows, activityList, sold] = await Promise.all([
+  const [rows, activityList, sold, legacy] = await Promise.all([
     db
       .select({
         plan: plans,
@@ -68,8 +70,21 @@ export default async function AdminPlansPage({
       .select({ activity: activities, category: categories })
       .from(activities)
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .orderBy(asc(categories.position), asc(activities.name)),
-    db.select({ count: sql<number>`count(*)::int` }).from(subscriptions).where(eq(subscriptions.status, "active")),
+      .where(eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG))
+      .orderBy(asc(activities.name)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(subscriptions)
+      .innerJoin(activities, eq(activities.id, subscriptions.activityId))
+      .innerJoin(categories, eq(categories.id, activities.categoryId))
+      .where(and(eq(subscriptions.status, "active"), eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG))),
+    db
+      .select({ plan: plans, activity: activities, category: categories, sold: soldCount })
+      .from(plans)
+      .innerJoin(activities, eq(activities.id, plans.activityId))
+      .innerJoin(categories, eq(categories.id, activities.categoryId))
+      .where(ne(categories.slug, MEMBERSHIP_CATEGORY_SLUG))
+      .orderBy(asc(categories.position), asc(activities.name), asc(plans.priceCents)),
   ]);
 
   return (
@@ -183,9 +198,57 @@ export default async function AdminPlansPage({
         })}
       </div>
 
+      {legacy.length > 0 ? (
+        <section id="anciennes-offres">
+          <SectionTitle eyebrow={t("legacyEyebrow")} title={t("legacyTitle")} subtitle={t("legacySubtitle")} />
+          <Card className="border-amber-200">
+            <ul className="divide-y divide-zinc-200">
+              {legacy.map((row) => (
+                <li key={row.plan.id} className="flex flex-wrap items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-zinc-900">
+                      {localize(row.plan, locale, PLAN_TRANSLATABLE).name}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500">
+                      {row.category.emoji} {localize(row.category, locale, CATEGORY_TRANSLATABLE).name} ·{" "}
+                      {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name} · {t("sold", { count: row.sold })}
+                    </p>
+                  </div>
+                  <span
+                    className={`badge ${
+                      row.plan.isActive
+                        ? "border-amber-200 bg-amber-50 text-gold-dark"
+                        : "border-zinc-200 bg-zinc-100 text-zinc-600"
+                    }`}
+                  >
+                    {row.plan.isActive ? t("legacyHidden") : tStatus("plan.inactive")}
+                  </span>
+                  {row.plan.isActive ? (
+                    <form action={togglePlanAction}>
+                      <input type="hidden" name="id" value={row.plan.id} />
+                      <input type="hidden" name="isActive" value="false" />
+                      <button className="btn btn-ghost btn-sm" type="submit">
+                        {t("deactivate")}
+                      </button>
+                    </form>
+                  ) : null}
+                  <form action={deletePlanAction}>
+                    <input type="hidden" name="id" value={row.plan.id} />
+                    <button className="btn btn-danger btn-sm" type="submit">
+                      {tCommon("delete")}
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
       <section>
         <SectionTitle eyebrow={t("newEyebrow")} title={t("newTitle")} />
         <Card>
+          {activityList.length === 0 ? <p className="mb-3 text-sm text-rose-700">⚠️ {t("noClubActivity")}</p> : null}
           <form action={createPlanAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <input type="hidden" name="redirectTo" value="/admin/abonnements" />
             <div className="sm:col-span-2 lg:col-span-4">
@@ -193,7 +256,6 @@ export default async function AdminPlansPage({
               <select name="activityId" required className="select">
                 {activityList.map((option) => (
                   <option key={option.activity.id} value={option.activity.id}>
-                    {localize(option.category, locale, CATEGORY_TRANSLATABLE).name} —{" "}
                     {localize(option.activity, locale, ACTIVITY_TRANSLATABLE).name}
                   </option>
                 ))}

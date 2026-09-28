@@ -4,6 +4,7 @@ import { ensureSeeded } from "@/lib/seed";
 import { getCategoriesWithCounts, listActivities } from "@/lib/queries";
 import { formatDate, formatDuration, formatPrice, formatTime } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
+import { MEMBERSHIP_CATEGORY_SLUG, offersMemberships } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -79,11 +80,23 @@ export default async function ActivitiesPage({
         ) : null}
       </form>
 
+      {offersMemberships(current?.slug) ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-gold-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-zinc-900">🎟️ {t("membershipsTitle")}</p>
+            <p className="mt-0.5 text-sm text-zinc-600">{t("membershipsText")}</p>
+          </div>
+          <Link href="/abonnements" className="btn btn-primary btn-sm shrink-0">
+            {t("membershipsCta")}
+          </Link>
+        </div>
+      ) : null}
+
       {activities.length === 0 ? (
         <EmptyState title={t("emptyTitle")} description={t("emptyText")} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {activities.map(({ activity, categoryName, categoryEmoji, sessionCount, planCount, minPrice, nextSession }) => (
+          {activities.map(({ activity, categoryName, categorySlug, categoryEmoji, sessionCount, planCount, minPrice, nextSession }) => (
             <article key={activity.id} className="card card-hover overflow-hidden">
               <div className="relative h-36 w-full overflow-hidden bg-zinc-100">
                 {activity.imageUrl ? (
@@ -142,7 +155,13 @@ export default async function ActivitiesPage({
                 </dl>
 
                 <div className="mt-5 flex items-center justify-between gap-3">
-                  <span className="text-xs text-zinc-500">{t("planCount", { count: planCount })}</span>
+                  {categorySlug === MEMBERSHIP_CATEGORY_SLUG ? (
+                    <Link href="/abonnements" className="text-xs font-medium text-gold-dark hover:underline">
+                      {t("planCount", { count: planCount })}
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
                   <Link href={`/activites/${activity.slug}`} className="btn btn-primary btn-sm">
                     {t("view")}
                   </Link>

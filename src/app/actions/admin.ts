@@ -29,6 +29,7 @@ import { runReminderJob } from "@/lib/reminders";
 import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
 import { logAndSend } from "@/lib/mailer";
+import { offersMemberships } from "@/lib/memberships";
 import { translatorFor } from "@/i18n/translator";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -518,12 +519,26 @@ function planBackPath(formData: FormData): string {
   return requested.startsWith("/admin/") ? requested : "/admin/abonnements";
 }
 
+/** Les abonnements sont réservés aux activités du club de chant. */
+async function activityOffersMemberships(activityId: number): Promise<boolean> {
+  const row = (
+    await db
+      .select({ slug: categories.slug })
+      .from(activities)
+      .innerJoin(categories, eq(categories.id, activities.categoryId))
+      .where(eq(activities.id, activityId))
+      .limit(1)
+  )[0];
+  return offersMemberships(row?.slug);
+}
+
 export async function createPlanAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const activityId = num(formData, "activityId");
   const values = planValues(formData);
   const back = planBackPath(formData);
   if (!activityId || !values.name) redirect(withMessage(back, "erreur", "planRequiredFields"));
+  if (!(await activityOffersMemberships(activityId))) redirect(withMessage(back, "erreur", "planClubOnly"));
   await db.insert(plans).values({ ...values, activityId });
   revalidatePath(back);
   redirect(withMessage(back, "ok", "planCreated"));
@@ -535,6 +550,10 @@ export async function updatePlanAction(formData: FormData): Promise<void> {
   const values = planValues(formData);
   const back = planBackPath(formData);
   if (!values.name) redirect(withMessage(back, "erreur", "planRequiredFields"));
+  const current = (await db.select({ activityId: plans.activityId }).from(plans).where(eq(plans.id, id)).limit(1))[0];
+  if (!current || !(await activityOffersMemberships(current.activityId))) {
+    redirect(withMessage(back, "erreur", "planClubOnly"));
+  }
   await db.update(plans).set(values).where(eq(plans.id, id));
   revalidatePath(back);
   redirect(withMessage(back, "ok", "planUpdated"));
