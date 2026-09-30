@@ -20,6 +20,7 @@ import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
+import { ImageUploadField } from "@/components/image-upload-field";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { offersMemberships } from "@/lib/memberships";
 
@@ -191,11 +192,8 @@ export default async function AdminActivityDetail({
             </label>
             <input id="capacity" name="capacity" type="number" min={1} defaultValue={activity.capacity} className="input" />
           </div>
-          <div>
-            <label className="label" htmlFor="imageUrl">
-              {t("image")}
-            </label>
-            <input id="imageUrl" name="imageUrl" type="url" defaultValue={activity.imageUrl ?? ""} className="input" />
+          <div className="sm:col-span-2">
+            <ImageUploadField name="imageUrl" label={t("image")} hint={t("imageHint")} defaultValue={activity.imageUrl} />
           </div>
           <div className="sm:col-span-2">
             <button className="btn btn-primary" type="submit">

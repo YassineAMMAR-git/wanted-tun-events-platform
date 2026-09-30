@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -344,6 +345,25 @@ export const heroSlides = pgTable(
   },
   (table) => [index("hero_slides_position_idx").on(table.position)],
 );
+
+/* ------------------------------------------------------------------ */
+/* Photos envoyées depuis l'administration                             */
+/* ------------------------------------------------------------------ */
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
+/**
+ * Photos des activités et du carrousel, compressées dans le navigateur avant l'envoi (quelques centaines de Ko).
+ * Servies par /media/{id} avec un cache long : une photo n'est jamais modifiée, une nouvelle photo = une nouvelle ligne.
+ * Les photos qui ne sont plus utilisées nulle part sont supprimées par la tâche quotidienne.
+ */
+export const images = pgTable("images", {
+  id: serial("id").primaryKey(),
+  contentType: varchar("content_type", { length: 32 }).notNull(),
+  data: bytea("data").notNull(),
+  size: integer("size").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /* ------------------------------------------------------------------ */
 /* Paiement en ligne via Mollie                                        */

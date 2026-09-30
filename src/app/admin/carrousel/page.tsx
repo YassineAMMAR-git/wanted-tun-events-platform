@@ -6,6 +6,7 @@ import { createSlideAction, deleteSlideAction, updateSlideAction } from "@/app/a
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
+import { ImageUploadField } from "@/components/image-upload-field";
 
 export const dynamic = "force-dynamic";
 
@@ -52,19 +53,16 @@ export default async function AdminCarouselPage({
   ];
 
   const settingsFields = (slide?: HeroSlide) => (
-    <div className="grid gap-3 sm:grid-cols-[2fr_1.4fr_0.6fr]">
-      <div>
-        <label className="label">{t("fieldImageUrl")}</label>
-        <input
+    <div className="grid gap-3 sm:grid-cols-[1.4fr_0.6fr]">
+      <div className="sm:col-span-2">
+        <ImageUploadField
           name="imageUrl"
-          type="url"
+          label={t("fieldImageUrl")}
+          hint={t("fieldImageHint")}
+          defaultValue={slide?.imageUrl}
           required
-          defaultValue={slide?.imageUrl ?? ""}
-          placeholder="https://"
-          className="input"
-          dir="ltr"
+          aspectClassName="aspect-[16/7]"
         />
-        <p className="mt-1 text-xs text-zinc-500">{t("fieldImageHint")}</p>
       </div>
       <div>
         <label className="label">{t("fieldCtaUrl")}</label>
@@ -81,7 +79,7 @@ export default async function AdminCarouselPage({
           className="input"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm text-zinc-700 sm:col-span-3">
+      <label className="flex items-center gap-2 text-sm text-zinc-700 sm:col-span-2">
         <input
           type="checkbox"
           name="isActive"
