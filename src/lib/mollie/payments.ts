@@ -2,35 +2,50 @@ import "server-only";
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, paymentLinks, plans, sessions, subscriptions, users, type PaymentLink } from "@/db/schema";
-import { formatDateTime } from "@/lib/format";
 import { activateSubscription } from "@/lib/subscriptions";
-import { createPaymentLink, getAccessToken, getConnection, getPaymentLink, type PaymentLinkStatus } from "@/lib/qonto/client";
-import { qontoConfigured, qontoVatRate } from "@/lib/qonto/config";
+import { createPayment, getPayment, type MolliePaymentStatus } from "@/lib/mollie/client";
+import { appUrl, mollieConfigured, mollieWebhookUrl, webhookReachable } from "@/lib/mollie/config";
+import { formatDateTime } from "@/lib/format";
 
-/** Statuts après lesquels un lien n'évolue plus. */
+/** Statuts enregistrés en base (colonne payment_links.status). */
+export type PaymentLinkStatus = "open" | "processing" | "paid" | "expired" | "canceled";
+
+/** « pending » / « authorized » : payé côté client, confirmation en cours ; « failed » : refusé, à retenter. */
+function toLinkStatus(status: MolliePaymentStatus): PaymentLinkStatus {
+  switch (status) {
+    case "paid":
+      return "paid";
+    case "pending":
+    case "authorized":
+      return "processing";
+    case "expired":
+      return "expired";
+    case "canceled":
+    case "failed":
+      return "canceled";
+    default:
+      return "open";
+  }
+}
+
+/** Statuts après lesquels un paiement n'évolue plus. */
 const FINAL: PaymentLinkStatus[] = ["paid", "expired", "canceled"];
 const isFinal = (status: string) => (FINAL as string[]).includes(status);
 
-/** Lien sur lequel le client peut encore payer (ouvert et non expiré) ou dont le paiement est en validation. */
+/** Paiement sur lequel le client peut encore payer (ouvert et non expiré) ou dont la confirmation est en cours. */
 export function isLinkUsable(link: PaymentLink | null): boolean {
   if (!link) return false;
   if (link.status === "processing") return true;
   return link.status === "open" && (!link.expiresAt || link.expiresAt.getTime() > Date.now());
 }
 
-/** Paiement en ligne actif : identifiants configurés et compte Qonto connecté. */
-export async function qontoPaymentsEnabled(): Promise<boolean> {
-  if (!qontoConfigured()) return false;
-  try {
-    return Boolean(await getConnection());
-  } catch {
-    // Tables pas encore créées sur cette base : on reste en paiement manuel.
-    return false;
-  }
+/** Paiement en ligne actif : clé Mollie renseignée. */
+export async function onlinePaymentsEnabled(): Promise<boolean> {
+  return mollieConfigured();
 }
 
 /**
- * Passe l'abonnement en « payé » une seule fois, même si le webhook, la page de paiement
+ * Passe la commande en « payée » une seule fois, même si le webhook, la page de retour
  * et la tâche quotidienne constatent le paiement en même temps.
  */
 async function claimAndActivate(subscriptionId: number): Promise<boolean> {
@@ -44,10 +59,10 @@ async function claimAndActivate(subscriptionId: number): Promise<boolean> {
   return true;
 }
 
-/** Relit le lien chez Qonto (jamais sur la seule foi d'un webhook) et active l'abonnement s'il est payé. */
+/** Relit le paiement chez Mollie (jamais sur la seule foi d'un webhook) et active la commande s'il est payé. */
 export async function syncPaymentLink(link: PaymentLink): Promise<PaymentLink> {
-  const remote = await getPaymentLink(link.externalId);
-  const status = remote.status ?? link.status;
+  const remote = await getPayment(link.externalId);
+  const status = toLinkStatus(remote.status);
   const [updated] = await db
     .update(paymentLinks)
     .set({ status, updatedAt: new Date() })
@@ -57,7 +72,7 @@ export async function syncPaymentLink(link: PaymentLink): Promise<PaymentLink> {
   return updated ?? { ...link, status };
 }
 
-/** Dernier lien de l'abonnement, resynchronisé s'il est encore en cours. */
+/** Dernier paiement de la commande, resynchronisé s'il est encore en cours. */
 export async function latestPaymentLink(subscriptionId: number): Promise<PaymentLink | null> {
   const link = (
     await db
@@ -71,14 +86,14 @@ export async function latestPaymentLink(subscriptionId: number): Promise<Payment
   try {
     return await syncPaymentLink(link);
   } catch (error) {
-    console.error("[qonto] synchronisation du lien impossible", error);
+    console.error("[mollie] synchronisation du paiement impossible", error);
     return link;
   }
 }
 
 /**
- * Lien de paiement à usage unique pour un abonnement ou un billet en attente.
- * Réutilise le lien ouvert s'il existe, sinon en crée un au prix lu en base (jamais envoyé par le client) :
+ * Paiement Mollie pour un abonnement ou un billet en attente.
+ * Réutilise le paiement ouvert s'il existe, sinon en crée un au prix lu en base (jamais envoyé par le client) :
  * celui de l'offre pour un abonnement, celui de l'activité pour un billet.
  */
 export async function ensurePaymentLink(subscriptionId: number): Promise<PaymentLink | null> {
@@ -101,45 +116,53 @@ export async function ensurePaymentLink(subscriptionId: number): Promise<Payment
   if (current && (current.status === "paid" || isLinkUsable(current))) return current;
 
   const amountCents = ticket ? row.activity.priceCents : row.plan!.priceCents;
-  const customer = `${row.user.firstName} ${row.user.lastName} (${row.user.email})`;
-  const created = await createPaymentLink({
-    title: ticket
-      ? `${row.activity.name} — billet${row.session ? ` du ${formatDateTime(row.session.startsAt)}` : ""}`
-      : `${row.activity.name} — ${row.plan!.name}`,
-    description: `${ticket ? "Billet" : "Abonnement"} n°${row.subscription.id} — ${customer}`,
+  // Libellé affiché au client sur la page Mollie et dans le tableau de bord Mollie.
+  const description = ticket
+    ? `${row.activity.name} — billet${row.session ? ` du ${formatDateTime(row.session.startsAt)}` : ""} (n°${row.subscription.id})`
+    : `${row.activity.name} — ${row.plan!.name} (abonnement n°${row.subscription.id})`;
+
+  const created = await createPayment({
     amountCents,
-    vatRate: qontoVatRate(),
+    description,
+    redirectUrl: `${appUrl()}/abonnement/${subscriptionId}/paiement?retour=1`,
+    webhookUrl: webhookReachable() ? mollieWebhookUrl() : undefined,
+    metadata: {
+      subscriptionId,
+      kind: row.subscription.kind,
+      customer: `${row.user.firstName} ${row.user.lastName} <${row.user.email}>`,
+    },
   });
+  const checkoutUrl = created._links.checkout?.href;
+  if (!checkoutUrl) throw new Error(`Paiement Mollie ${created.id} sans page de paiement (statut ${created.status}).`);
 
   const [link] = await db
     .insert(paymentLinks)
     .values({
       subscriptionId,
       externalId: created.id,
-      url: created.url,
+      url: checkoutUrl,
       amountCents,
-      status: created.status ?? "open",
-      expiresAt: created.expiration_date ? new Date(created.expiration_date) : null,
+      status: toLinkStatus(created.status),
+      expiresAt: created.expiresAt ? new Date(created.expiresAt) : null,
     })
     .returning();
   return link;
 }
 
-/** Événement webhook : on ne traite que les liens créés par ce site. */
-export async function handlePaymentLinkEvent(externalId: string): Promise<void> {
+/** Webhook : on ne traite que les paiements créés par ce site. */
+export async function handlePaymentWebhook(externalId: string): Promise<void> {
   const link = (await db.select().from(paymentLinks).where(eq(paymentLinks.externalId, externalId)).limit(1))[0];
   if (!link) return;
   await syncPaymentLink(link);
 }
 
 /**
- * Filet de sécurité (tâche quotidienne) : resynchronise les liens encore ouverts des 30 derniers jours
- * et renouvelle le jeton Qonto, ce qui prolonge la connexion de 90 jours à chaque passage.
+ * Filet de sécurité (tâche quotidienne) : resynchronise les paiements encore ouverts des 30 derniers jours,
+ * au cas où un webhook aurait été manqué.
  */
 export async function reconcilePendingPayments(): Promise<{ checked: number; activated: number; error?: string }> {
-  if (!(await qontoPaymentsEnabled())) return { checked: 0, activated: 0 };
+  if (!(await onlinePaymentsEnabled())) return { checked: 0, activated: 0 };
   try {
-    await getAccessToken({ force: true });
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const pending = await db
       .select()

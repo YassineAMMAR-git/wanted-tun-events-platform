@@ -19,7 +19,7 @@ Plateforme web de gestion des **cours, ateliers, événements et abonnements** (
 ### Espace client
 - Création de compte avec **confirmation par e-mail** (le compte reste inactif tant que l'adresse n'est pas confirmée), connexion, modification des informations personnelles.
 - Liste des activités, filtres par catégorie, recherche.
-- Choix d'une offre d'abonnement → **récapitulatif du prix** → **redirection vers le lien de paiement externe** → activation de l'abonnement.
+- Choix d'une offre d'abonnement (club de chant) ou d'un billet (événements) → **récapitulatif du prix** → **paiement sur la page sécurisée Mollie** → activation automatique au paiement confirmé (webhook Mollie). Sans `MOLLIE_API_KEY`, paiement manuel par lien externe et validation par l'administration.
 - Suivi visuel des séances : 🟢 séance à venir (allumée) / ⚪ séance réalisée (éteinte).
 - Barre de progression, nombre de séances restantes, statut de chaque séance.
 - Confirmation / signalement d'absence en un clic (espace personnel **ou** lien reçu par e-mail).

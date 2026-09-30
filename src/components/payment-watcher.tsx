@@ -7,8 +7,8 @@ const INTERVAL_MS = 5000;
 const MAX_DURATION_MS = 30 * 60 * 1000;
 
 /**
- * Qonto ne renvoie pas le client sur le site après le paiement : la page de paiement,
- * restée ouverte, se recharge donc toute seule jusqu'à constater le paiement (30 minutes au plus).
+ * Paiement reçu mais pas encore confirmé par Mollie (virement, validation de la banque…) :
+ * la page de paiement se recharge toute seule jusqu'à constater le paiement (30 minutes au plus).
  */
 export function PaymentWatcher({ label }: { label: string }) {
   const router = useRouter();

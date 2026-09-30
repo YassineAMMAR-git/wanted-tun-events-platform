@@ -1,10 +1,9 @@
 import { desc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
-import { activities, paymentLinks, plans, subscriptions, users, type QontoConnection } from "@/db/schema";
-import { disconnectQontoAction, registerQontoWebhookAction } from "@/app/actions/admin";
-import { getConnection, getPaymentLinksConnection, type ConnectionStatus } from "@/lib/qonto/client";
-import { qontoConfigured, qontoEnv, qontoRedirectUri, qontoWebhookUrl } from "@/lib/qonto/config";
+import { activities, paymentLinks, plans, subscriptions, users } from "@/db/schema";
+import { listMethods } from "@/lib/mollie/client";
+import { appUrl, mollieConfigured, mollieMode, mollieWebhookUrl, webhookReachable } from "@/lib/mollie/config";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -13,47 +12,27 @@ export const dynamic = "force-dynamic";
 
 type Check = { ok: boolean; label: string; detail?: string };
 
-async function loadState() {
-  let connection: QontoConnection | null = null;
-  let tablesReady = true;
+async function loadRecent() {
   try {
-    connection = await getConnection();
+    return await db
+      .select({
+        link: paymentLinks,
+        subscription: subscriptions,
+        user: users,
+        planName: plans.name,
+        activityName: activities.name,
+      })
+      .from(paymentLinks)
+      .innerJoin(subscriptions, eq(subscriptions.id, paymentLinks.subscriptionId))
+      .innerJoin(users, eq(users.id, subscriptions.userId))
+      .innerJoin(activities, eq(activities.id, subscriptions.activityId))
+      .leftJoin(plans, eq(plans.id, subscriptions.planId))
+      .orderBy(desc(paymentLinks.createdAt))
+      .limit(25);
   } catch {
-    tablesReady = false;
+    // Table payment_links absente : schéma pas encore appliqué sur cette base.
+    return null;
   }
-
-  let linksStatus: ConnectionStatus | null = null;
-  let linksLocation: string | undefined;
-  let apiError: string | null = null;
-  if (connection) {
-    try {
-      const result = await getPaymentLinksConnection();
-      linksStatus = result.status;
-      linksLocation = result.connection_location;
-    } catch (error) {
-      apiError = error instanceof Error ? error.message : String(error);
-    }
-  }
-
-  const recent = tablesReady
-    ? await db
-        .select({
-          link: paymentLinks,
-          subscription: subscriptions,
-          user: users,
-          planName: plans.name,
-          activityName: activities.name,
-        })
-        .from(paymentLinks)
-        .innerJoin(subscriptions, eq(subscriptions.id, paymentLinks.subscriptionId))
-        .innerJoin(users, eq(users.id, subscriptions.userId))
-        .innerJoin(activities, eq(activities.id, subscriptions.activityId))
-        .leftJoin(plans, eq(plans.id, subscriptions.planId))
-        .orderBy(desc(paymentLinks.createdAt))
-        .limit(25)
-    : [];
-
-  return { connection, tablesReady, linksStatus, linksLocation, apiError, recent };
 }
 
 const LINK_STATUS_STYLE: Record<string, string> = {
@@ -71,39 +50,41 @@ export default async function AdminPaymentsPage({
 }) {
   const { ok, erreur } = await searchParams;
   const [locale, t] = await Promise.all([getLocale(), getTranslations("admin.payments")]);
-  const configured = qontoConfigured();
-  const state = configured ? await loadState() : null;
-  const connection = state?.connection ?? null;
+  const configured = mollieConfigured();
+  const mode = mollieMode();
+
+  // La liste des moyens de paiement sert de test de la clé d'API.
+  let methods: string[] | null = null;
+  let apiError: string | null = null;
+  if (configured) {
+    try {
+      methods = (await listMethods()).map((method) => method.description);
+    } catch (error) {
+      apiError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  const recent = await loadRecent();
+  const reachable = webhookReachable();
 
   const checks: Check[] = [
-    { ok: configured, label: t("checkConfigured"), detail: configured ? t("mode", { mode: qontoEnv() }) : t("checkConfiguredHint") },
     {
-      ok: Boolean(state?.tablesReady),
-      label: t("checkTables"),
-      detail: state && !state.tablesReady ? t("checkTablesHint") : undefined,
+      ok: configured,
+      label: t("checkKey"),
+      detail: configured ? t(mode === "live" ? "modeLive" : "modeTest") : t("checkKeyHint"),
     },
     {
-      ok: Boolean(connection && !connection.lastError),
-      label: t("checkConnected"),
-      detail: connection
-        ? connection.lastError
-          ? t("checkConnectedError", { error: connection.lastError })
-          : t("checkConnectedSince", {
-              date: formatDateTime(connection.connectedAt, locale),
-              until: formatDateTime(connection.refreshTokenExpiresAt, locale),
-            })
-        : t("checkConnectedHint"),
+      ok: methods !== null && methods.length > 0,
+      label: t("checkApi"),
+      detail: apiError
+        ? t("checkApiError", { error: apiError })
+        : methods
+          ? methods.length > 0
+            ? t("methods", { list: methods.join(", ") })
+            : t("noMethods")
+          : t("checkApiHint"),
     },
-    {
-      ok: state?.linksStatus === "enabled",
-      label: t("checkLinks"),
-      detail: state?.apiError
-        ? t("checkApiError", { error: state.apiError })
-        : state?.linksStatus
-          ? t("linksStatus", { status: state.linksStatus })
-          : t("checkLinksHint"),
-    },
-    { ok: Boolean(connection?.webhookSubscriptionId), label: t("checkWebhook"), detail: t("checkWebhookHint") },
+    { ok: reachable, label: t("checkWebhook"), detail: reachable ? t("checkWebhookOk") : t("checkWebhookHint", { url: appUrl() }) },
+    { ok: recent !== null, label: t("checkTables"), detail: recent === null ? t("checkTablesHint") : undefined },
   ];
   const ready = checks.every((check) => check.ok);
 
@@ -114,10 +95,14 @@ export default async function AdminPaymentsPage({
 
       <div
         className={`rounded-xl border px-4 py-3 text-sm ${
-          ready ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-gold-dark"
+          ready
+            ? mode === "live"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-sky-200 bg-sky-50 text-sky-700"
+            : "border-amber-200 bg-amber-50 text-gold-dark"
         }`}
       >
-        {ready ? `✅ ${t("readyOn")}` : `ℹ️ ${t("readyOff")}`}
+        {ready ? (mode === "live" ? `✅ ${t("readyLive")}` : `🧪 ${t("readyTest")}`) : `ℹ️ ${t("readyOff")}`}
       </div>
 
       <Card>
@@ -134,53 +119,24 @@ export default async function AdminPaymentsPage({
           ))}
         </ul>
 
-        <div className="mt-4 grid gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600 sm:grid-cols-2">
-          <div>
-            <p className="font-semibold text-zinc-700">{t("redirectUri")}</p>
-            <code dir="ltr" className="break-all">
-              {qontoRedirectUri()}
-            </code>
-          </div>
-          <div>
-            <p className="font-semibold text-zinc-700">{t("webhookUrl")}</p>
-            <code dir="ltr" className="break-all">
-              {qontoWebhookUrl()}
-            </code>
-          </div>
+        <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+          <p className="font-semibold text-zinc-700">{t("webhookUrl")}</p>
+          <code dir="ltr" className="break-all">
+            {mollieWebhookUrl()}
+          </code>
+          <p className="mt-1">{t("webhookNote")}</p>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {configured && state?.tablesReady ? (
-            // Lien classique (pas de préchargement) : la route redirige vers Qonto.
-            <a href="/api/qonto/connect" className="btn btn-primary">
-              {connection ? t("reconnect") : t("connect")}
-            </a>
-          ) : null}
-          {state?.linksLocation && state.linksStatus !== "enabled" ? (
-            <a href={state.linksLocation} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
-              {t("activateLinks")}
-            </a>
-          ) : null}
-          {connection ? (
-            <>
-              <form action={registerQontoWebhookAction}>
-                <button className="btn btn-ghost" type="submit">
-                  {t("registerWebhook")}
-                </button>
-              </form>
-              <form action={disconnectQontoAction}>
-                <button className="btn btn-danger" type="submit">
-                  {t("disconnect")}
-                </button>
-              </form>
-            </>
-          ) : null}
+          <a href="https://my.mollie.com/dashboard" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+            {t("openDashboard")}
+          </a>
         </div>
       </Card>
 
       <section>
         <SectionTitle title={t("recentTitle")} subtitle={t("recentSubtitle")} />
-        {!state || state.recent.length === 0 ? (
+        {!recent || recent.length === 0 ? (
           <EmptyState title={t("recentEmpty")} />
         ) : (
           <div className="card scroll-x">
@@ -196,7 +152,7 @@ export default async function AdminPaymentsPage({
                 </tr>
               </thead>
               <tbody>
-                {state.recent.map(({ link, subscription, user, planName, activityName }) => (
+                {recent.map(({ link, subscription, user, planName, activityName }) => (
                   <tr key={link.id}>
                     <td className="whitespace-nowrap">{formatDateTime(link.createdAt, locale)}</td>
                     <td>
@@ -210,6 +166,9 @@ export default async function AdminPaymentsPage({
                     <td>
                       <span className={`badge ${LINK_STATUS_STYLE[link.status] ?? LINK_STATUS_STYLE.expired}`}>
                         {t(`linkStatus.${link.status in LINK_STATUS_STYLE ? link.status : "expired"}` as "linkStatus.paid")}
+                      </span>
+                      <span className="block text-[11px] text-zinc-500" dir="ltr">
+                        {link.externalId}
                       </span>
                     </td>
                     <td className="text-xs text-zinc-600">
