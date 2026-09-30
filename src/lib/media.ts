@@ -43,6 +43,7 @@ export async function deleteOrphanImages(): Promise<number> {
         lt(images.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000)),
         sql`not exists (select 1 from activities a where a.image_url = ${url})`,
         sql`not exists (select 1 from hero_slides h where h.image_url = ${url})`,
+        sql`not exists (select 1 from categories c where c.image_url = ${url})`,
       ),
     )
     .returning({ id: images.id });

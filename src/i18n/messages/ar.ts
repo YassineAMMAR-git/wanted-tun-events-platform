@@ -563,6 +563,8 @@ const ar: Messages = {
       counts: "{activities, plural, other {# نشاط}} · {sessions, plural, other {# حصة}}",
       fieldName: "الاسم",
       fieldDescription: "الوصف",
+      fieldImage: "صورة الفئة",
+      fieldImageHint: "تظهر على بطاقة الفئة في الصفحة الرئيسية. اختيارية: بدون صورة يظهر الرمز التعبيري فقط.",
       fieldEmoji: "الرمز التعبيري",
       fieldAccent: "اللون",
       fieldPosition: "ترتيب العرض",

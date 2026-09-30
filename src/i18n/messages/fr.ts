@@ -564,6 +564,8 @@ const fr = {
       counts: "{activities, plural, =0 {aucune activité} one {# activité} other {# activités}} · {sessions, plural, =0 {aucune séance} one {# séance} other {# séances}}",
       fieldName: "Nom",
       fieldDescription: "Description",
+      fieldImage: "Photo de la catégorie",
+      fieldImageHint: "Affichée sur la carte de la catégorie en page d’accueil. Facultative : sans photo, seul l’emoji apparaît.",
       fieldEmoji: "Emoji",
       fieldAccent: "Couleur",
       fieldPosition: "Ordre d’affichage",

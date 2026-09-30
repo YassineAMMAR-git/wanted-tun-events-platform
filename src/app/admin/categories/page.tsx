@@ -8,6 +8,7 @@ import { localize } from "@/lib/i18n/content";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
+import { ImageUploadField } from "@/components/image-upload-field";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,14 @@ export default async function AdminCategoriesPage({
               <Card key={category.id}>
                 <details>
                   <summary className="flex cursor-pointer flex-wrap items-center gap-3 list-none">
+                    {category.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={category.imageUrl}
+                        alt=""
+                        className="h-10 w-16 shrink-0 rounded-md border border-zinc-200 object-cover"
+                      />
+                    ) : null}
                     <span className="text-2xl">{category.emoji}</span>
                     <span className="flex items-center gap-2">
                       <span className={`inline-block size-2.5 rounded-full ${ACCENT_DOT[accent]}`} aria-hidden="true" />
@@ -140,6 +149,14 @@ export default async function AdminCategoriesPage({
                         { name: "name", label: t("fieldName"), required: true, maxLength: 120 },
                         { name: "description", label: t("fieldDescription"), multiline: true, maxLength: 500 },
                       ]}
+                    />
+
+                    <ImageUploadField
+                      name="imageUrl"
+                      label={t("fieldImage")}
+                      hint={t("fieldImageHint")}
+                      defaultValue={category.imageUrl}
+                      aspectClassName="aspect-[16/9]"
                     />
 
                     <div className="grid gap-3 sm:grid-cols-4">
@@ -216,6 +233,8 @@ export default async function AdminCategoriesPage({
               { name: "description", label: t("fieldDescription"), multiline: true, maxLength: 500 },
             ]}
           />
+
+          <ImageUploadField name="imageUrl" label={t("fieldImage")} hint={t("fieldImageHint")} aspectClassName="aspect-[16/9]" />
 
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
