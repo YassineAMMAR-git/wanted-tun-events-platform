@@ -44,7 +44,7 @@ Plateforme web de gestion des **cours, ateliers, événements et abonnements** (
 ### Comptes et sécurité
 - **Sessions** : jeton aléatoire de 256 bits dans un cookie `HttpOnly` / `SameSite=Lax` (`Secure` en production) ; seule son empreinte SHA-256 est stockée (`user_sessions`). Déconnexion et révocation côté serveur.
 - **Rôles** : `client` (session de 30 jours) et `admin` (session de 12 heures). Vérification dans chaque page et action (`requireUser` / `requireAdmin`), plus une redirection anticipée dans `src/proxy.ts`.
-- **Mots de passe** : scrypt (N=2^15, r=8, p=3) ; politique CNIL (12 caractères, majuscule, minuscule, chiffre, caractère spécial). Les anciens hachages sont mis à niveau à la connexion.
+- **Mots de passe** : scrypt (N=2^15, r=8, p=3) ; politique CNIL (8 caractères, majuscule, minuscule, chiffre, caractère spécial). Les anciens hachages sont mis à niveau à la connexion.
 - **Anti force brute** : compte bloqué 15 minutes après 5 échecs ; message identique que l'e-mail existe ou non.
 - **Vérification e-mail** : lien à usage unique valable 24 h (`email_verification_tokens`, empreinte uniquement), renvoi limité à un e-mail par minute.
 - **Contrôle des saisies** : schémas `zod` côté serveur (`src/lib/validation`) + attributs HTML côté navigateur ; erreurs affichées sous chaque champ.

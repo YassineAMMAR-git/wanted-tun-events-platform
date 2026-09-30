@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { translateKey } from "@/i18n/dynamic";
+import { VALIDATION_MESSAGE_VALUES } from "@/lib/validation/constants";
 
 /**
  * Bandeau affiché après une action d'administration.
@@ -11,7 +12,7 @@ export function Flash({ ok, erreur }: { ok?: string; erreur?: string }) {
 
   const key = erreur ?? ok ?? "";
   const fullKey = key.includes(".") ? key : `admin.flash.${key}`;
-  const text = translateKey(t, fullKey, { min: 12, max: 128 }, erreur ? t("validation.invalid") : t("common.save"));
+  const text = translateKey(t, fullKey, VALIDATION_MESSAGE_VALUES, erreur ? t("validation.invalid") : t("common.save"));
 
   return (
     <div
