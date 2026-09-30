@@ -346,28 +346,13 @@ export const heroSlides = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
-/* Paiement en ligne via l'API Qonto                                   */
+/* Paiement en ligne via Mollie                                        */
 /* ------------------------------------------------------------------ */
 
 /**
- * Connexion OAuth au compte Qonto (une seule ligne, id = 1).
- * Jetons et secret du webhook sont chiffrés (AES-256-GCM, clé dérivée de QONTO_CLIENT_SECRET).
+ * Paiements Mollie, un par tentative de paiement d'un abonnement ou d'un billet.
+ * external_id = identifiant Mollie (tr_…), url = page de paiement Mollie.
  */
-export const qontoConnection = pgTable("qonto_connection", {
-  id: integer("id").primaryKey(),
-  accessToken: text("access_token").notNull(),
-  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }).notNull(),
-  refreshToken: text("refresh_token").notNull(),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }).notNull(),
-  webhookSubscriptionId: varchar("webhook_subscription_id", { length: 64 }),
-  webhookSecret: text("webhook_secret"),
-  /** Dernière erreur de renouvellement : la connexion doit alors être refaite depuis l'administration. */
-  lastError: text("last_error"),
-  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-/** Liens de paiement Qonto à usage unique, un par tentative de paiement d'un abonnement. */
 export const paymentLinks = pgTable(
   "payment_links",
   {
@@ -378,7 +363,7 @@ export const paymentLinks = pgTable(
     externalId: varchar("external_id", { length: 64 }).notNull(),
     url: text("url").notNull(),
     amountCents: integer("amount_cents").notNull(),
-    /** Statut Qonto : open, processing, paid, expired, canceled. */
+    /** open, processing (paiement reçu, confirmation en cours), paid, expired, canceled (annulé ou refusé). */
     status: varchar("status", { length: 16 }).notNull().default("open"),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -401,5 +386,4 @@ export type Attendance = typeof attendances.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;
 export type NotificationRule = typeof notificationRules.$inferSelect;
 export type HeroSlide = typeof heroSlides.$inferSelect;
-export type QontoConnection = typeof qontoConnection.$inferSelect;
 export type PaymentLink = typeof paymentLinks.$inferSelect;

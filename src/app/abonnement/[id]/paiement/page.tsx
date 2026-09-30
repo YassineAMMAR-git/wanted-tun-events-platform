@@ -13,13 +13,13 @@ import {
   subscriptions,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { createPaymentLinkAction, declarePaymentAction } from "@/app/actions/booking";
+import { declarePaymentAction, startPaymentAction } from "@/app/actions/booking";
 import { formatDate, formatDuration, formatPrice, formatTime, isPast } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
 import { PaymentWatcher } from "@/components/payment-watcher";
-import { isLinkUsable, latestPaymentLink, qontoPaymentsEnabled } from "@/lib/qonto/payments";
+import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +28,12 @@ export default async function PaymentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ declare?: string; lien?: string }>;
+  searchParams: Promise<{ declare?: string; lien?: string; retour?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const { id } = await params;
-  const { declare, lien } = await searchParams;
+  const { declare, lien, retour } = await searchParams;
   const subscriptionId = Number(id);
   if (!Number.isFinite(subscriptionId)) notFound();
 
@@ -66,10 +66,11 @@ export default async function PaymentPage({
     subscription.paymentStatus !== "paid" &&
     (!row.session || row.session.status !== "scheduled" || isPast(row.session.startsAt));
 
-  // Paiement Qonto : le lien est relu chez Qonto à chaque affichage, ce qui active l'abonnement s'il vient d'être payé.
-  const qonto = await qontoPaymentsEnabled();
-  const link = qonto && subscription.paymentStatus !== "paid" && !ticketClosed ? await latestPaymentLink(subscription.id) : null;
-  const linkUsable = isLinkUsable(link);
+  // Paiement Mollie : relu chez Mollie à chaque affichage (notamment au retour du client), ce qui active la commande si elle est payée.
+  const online = await onlinePaymentsEnabled();
+  const link = online && subscription.paymentStatus !== "paid" && !ticketClosed ? await latestPaymentLink(subscription.id) : null;
+  // Retour de Mollie sans paiement abouti (annulé, refusé, expiré, ou page quittée).
+  const notCompleted = Boolean(retour) && link?.status !== "paid" && link?.status !== "processing";
 
   const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
@@ -143,7 +144,7 @@ export default async function PaymentPage({
           <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
         ) : null}
 
-        {qonto || alreadyPaid || ticketClosed ? null : (
+        {online || alreadyPaid || ticketClosed ? null : (
           <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-sm font-semibold text-gold-dark">{t("externalLink")}</p>
             <p className="mt-1 text-xs break-all text-zinc-600" dir="ltr">
@@ -163,38 +164,33 @@ export default async function PaymentPage({
           <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             {t("ticketClosed")}
           </div>
-        ) : qonto ? (
+        ) : online ? (
           <div className="mt-5 space-y-3">
             {lien === "erreur" ? (
               <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                ⚠️ {t("qontoLinkError")}
+                ⚠️ {t("onlineError")}
+              </div>
+            ) : notCompleted ? (
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
+                {t("onlineNotCompleted")}
               </div>
             ) : null}
 
-            {linkUsable && link ? (
+            {link?.status === "processing" ? (
               <>
-                {link.status === "processing" ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-semibold text-gold-dark">{t("qontoProcessingTitle")}</p>
-                    <p className="mt-1 text-xs text-zinc-700">{t("qontoProcessingText")}</p>
-                  </div>
-                ) : (
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">
-                    🔒 {t("pay", { price })}
-                  </a>
-                )}
-                <p className="text-center text-xs text-zinc-600">{t("qontoHint")}</p>
-                <PaymentWatcher label={t("qontoWatching")} />
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-gold-dark">{t("onlineProcessingTitle")}</p>
+                  <p className="mt-1 text-xs text-zinc-700">{t("onlineProcessingText")}</p>
+                </div>
+                <PaymentWatcher label={t("onlineWatching")} />
               </>
             ) : (
-              <form action={createPaymentLinkAction} className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+              <form action={startPaymentAction}>
                 <input type="hidden" name="subscriptionId" value={subscription.id} />
-                <p className="text-sm text-zinc-700">
-                  {link?.status === "expired" || link?.status === "canceled" ? t("qontoExpired") : t("qontoNoLink")}
-                </p>
-                <button className="btn btn-primary mt-3 w-full" type="submit">
-                  {t("qontoNewLink")}
+                <button className="btn btn-primary w-full" type="submit">
+                  🔒 {notCompleted ? t("onlineRetry", { price }) : t("onlinePay", { price })}
                 </button>
+                <p className="mt-2 text-center text-xs text-zinc-600">{t("onlineHint")}</p>
               </form>
             )}
           </div>

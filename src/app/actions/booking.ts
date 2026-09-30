@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { activities, attendances, categories, plans, sessions, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
 import { offersMemberships } from "@/lib/memberships";
-import { ensurePaymentLink, qontoPaymentsEnabled } from "@/lib/qonto/payments";
+import { ensurePaymentLink } from "@/lib/mollie/payments";
 import { activateSubscription, ticketsSold } from "@/lib/subscriptions";
 
 /**
@@ -54,11 +54,6 @@ export async function subscribeAction(formData: FormData): Promise<void> {
       sessionsUsed: 0,
     })
     .returning({ id: subscriptions.id });
-
-  // Paiement Qonto : le lien est préparé tout de suite. En cas d'échec, la page de paiement propose d'en générer un.
-  if (await qontoPaymentsEnabled()) {
-    await ensurePaymentLink(inserted[0]!.id).catch((error) => console.error("[qonto] création du lien impossible", error));
-  }
 
   revalidatePath("/espace-personnel");
   redirect(`/abonnement/${inserted[0]!.id}/paiement`);
@@ -141,37 +136,49 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
     redirect("/espace-personnel?billet=confirme");
   }
 
-  if (await qontoPaymentsEnabled()) {
-    await ensurePaymentLink(ticketId).catch((error) => console.error("[qonto] création du lien impossible", error));
-  }
-
   revalidatePath("/espace-personnel");
   redirect(`/abonnement/${ticketId}/paiement`);
 }
 
-/** Nouveau lien de paiement Qonto (le précédent a expiré, a été annulé ou n'a pas pu être créé). */
-export async function createPaymentLinkAction(formData: FormData): Promise<void> {
+/**
+ * Bouton « Payer » : crée (ou reprend) le paiement Mollie de la commande puis envoie le client sur la page Mollie.
+ * Mollie le renvoie ensuite sur la page de paiement du site, qui constate le résultat.
+ */
+export async function startPaymentAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const subscriptionId = Number(formData.get("subscriptionId") ?? 0);
 
   const owned = (
     await db
-      .select({ id: subscriptions.id })
+      .select({ subscription: subscriptions, session: sessions })
       .from(subscriptions)
+      .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
       .where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, user.id)))
       .limit(1)
   )[0];
   if (!owned) redirect("/espace-personnel?erreur=subscriptionNotFound");
+  const page = `/abonnement/${owned.subscription.id}/paiement`;
 
-  let failed = false;
-  try {
-    await ensurePaymentLink(owned.id);
-  } catch (error) {
-    console.error("[qonto] création du lien impossible", error);
-    failed = true;
+  // Billet d'une date annulée ou passée : plus en vente (la page de paiement l'explique).
+  const { session } = owned;
+  if (
+    owned.subscription.kind === "ticket" &&
+    (!session || session.status !== "scheduled" || session.startsAt.getTime() <= Date.now())
+  ) {
+    redirect(page);
   }
-  redirect(`/abonnement/${owned.id}/paiement${failed ? "?lien=erreur" : ""}`);
+
+  let checkoutUrl: string | null = null;
+  try {
+    const link = await ensurePaymentLink(owned.subscription.id);
+    if (link && link.status === "open") checkoutUrl = link.url;
+  } catch (error) {
+    console.error("[mollie] création du paiement impossible", error);
+    redirect(`${page}?lien=erreur`);
+  }
+  // Déjà payé ou confirmation en cours : la page de paiement affiche l'état.
+  redirect(checkoutUrl ?? page);
 }
 
 /**
