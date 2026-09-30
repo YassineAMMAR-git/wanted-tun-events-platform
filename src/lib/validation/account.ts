@@ -36,7 +36,7 @@ export const emailSchema = z
 
 /**
  * Politique de mot de passe alignée sur les recommandations de la CNIL :
- * 12 caractères minimum mélangeant majuscules, minuscules, chiffres et caractères spéciaux.
+ * 8 caractères minimum mélangeant majuscules, minuscules, chiffres et caractères spéciaux.
  */
 export const newPasswordSchema = z
   .string()
