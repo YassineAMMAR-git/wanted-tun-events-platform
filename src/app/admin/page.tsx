@@ -44,7 +44,7 @@ export default async function AdminDashboard({
       .orderBy(asc(sessions.startsAt))
       .limit(8),
     db
-      .select({ user: users, subs: sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id})::int` })
+      .select({ user: users, subs: sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')::int` })
       .from(users)
       .where(eq(users.role, "client"))
       .orderBy(desc(users.createdAt))

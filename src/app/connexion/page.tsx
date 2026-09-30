@@ -49,9 +49,9 @@ export default async function LoginPage({
         </div>
       ) : null}
 
-      {erreur === "loginToSubscribe" ? (
+      {erreur === "loginToSubscribe" || erreur === "loginToBuyTicket" ? (
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
-          {t("login.loginToSubscribe")}
+          {t(erreur === "loginToBuyTicket" ? "login.loginToBuyTicket" : "login.loginToSubscribe")}
         </div>
       ) : null}
 

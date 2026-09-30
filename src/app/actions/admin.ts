@@ -24,7 +24,7 @@ import {
 import { hashPassword, randomToken, requireAdmin, revokeUserSessions, sendVerificationEmail } from "@/lib/auth";
 import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema } from "@/lib/validation/account";
 import { firstIssueMessage, readFields } from "@/lib/validation/form";
-import { activateSubscription, attachSubscribersToSession, ensureAttendances } from "@/lib/subscriptions";
+import { activateSubscription, attachSubscribersToSession, grantAttendances } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
 import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
@@ -302,12 +302,27 @@ export async function createActivityAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const values = activityValues(formData);
   if (!values.name) redirect(withMessage("/admin/activites", "erreur", "activityNameRequired"));
+  // Date facultative : pour un événement ponctuel, elle crée directement la date mise en vente.
+  const rawDate = str(formData, "startsAt");
+  const startsAt = rawDate ? parseParisDateTime(rawDate) : null;
+  if (rawDate && !startsAt) redirect(withMessage("/admin/activites", "erreur", "dateInvalid"));
+
   const slug = slugify(values.name) || `activite-${Date.now()}`;
   const inserted = await db
     .insert(activities)
     .values({ ...values, slug, status: "active" })
     .returning({ id: activities.id });
-  redirect(withMessage(`/admin/activites/${inserted[0]!.id}`, "ok", "activityCreated"));
+  const activityId = inserted[0]!.id;
+  if (startsAt) {
+    await db.insert(sessions).values({
+      activityId,
+      startsAt,
+      durationMinutes: values.durationMinutes,
+      location: [values.address, values.city].filter(Boolean).join(", ") || null,
+      status: "scheduled",
+    });
+  }
+  redirect(withMessage(`/admin/activites/${activityId}`, "ok", "activityCreated"));
 }
 
 export async function updateActivityAction(formData: FormData): Promise<void> {
@@ -468,11 +483,21 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const sessionId = num(formData, "sessionId");
   const userId = num(formData, "userId");
+  // Rattachement à l'abonnement actif du client pour cette activité, s'il en a un (jamais au billet d'une autre date).
   const subscription = (
     await db
-      .select()
+      .select({ id: subscriptions.id })
       .from(subscriptions)
-      .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"), gte(subscriptions.endsAt, new Date())))
+      .innerJoin(sessions, eq(sessions.activityId, subscriptions.activityId))
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.kind, "membership"),
+          eq(subscriptions.status, "active"),
+          gte(subscriptions.endsAt, new Date()),
+        ),
+      )
       .limit(1)
   )[0];
 
@@ -592,11 +617,12 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
       .set({ status: "cancelled", paymentStatus: "cancelled" })
       .where(eq(subscriptions.id, id));
   } else if (action === "markPaid") {
-    await db
+    const [updated] = await db
       .update(subscriptions)
       .set({ paymentStatus: "paid", status: "active" })
-      .where(eq(subscriptions.id, id));
-    await ensureAttendances({ userId, activityId: num(formData, "activityId"), subscriptionId: id, limit: num(formData, "sessionsIncluded") });
+      .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
+      .returning();
+    if (updated) await grantAttendances(updated);
   } else if (action === "extend") {
     const row = (await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1))[0];
     if (row) {

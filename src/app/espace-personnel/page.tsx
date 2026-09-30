@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ abonnement?: string; erreur?: string }>;
+  searchParams: Promise<{ abonnement?: string; billet?: string; erreur?: string }>;
 }) {
   const user = await requireUser();
   const flags = await searchParams;
@@ -40,7 +40,9 @@ export default async function DashboardPage({
   const now = new Date();
   const upcoming = sessionRows.filter((row) => row.session.startsAt.getTime() >= now.getTime());
   const past = sessionRows.filter((row) => row.session.startsAt.getTime() < now.getTime()).reverse();
-  const activeSubscriptions = subscriptionRows.filter((row) => row.subscription.status === "active");
+  const memberships = subscriptionRows.flatMap((row) => (row.plan ? [{ ...row, plan: row.plan }] : []));
+  const tickets = subscriptionRows.filter((row) => row.subscription.kind === "ticket");
+  const activeSubscriptions = memberships.filter((row) => row.subscription.status === "active");
   const pendingPayments = subscriptionRows.filter(
     (row) =>
       (row.subscription.paymentStatus === "pending" || row.subscription.paymentStatus === "declared") &&
@@ -74,6 +76,11 @@ export default async function DashboardPage({
           {t("subscriptionActive")}
         </div>
       ) : null}
+      {flags.billet === "confirme" || flags.billet === "deja" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {flags.billet === "confirme" ? t("ticketRegistered") : t("ticketAlreadyBought")}
+        </div>
+      ) : null}
       {flags.erreur === "subscriptionNotFound" ? (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {t("errors.subscriptionNotFound")}
@@ -98,10 +105,14 @@ export default async function DashboardPage({
                 className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-semibold text-zinc-900">{row.plan.name}</p>
+                  <p className="font-semibold text-zinc-900">{row.plan ? row.plan.name : t("ticketOf", { name: row.activity.name })}</p>
                   <p className="text-sm text-zinc-600">
-                    {row.activity.name} · {formatPrice(row.plan.priceCents, locale)} ·{" "}
-                    {tCommon("sessions", { count: row.plan.sessionsIncluded })}
+                    {row.activity.name} · {formatPrice(row.priceCents, locale)} ·{" "}
+                    {row.plan
+                      ? tCommon("sessions", { count: row.plan.sessionsIncluded })
+                      : row.session
+                        ? formatDate(row.session.startsAt, locale)
+                        : tCommon("none")}
                   </p>
                 </div>
                 <Link href={`/abonnement/${row.subscription.id}/paiement`} className="btn btn-primary btn-sm">
@@ -113,13 +124,62 @@ export default async function DashboardPage({
         </section>
       ) : null}
 
+      {tickets.length > 0 ? (
+        <section>
+          <SectionTitle eyebrow={t("ticketsEyebrow")} title={t("ticketsTitle")} subtitle={t("ticketsSubtitle")} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {tickets.map((row) => {
+              const status = toSubscriptionStatus(row.subscription.status);
+              const pending = row.subscription.status === "pending";
+              return (
+                <Card key={row.subscription.id} className="card-hover">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="badge border-zinc-300 bg-zinc-50">
+                        {row.categoryEmoji} {row.categoryName}
+                      </span>
+                      <h3 className="mt-2 text-lg font-bold text-zinc-900">{row.activity.name}</h3>
+                      <p className="text-sm text-emerald-700">
+                        {row.session
+                          ? tCommon("dateAtTime", {
+                              date: formatDate(row.session.startsAt, locale),
+                              time: formatTime(row.session.startsAt, locale),
+                            })
+                          : tCommon("none")}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        📍 {row.session?.location || [row.activity.address, row.activity.city].filter(Boolean).join(", ")}
+                      </p>
+                    </div>
+                    <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`ticket.${status}`)}</span>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gold-dark">{formatPrice(row.priceCents, locale)}</span>
+                    {pending ? (
+                      <Link href={`/abonnement/${row.subscription.id}/paiement`} className="btn btn-primary btn-sm ms-3">
+                        {t("finalize")}
+                      </Link>
+                    ) : (
+                      <Link href={`/activites/${row.activity.slug}`} className="btn btn-ghost btn-sm ms-3">
+                        {t("viewActivity")}
+                      </Link>
+                    )}
+                    <span className="ms-auto text-xs text-zinc-500">{t("reference", { id: row.subscription.id })}</span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       <section>
         <SectionTitle eyebrow={t("subsEyebrow")} title={t("subsTitle")} subtitle={t("subsSubtitle")} />
-        {subscriptionRows.length === 0 ? (
+        {memberships.length === 0 ? (
           <EmptyState title={t("noSubsTitle")} description={t("noSubsText")} />
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
-            {subscriptionRows.map((row) => {
+            {memberships.map((row) => {
               const status = toSubscriptionStatus(row.subscription.status);
               const used = Math.max(row.attendedCount, row.subscription.sessionsUsed);
               const remainingForPlan = Math.max(row.plan.sessionsIncluded - used, 0);

@@ -1,10 +1,18 @@
 import "server-only";
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { ACTIVITY_TRANSLATABLE, activities, attendances, sessions, subscriptions, users } from "@/db/schema";
+import {
+  ACTIVITY_TRANSLATABLE,
+  activities,
+  attendances,
+  sessions,
+  subscriptions,
+  users,
+  type Subscription,
+} from "@/db/schema";
 import { randomToken } from "@/lib/auth";
 import { appUrl, logAndSend } from "@/lib/mailer";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { translatorFor } from "@/i18n/translator";
 
@@ -65,7 +73,52 @@ export async function ensureAttendances(params: {
   return missing.length;
 }
 
-/** Active un abonnement après paiement et génère les séances suivies. */
+/**
+ * Présences auxquelles donne droit une souscription payée :
+ * les prochaines séances pour un abonnement, la seule date achetée pour un billet.
+ */
+export async function grantAttendances(subscription: Subscription): Promise<void> {
+  if (subscription.kind === "ticket") {
+    if (!subscription.sessionId) return;
+    await db
+      .insert(attendances)
+      .values({
+        sessionId: subscription.sessionId,
+        userId: subscription.userId,
+        subscriptionId: subscription.id,
+        status: "pending",
+        token: randomToken(),
+      })
+      .onConflictDoNothing();
+    return;
+  }
+  await ensureAttendances({
+    userId: subscription.userId,
+    activityId: subscription.activityId,
+    subscriptionId: subscription.id,
+    limit: subscription.sessionsIncluded,
+  });
+}
+
+/** Billets payés pour une date d'événement (les billets en attente de paiement ne réservent pas de place). */
+export async function ticketsSold(sessionIds: number[]): Promise<Map<number, number>> {
+  if (sessionIds.length === 0) return new Map();
+  const rows = await db
+    .select({ sessionId: subscriptions.sessionId, count: sql<number>`count(*)::int` })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.kind, "ticket"),
+        inArray(subscriptions.sessionId, sessionIds),
+        eq(subscriptions.paymentStatus, "paid"),
+        ne(subscriptions.status, "cancelled"),
+      ),
+    )
+    .groupBy(subscriptions.sessionId);
+  return new Map(rows.map((row) => [row.sessionId!, row.count]));
+}
+
+/** Active un abonnement ou un billet après paiement et crée les présences correspondantes. */
 export async function activateSubscription(subscriptionId: number): Promise<void> {
   const subscription = (
     await db.select().from(subscriptions).where(eq(subscriptions.id, subscriptionId)).limit(1)
@@ -77,51 +130,81 @@ export async function activateSubscription(subscriptionId: number): Promise<void
     .set({ status: "active", paymentStatus: "paid" })
     .where(eq(subscriptions.id, subscriptionId));
 
-  await ensureAttendances({
-    userId: subscription.userId,
-    activityId: subscription.activityId,
-    subscriptionId: subscription.id,
-    limit: subscription.sessionsIncluded,
-  });
+  await grantAttendances(subscription);
 
   const info = (
     await db
-      .select({ email: users.email, firstName: users.firstName, locale: users.locale, activity: activities })
+      .select({
+        email: users.email,
+        firstName: users.firstName,
+        locale: users.locale,
+        activity: activities,
+        session: sessions,
+      })
       .from(subscriptions)
       .innerJoin(users, eq(users.id, subscriptions.userId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
+      .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
       .where(eq(subscriptions.id, subscriptionId))
       .limit(1)
   )[0];
+  if (!info) return;
 
-  if (info) {
-    const { locale } = info;
-    const t = translatorFor(locale);
-    const activityName = localize(info.activity, locale, ACTIVITY_TRANSLATABLE).name;
+  const { locale } = info;
+  const t = translatorFor(locale);
+  const activityName = localize(info.activity, locale, ACTIVITY_TRANSLATABLE).name;
+
+  if (subscription.kind === "ticket") {
+    const place =
+      info.session?.location || [info.activity.address, info.activity.city].filter(Boolean).join(", ") || null;
     await logAndSend({
-      type: "subscription_activated",
+      type: "ticket_confirmed",
       userId: subscription.userId,
+      sessionId: info.session?.id ?? null,
       subscriptionId: subscription.id,
       recipient: info.email,
       locale,
-      subject: t("emails.subscriptionActivated.subject", { activity: activityName }),
+      subject: t("emails.ticketConfirmed.subject", { activity: activityName }),
       body: [
         t("emails.hello", { name: info.firstName }),
         "",
-        t("emails.subscriptionActivated.active", { activity: activityName }),
-        t("emails.subscriptionActivated.sessions", { count: subscription.sessionsIncluded }),
-        t("emails.subscriptionActivated.validUntil", { date: formatDate(subscription.endsAt, locale) }),
+        t("emails.ticketConfirmed.confirmed", { activity: activityName }),
+        ...(info.session ? [t("emails.ticketConfirmed.date", { value: formatDateTime(info.session.startsAt, locale) })] : []),
+        ...(place ? [t("emails.ticketConfirmed.place", { value: place })] : []),
+        t("emails.ticketConfirmed.reference", { id: subscription.id }),
         "",
-        t("emails.subscriptionActivated.follow"),
+        t("emails.ticketConfirmed.follow"),
         `${appUrl()}/espace-personnel`,
         "",
         t("emails.team"),
       ].join("\n"),
     });
+    return;
   }
+
+  await logAndSend({
+    type: "subscription_activated",
+    userId: subscription.userId,
+    subscriptionId: subscription.id,
+    recipient: info.email,
+    locale,
+    subject: t("emails.subscriptionActivated.subject", { activity: activityName }),
+    body: [
+      t("emails.hello", { name: info.firstName }),
+      "",
+      t("emails.subscriptionActivated.active", { activity: activityName }),
+      t("emails.subscriptionActivated.sessions", { count: subscription.sessionsIncluded }),
+      t("emails.subscriptionActivated.validUntil", { date: formatDate(subscription.endsAt, locale) }),
+      "",
+      t("emails.subscriptionActivated.follow"),
+      `${appUrl()}/espace-personnel`,
+      "",
+      t("emails.team"),
+    ].join("\n"),
+  });
 }
 
-/** Ajoute les participants abonnés lorsqu'une nouvelle séance est créée. */
+/** Ajoute les participants abonnés lorsqu'une nouvelle séance est créée (les billets restent liés à leur date). */
 export async function attachSubscribersToSession(sessionId: number, activityId: number): Promise<void> {
   const actives = await db
     .select({
@@ -133,6 +216,7 @@ export async function attachSubscribersToSession(sessionId: number, activityId: 
     .where(
       and(
         eq(subscriptions.activityId, activityId),
+        eq(subscriptions.kind, "membership"),
         eq(subscriptions.status, "active"),
         gt(subscriptions.endsAt, new Date()),
       ),

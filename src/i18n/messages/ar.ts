@@ -66,6 +66,7 @@ const ar: Messages = {
   },
 
   status: {
+    ticket: { pending: "في انتظار الدفع", active: "مؤكَّدة", expired: "منقضية", cancelled: "ملغاة" },
     session: { scheduled: "مبرمجة", cancelled: "ملغاة", postponed: "مؤجلة", done: "منتهية" },
     attendance: {
       confirmed: "الحضور مؤكَّد",
@@ -139,6 +140,11 @@ const ar: Messages = {
   },
 
   activities: {
+    dateTba: "الموعد قريبًا",
+    ticket: "🎟️ التذكرة",
+    free: "مجاني",
+    date: "📅 التاريخ",
+    book: "احجز",
     sortDefault: "الفئة",
     sortName: "الاسم (أ → ي)",
     sortPrice: "السعر تصاعديًا",
@@ -170,6 +176,24 @@ const ar: Messages = {
   },
 
   activity: {
+    dateTba: "سيُعلن عن الموعد قريبًا",
+    free: "مجاني",
+    eventDate: "التاريخ",
+    eventDuration: "المدة",
+    ticketPrice: "سعر التذكرة",
+    ticketEyebrow: "التذاكر",
+    ticketTitle: "احجز مكانك",
+    ticketSubtitle: "تذكرة واحدة لكل شخص. ادفع عبر الإنترنت: يُؤكَّد تسجيلك فور استلام الدفع.",
+    ticketPerPerson: "للشخص الواحد",
+    noDates: "سيُعلن عن مواعيد هذه الفعالية قريبًا جدًا. عُد لاحقًا أو تواصل معنا.",
+    chooseDate: "اختر الموعد",
+    soldOut: "مكتمل",
+    placesLeft: "{count, plural, one {مكان واحد متبقٍّ} other {# أماكن متبقية}}",
+    registerFree: "سجّلني مجانًا",
+    payAndRegister: "ادفع وسجّل — {price}",
+    ticketSecurePayment: "دفع آمن عبر رابط دفع إلكتروني",
+    ticketSoldOut: "عذرًا، هذا الموعد مكتمل. اختر موعدًا آخر إن كان متاحًا.",
+    ticketUnavailable: "لم يعد هذا الموعد متاحًا للحجز.",
     breadcrumb: "الأنشطة",
     places: "{count} مقعدًا",
     description: "الوصف",
@@ -223,6 +247,15 @@ const ar: Messages = {
   },
 
   payment: {
+    ticketIntro: "راجع ملخص تذكرتك ثم ادفع عبر الإنترنت: يُؤكَّد تسجيلك فور استلام الدفع.",
+    ticket: "التذكرة",
+    ticketOne: "تذكرة لشخص واحد",
+    eventDate: "تاريخ الفعالية",
+    eventTime: "الساعة",
+    seeTickets: "عرض تذاكري",
+    ticketConfirmed: "تم تأكيد التسجيل ✅",
+    ticketClosed: "هذا الموعد انقضى أو أُلغي أو لم يعد معروضًا للبيع: لم يعد بالإمكان دفع هذه التذكرة. تواصل معنا لأي استفسار.",
+    ticketHelp: "لديك سؤال؟ راسلنا على {email} — ستظهر تذكرتك في مساحتك الشخصية فور تأكيد الدفع.",
     step: "الخطوة 7 من المسار",
     title: "تأكيد طلبك",
     intro: "راجع الملخّص ثم ادفع عبر رابط الدفع الخارجي الخاص بالعرض.",
@@ -259,6 +292,12 @@ const ar: Messages = {
   },
 
   dashboard: {
+    ticketRegistered: "✅ تم تأكيد تسجيلك. تجد تذكرتك أدناه.",
+    ticketAlreadyBought: "لديك بالفعل تذكرة لهذا الموعد: وهي معروضة أدناه.",
+    ticketOf: "تذكرة — {name}",
+    ticketsEyebrow: "تذاكري",
+    ticketsTitle: "الفعاليات المحجوزة",
+    ticketsSubtitle: "حفلات، سهرات، رحلات…: التاريخ والمكان وحالة تذكرتك.",
     eyebrow: "المساحة الشخصية",
     hello: "مرحبًا {name} 👋",
     intro: "هنا تجد اشتراكاتك وحصصك وتقدّم برامجك.",
@@ -341,6 +380,7 @@ const ar: Messages = {
       demoClient: "👤 عميل:",
       demoAdmin: "🛠️ مسؤول:",
       loginToSubscribe: "سجّل الدخول للاشتراك في هذا العرض.",
+      loginToBuyTicket: "سجّل الدخول لحجز تذكرتك.",
     },
     verification: {
       verified: "🎉 تم تأكيد بريدك الإلكتروني وتفعيل حسابك. يمكنك الآن تسجيل الدخول.",
@@ -533,6 +573,8 @@ const ar: Messages = {
       },
     },
     activities: {
+      eventDate: "تاريخ الفعالية (اختياري)",
+      eventDateHint: "لفعالية لمرة واحدة: يُنشئ مباشرةً الموعد المعروض للبيع. يمكن إضافة مواعيد أخرى من صفحة النشاط.",
       searchPlaceholder: "الاسم أو المدينة أو العنوان",
       filterCategory: "الفئة",
       filterStatus: "الحالة",
@@ -570,6 +612,23 @@ const ar: Messages = {
       create: "إنشاء النشاط",
     },
     activityDetail: {
+      event: {
+        statDates: "المواعيد",
+        statTickets: "التذاكر المبيعة",
+        statTicketsHint: "تذاكر مدفوعة، كل المواعيد",
+        statCapacity: "الأماكن لكل موعد",
+        statPrice: "سعر التذكرة",
+        price: "سعر التذكرة (€) — 0 = مجاني",
+        capacity: "الأماكن لكل موعد",
+        sessionsEyebrow: "التذاكر",
+        sessionsTitle: "مواعيد الفعالية",
+        sessionsSubtitle:
+          "يُعرض كل موعد للبيع بسعر التذكرة والسعة المحددين أعلاه. إلغاء موعد يُعلم المشاركين تلقائيًا عبر البريد الإلكتروني.",
+        addSession: "إضافة الموعد",
+        noSessions: "لا يوجد موعد: الفعالية غير معروضة للبيع بعد.",
+        startsAt: "التاريخ والساعة (بتوقيت باريس) *",
+        sold: "{sold} / {capacity} تذكرة مبيعة",
+      },
       breadcrumb: "الأنشطة",
       statSessions: "الحصص",
       statSessionsHint: "{count} قادمة",
@@ -813,6 +872,7 @@ const ar: Messages = {
       create: "إنشاء العميل",
     },
     clientDetail: {
+      ticketFor: "تذكرة يوم {date}",
       breadcrumb: "العملاء",
       statSubs: "الاشتراكات",
       statSessions: "الحصص المتابَعة",
@@ -890,6 +950,7 @@ const ar: Messages = {
       emptyText: "أضف أول شريحة باستخدام النموذج أدناه.",
     },
     payments: {
+      ticketOf: "تذكرة — {name}",
       eyebrow: "الدفع عبر الإنترنت",
       title: "مدفوعات Qonto",
       subtitle: "الدفع عبر رابط Qonto لمرة واحدة وتفعيل الاشتراك تلقائيًا فور تأكيد الدفع.",
@@ -995,6 +1056,14 @@ const ar: Messages = {
   },
 
   emails: {
+    ticketConfirmed: {
+      subject: "تم تأكيد التسجيل — {activity}",
+      confirmed: "تم تأكيد تسجيلك في « {activity} ». شكرًا لك!",
+      date: "• التاريخ: {value}",
+      place: "• المكان: {value}",
+      reference: "• تذكرة رقم {id}",
+      follow: "تجد تذكرتك في مساحتك الشخصية:",
+    },
     signature: "إلى اللقاء قريبًا،",
     team: "فريق WANTED TUN EVENTS",
     autoNotice: "أُرسلت هذه الرسالة تلقائيًا، يُرجى عدم الرد عليها.",

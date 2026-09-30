@@ -2,12 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, attendances, categories, plans, subscriptions } from "@/db/schema";
+import { activities, attendances, categories, plans, sessions, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
 import { offersMemberships } from "@/lib/memberships";
 import { ensurePaymentLink, qontoPaymentsEnabled } from "@/lib/qonto/payments";
+import { activateSubscription, ticketsSold } from "@/lib/subscriptions";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -42,6 +43,7 @@ export async function subscribeAction(formData: FormData): Promise<void> {
     .insert(subscriptions)
     .values({
       userId: user.id,
+      kind: "membership",
       planId: plan.id,
       activityId: plan.activityId,
       status: "pending",
@@ -60,6 +62,91 @@ export async function subscribeAction(formData: FormData): Promise<void> {
 
   revalidatePath("/espace-personnel");
   redirect(`/abonnement/${inserted[0]!.id}/paiement`);
+}
+
+/**
+ * Billet d'un événement ponctuel (toutes les catégories sauf le club de chant) :
+ * une date → un billet au prix de l'activité, en attente de paiement → page de paiement.
+ * Un événement gratuit est confirmé immédiatement.
+ */
+export async function buyTicketAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  const sessionId = Number(formData.get("sessionId") ?? 0);
+  if (!sessionId) redirect("/activites");
+
+  const row = (
+    await db
+      .select({ session: sessions, activity: activities, categorySlug: categories.slug })
+      .from(sessions)
+      .innerJoin(activities, eq(activities.id, sessions.activityId))
+      .innerJoin(categories, eq(categories.id, activities.categoryId))
+      .where(eq(sessions.id, sessionId))
+      .limit(1)
+  )[0];
+  // Le club de chant se souscrit par formule, jamais à la date.
+  if (!row || row.activity.status !== "active" || offersMemberships(row.categorySlug)) redirect("/activites");
+  const { session, activity } = row;
+  const back = `/activites/${activity.slug}`;
+
+  if (session.status !== "scheduled" || session.startsAt.getTime() <= Date.now()) {
+    redirect(`${back}?billet=indisponible#billet`);
+  }
+  if (!user) redirect(`/connexion?erreur=loginToBuyTicket&next=${back}`);
+
+  // Un seul billet par personne et par date : on reprend celui déjà commencé.
+  const existing = (
+    await db
+      .select({ id: subscriptions.id, paymentStatus: subscriptions.paymentStatus })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.kind, "ticket"),
+          eq(subscriptions.userId, user.id),
+          eq(subscriptions.sessionId, session.id),
+          ne(subscriptions.status, "cancelled"),
+        ),
+      )
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1)
+  )[0];
+  if (existing) {
+    redirect(existing.paymentStatus === "paid" ? "/espace-personnel?billet=deja" : `/abonnement/${existing.id}/paiement`);
+  }
+
+  const sold = (await ticketsSold([session.id])).get(session.id) ?? 0;
+  if (sold >= activity.capacity) redirect(`${back}?billet=complet#billet`);
+
+  const inserted = await db
+    .insert(subscriptions)
+    .values({
+      userId: user.id,
+      kind: "ticket",
+      planId: null,
+      activityId: activity.id,
+      sessionId: session.id,
+      status: "pending",
+      paymentStatus: "pending",
+      startsAt: new Date(),
+      // Le billet expire à la fin de l'événement (tâche quotidienne).
+      endsAt: new Date(session.startsAt.getTime() + session.durationMinutes * 60 * 1000),
+      sessionsIncluded: 1,
+      sessionsUsed: 0,
+    })
+    .returning({ id: subscriptions.id });
+  const ticketId = inserted[0]!.id;
+
+  if (activity.priceCents <= 0) {
+    await activateSubscription(ticketId);
+    revalidatePath("/espace-personnel");
+    redirect("/espace-personnel?billet=confirme");
+  }
+
+  if (await qontoPaymentsEnabled()) {
+    await ensurePaymentLink(ticketId).catch((error) => console.error("[qonto] création du lien impossible", error));
+  }
+
+  revalidatePath("/espace-personnel");
+  redirect(`/abonnement/${ticketId}/paiement`);
 }
 
 /** Nouveau lien de paiement Qonto (le précédent a expiré, a été annulé ou n'a pas pu être créé). */

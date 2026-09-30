@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
-import { paymentLinks, plans, subscriptions, users, type QontoConnection } from "@/db/schema";
+import { activities, paymentLinks, plans, subscriptions, users, type QontoConnection } from "@/db/schema";
 import { disconnectQontoAction, registerQontoWebhookAction } from "@/app/actions/admin";
 import { getConnection, getPaymentLinksConnection, type ConnectionStatus } from "@/lib/qonto/client";
 import { qontoConfigured, qontoEnv, qontoRedirectUri, qontoWebhookUrl } from "@/lib/qonto/config";
@@ -37,11 +37,18 @@ async function loadState() {
 
   const recent = tablesReady
     ? await db
-        .select({ link: paymentLinks, subscription: subscriptions, user: users, planName: plans.name })
+        .select({
+          link: paymentLinks,
+          subscription: subscriptions,
+          user: users,
+          planName: plans.name,
+          activityName: activities.name,
+        })
         .from(paymentLinks)
         .innerJoin(subscriptions, eq(subscriptions.id, paymentLinks.subscriptionId))
         .innerJoin(users, eq(users.id, subscriptions.userId))
-        .innerJoin(plans, eq(plans.id, subscriptions.planId))
+        .innerJoin(activities, eq(activities.id, subscriptions.activityId))
+        .leftJoin(plans, eq(plans.id, subscriptions.planId))
         .orderBy(desc(paymentLinks.createdAt))
         .limit(25)
     : [];
@@ -189,7 +196,7 @@ export default async function AdminPaymentsPage({
                 </tr>
               </thead>
               <tbody>
-                {state.recent.map(({ link, subscription, user, planName }) => (
+                {state.recent.map(({ link, subscription, user, planName, activityName }) => (
                   <tr key={link.id}>
                     <td className="whitespace-nowrap">{formatDateTime(link.createdAt, locale)}</td>
                     <td>
@@ -198,7 +205,7 @@ export default async function AdminPaymentsPage({
                         {user.email}
                       </span>
                     </td>
-                    <td>{planName}</td>
+                    <td>{planName ?? t("ticketOf", { name: activityName })}</td>
                     <td className="whitespace-nowrap">{formatPrice(link.amountCents, locale)}</td>
                     <td>
                       <span className={`badge ${LINK_STATUS_STYLE[link.status] ?? LINK_STATUS_STYLE.expired}`}>
