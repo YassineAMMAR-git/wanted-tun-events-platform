@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ensureSeeded } from "@/lib/seed";
 import { getActivityDetail } from "@/lib/queries";
-import { subscribeAction } from "@/app/actions/booking";
+import { buyTicketAction, subscribeAction } from "@/app/actions/booking";
 import { formatDate, formatDuration, formatPrice, formatTime, parseParisDateTime, toDateTimeLocalValue } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 
@@ -16,7 +16,7 @@ export default async function ActivityDetailPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ du?: string; au?: string; lieu?: string }>;
+  searchParams: Promise<{ du?: string; au?: string; lieu?: string; billet?: string }>;
 }) {
   await ensureSeeded();
   const [{ slug }, query] = await Promise.all([params, searchParams]);
@@ -38,6 +38,16 @@ export default async function ActivityDetailPage({
   const today = toDateTimeLocalValue(new Date()).slice(0, 10);
   const pagePath = `/activites/${activity.slug}`;
   const address = [activity.address, activity.city].filter(Boolean).join(", ");
+  const { ticketDates } = detail;
+  const nextDate = ticketDates[0];
+  const firstAvailable = ticketDates.find((date) => date.placesLeft > 0);
+  const free = activity.priceCents <= 0;
+  const ticketNotice =
+    query.billet === "complet" ? t("ticketSoldOut") : query.billet === "indisponible" ? t("ticketUnavailable") : null;
+  const nextDateLabel = nextDate
+    ? tCommon("dateAtTime", { date: formatDate(nextDate.startsAt, locale), time: formatTime(nextDate.startsAt, locale) })
+    : t("dateTba");
+  const ticketPrice = free ? t("free") : formatPrice(activity.priceCents, locale);
 
   return (
     <div className="space-y-8">
@@ -66,13 +76,21 @@ export default async function ActivityDetailPage({
           <h1 className="mt-3 text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl">{activity.name}</h1>
           <p className="mt-2 text-sm text-zinc-700 sm:text-base">{activity.shortDescription}</p>
           <div className="mt-4 flex flex-wrap gap-1.5 text-xs">
-            {[
-              `📍 ${address}`,
-              `🕒 ${activity.scheduleText ?? tCommon("none")}`,
-              `⏱️ ${formatDuration(activity.durationMinutes, locale)}`,
-              `👥 ${t("places", { count: activity.capacity })}`,
-              `🎟️ ${formatPrice(activity.priceCents, locale)}`,
-            ].map((chip) => (
+            {(detail.offersMemberships
+              ? [
+                  `📍 ${address}`,
+                  `🕒 ${activity.scheduleText ?? tCommon("none")}`,
+                  `⏱️ ${formatDuration(activity.durationMinutes, locale)}`,
+                  `👥 ${t("places", { count: activity.capacity })}`,
+                  `🎟️ ${formatPrice(activity.priceCents, locale)}`,
+                ]
+              : [
+                  `📅 ${nextDateLabel}`,
+                  `📍 ${nextDate?.location || address}`,
+                  `⏱️ ${formatDuration(nextDate?.durationMinutes ?? activity.durationMinutes, locale)}`,
+                  `🎟️ ${ticketPrice}`,
+                ]
+            ).map((chip) => (
               <span key={chip} className="badge border-zinc-300 bg-white/90 text-zinc-800">
                 {chip}
               </span>
@@ -89,15 +107,25 @@ export default async function ActivityDetailPage({
         <Card>
           <h2 className="text-lg font-bold text-zinc-900">{t("practical")}</h2>
           <dl className="mt-3 space-y-3 text-sm">
-            {[
-              [t("category"), categoryName],
-              [t("address"), address],
-              [t("schedule"), activity.scheduleText ?? tCommon("none")],
-              [t("sessionDuration"), formatDuration(activity.durationMinutes, locale)],
-              [t("pricePerSession"), formatPrice(activity.priceCents, locale)],
-              ...(detail.offersMemberships ? [[t("plans"), tCommon("plansCount", { count: plans.length })]] : []),
-              [t("upcomingCount"), String(upcomingTotal)],
-            ].map(([label, value]) => (
+            {(detail.offersMemberships
+              ? [
+                  [t("category"), categoryName],
+                  [t("address"), address],
+                  [t("schedule"), activity.scheduleText ?? tCommon("none")],
+                  [t("sessionDuration"), formatDuration(activity.durationMinutes, locale)],
+                  [t("pricePerSession"), formatPrice(activity.priceCents, locale)],
+                  [t("plans"), tCommon("plansCount", { count: plans.length })],
+                  [t("upcomingCount"), String(upcomingTotal)],
+                ]
+              : [
+                  [t("category"), categoryName],
+                  [t("address"), nextDate?.location || address],
+                  [t("eventDate"), nextDateLabel],
+                  ...(activity.scheduleText ? [[t("schedule"), activity.scheduleText]] : []),
+                  [t("eventDuration"), formatDuration(nextDate?.durationMinutes ?? activity.durationMinutes, locale)],
+                  [t("ticketPrice"), ticketPrice],
+                ]
+            ).map(([label, value]) => (
               <div key={label} className="flex justify-between gap-4 border-b border-zinc-200 pb-2">
                 <dt className="text-zinc-500">{label}</dt>
                 <dd className="text-end font-medium text-zinc-800">{value}</dd>
@@ -106,6 +134,83 @@ export default async function ActivityDetailPage({
           </dl>
         </Card>
       </section>
+
+      {detail.offersMemberships ? null : (
+        <section id="billet" className="scroll-mt-20">
+          <SectionTitle eyebrow={t("ticketEyebrow")} title={t("ticketTitle")} subtitle={t("ticketSubtitle")} />
+          {ticketNotice ? (
+            <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
+              {ticketNotice}
+            </div>
+          ) : null}
+          <Card className="max-w-2xl">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs tracking-wider text-zinc-500 uppercase">{t("ticketPrice")}</p>
+                <p className="text-3xl font-black text-gold-dark">{ticketPrice}</p>
+              </div>
+              <p className="text-sm text-zinc-600">{t("ticketPerPerson")}</p>
+            </div>
+
+            {ticketDates.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-600">{t("noDates")}</p>
+            ) : (
+              <form action={buyTicketAction} className="mt-4 space-y-3">
+                <fieldset className="space-y-2">
+                  <legend className="label">{ticketDates.length > 1 ? t("chooseDate") : t("eventDate")}</legend>
+                  {ticketDates.map((date) => {
+                    const full = date.placesLeft === 0;
+                    return (
+                      <label
+                        key={date.id}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                          full
+                            ? "cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60"
+                            : "cursor-pointer border-amber-200 bg-amber-50/50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="sessionId"
+                          value={date.id}
+                          required
+                          disabled={full}
+                          defaultChecked={date.id === firstAvailable?.id}
+                          className="accent-amber-600"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-zinc-900">
+                            📅 {formatDate(date.startsAt, locale)} · {formatTime(date.startsAt, locale)}
+                          </span>
+                          <span className="block truncate text-xs text-zinc-600">
+                            📍 {date.location || address}
+                            {date.title ? ` · ${date.title}` : ""}
+                          </span>
+                        </span>
+                        <span
+                          className={`badge ${
+                            full ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {full ? t("soldOut") : t("placesLeft", { count: date.placesLeft })}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+                <button className="btn btn-primary w-full" type="submit" disabled={!firstAvailable}>
+                  {!firstAvailable
+                    ? t("soldOut")
+                    : free
+                      ? t("registerFree")
+                      : t("payAndRegister", { price: formatPrice(activity.priceCents, locale) })}
+                </button>
+                {free ? null : <p className="text-center text-[11px] text-zinc-500">{t("ticketSecurePayment")}</p>}
+              </form>
+            )}
+          </Card>
+        </section>
+      )}
 
       {detail.offersMemberships ? (
         <section>
@@ -163,103 +268,105 @@ export default async function ActivityDetailPage({
         </section>
       ) : null}
 
-      <section className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <Card>
-          <div id="seances" className="flex scroll-mt-20 flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-lg font-bold text-zinc-900">{t("upcomingTitle")}</h2>
-            <p className="text-xs text-zinc-500">
-              {filtered
-                ? t("upcomingFiltered", { shown: upcoming.length, total: upcomingTotal })
-                : t("upcomingCountLabel", { count: upcomingTotal })}
-            </p>
-          </div>
+      {detail.offersMemberships ? (
+        <section className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <Card>
+            <div id="seances" className="flex scroll-mt-20 flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-bold text-zinc-900">{t("upcomingTitle")}</h2>
+              <p className="text-xs text-zinc-500">
+                {filtered
+                  ? t("upcomingFiltered", { shown: upcoming.length, total: upcomingTotal })
+                  : t("upcomingCountLabel", { count: upcomingTotal })}
+              </p>
+            </div>
 
-          {upcomingTotal > 0 ? (
-            <form
-              action={`${pagePath}#seances`}
-              className="mt-3 grid items-end gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:grid-cols-[1fr_1fr_1.4fr_auto]"
-            >
-              <div>
-                <label className="label" htmlFor="du">
-                  {t("filterFrom")}
-                </label>
-                <input id="du" name="du" type="date" min={today} defaultValue={du ?? ""} className="input" />
-              </div>
-              <div>
-                <label className="label" htmlFor="au">
-                  {t("filterTo")}
-                </label>
-                <input id="au" name="au" type="date" min={du ?? today} defaultValue={au ?? ""} className="input" />
-              </div>
-              <div>
-                <label className="label" htmlFor="lieu">
-                  {t("filterPlace")}
-                </label>
-                <select id="lieu" name="lieu" defaultValue={lieu ?? ""} className="select">
-                  <option value="">{t("allPlaces")}</option>
-                  {upcomingPlaces.map((place) => (
-                    <option key={place} value={place}>
-                      {place}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <button className="btn btn-primary" type="submit">
-                  {tCommon("filter")}
-                </button>
-                {filtered ? (
-                  <Link href={`${pagePath}#seances`} className="btn btn-ghost" aria-label={tCommon("reset")}>
-                    ✕
-                  </Link>
-                ) : null}
-              </div>
-            </form>
-          ) : null}
+            {upcomingTotal > 0 ? (
+              <form
+                action={`${pagePath}#seances`}
+                className="mt-3 grid items-end gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:grid-cols-[1fr_1fr_1.4fr_auto]"
+              >
+                <div>
+                  <label className="label" htmlFor="du">
+                    {t("filterFrom")}
+                  </label>
+                  <input id="du" name="du" type="date" min={today} defaultValue={du ?? ""} className="input" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="au">
+                    {t("filterTo")}
+                  </label>
+                  <input id="au" name="au" type="date" min={du ?? today} defaultValue={au ?? ""} className="input" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="lieu">
+                    {t("filterPlace")}
+                  </label>
+                  <select id="lieu" name="lieu" defaultValue={lieu ?? ""} className="select">
+                    <option value="">{t("allPlaces")}</option>
+                    {upcomingPlaces.map((place) => (
+                      <option key={place} value={place}>
+                        {place}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn btn-primary" type="submit">
+                    {tCommon("filter")}
+                  </button>
+                  {filtered ? (
+                    <Link href={`${pagePath}#seances`} className="btn btn-ghost" aria-label={tCommon("reset")}>
+                      ✕
+                    </Link>
+                  ) : null}
+                </div>
+              </form>
+            ) : null}
 
-          {upcoming.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-600">{filtered ? t("noUpcomingFiltered") : t("noUpcoming")}</p>
-          ) : (
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {upcoming.map((session) => (
-                <li
-                  key={session.id}
-                  className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5"
-                >
-                  <p className="text-xs font-semibold text-emerald-700">
-                    🟢 {formatDate(session.startsAt, locale)} · {formatTime(session.startsAt, locale)}
-                  </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-zinc-900">{session.title ?? activity.name}</p>
-                  <p className="truncate text-xs text-zinc-600">
-                    📍 {session.location || address} · {formatDuration(session.durationMinutes, locale)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card>
-          <h2 className="text-lg font-bold text-zinc-900">{t("pastTitle")}</h2>
-          {past.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-600">{t("noPast")}</p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {past.map((session) => (
-                <li
-                  key={session.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm text-zinc-700">{session.title ?? activity.name}</p>
-                    <p className="text-xs text-zinc-500">{session.location ?? address}</p>
-                  </div>
-                  <p className="text-xs text-zinc-500">⚪ {formatDate(session.startsAt, locale)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </section>
+            {upcoming.length === 0 ? (
+              <p className="mt-3 text-sm text-zinc-600">{filtered ? t("noUpcomingFiltered") : t("noUpcoming")}</p>
+            ) : (
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {upcoming.map((session) => (
+                  <li
+                    key={session.id}
+                    className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5"
+                  >
+                    <p className="text-xs font-semibold text-emerald-700">
+                      🟢 {formatDate(session.startsAt, locale)} · {formatTime(session.startsAt, locale)}
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold text-zinc-900">{session.title ?? activity.name}</p>
+                    <p className="truncate text-xs text-zinc-600">
+                      📍 {session.location || address} · {formatDuration(session.durationMinutes, locale)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card>
+            <h2 className="text-lg font-bold text-zinc-900">{t("pastTitle")}</h2>
+            {past.length === 0 ? (
+              <p className="mt-3 text-sm text-zinc-600">{t("noPast")}</p>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {past.map((session) => (
+                  <li
+                    key={session.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm text-zinc-700">{session.title ?? activity.name}</p>
+                      <p className="text-xs text-zinc-500">{session.location ?? address}</p>
+                    </div>
+                    <p className="text-xs text-zinc-500">⚪ {formatDate(session.startsAt, locale)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </section>
+      ) : null}
     </div>
   );
 }

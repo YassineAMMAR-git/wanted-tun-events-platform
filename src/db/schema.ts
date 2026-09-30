@@ -207,8 +207,16 @@ export const plans = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
-/* Abonnements souscrits par les clients                               */
+/* Abonnements (club de chant) et billets (événements ponctuels)       */
 /* ------------------------------------------------------------------ */
+
+/**
+ * « membership » : formule du club de chant (plan_id renseigné, plusieurs séances).
+ * « ticket » : billet d'un événement ponctuel (plan_id vide, session_id = la date choisie, prix = celui de l'activité).
+ */
+export const SUBSCRIPTION_KINDS = ["membership", "ticket"] as const;
+export type SubscriptionKind = (typeof SUBSCRIPTION_KINDS)[number];
+
 export const subscriptions = pgTable(
   "subscriptions",
   {
@@ -216,12 +224,13 @@ export const subscriptions = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    planId: integer("plan_id")
-      .notNull()
-      .references(() => plans.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 16 }).$type<SubscriptionKind>().notNull().default("membership"),
+    planId: integer("plan_id").references(() => plans.id, { onDelete: "cascade" }),
     activityId: integer("activity_id")
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
+    /** Billet : date de l'événement. La supprimer ne supprime pas le billet (payé) : il faut alors le rembourser. */
+    sessionId: integer("session_id").references(() => sessions.id, { onDelete: "set null" }),
     status: varchar("status", { length: 16 }).notNull().default("pending"),
     paymentStatus: varchar("payment_status", { length: 16 }).notNull().default("pending"),
     paymentReference: varchar("payment_reference", { length: 120 }),
@@ -234,6 +243,7 @@ export const subscriptions = pgTable(
   (table) => [
     index("subscriptions_user_idx").on(table.userId),
     index("subscriptions_activity_idx").on(table.activityId),
+    index("subscriptions_session_idx").on(table.sessionId),
   ],
 );
 

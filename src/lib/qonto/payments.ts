@@ -1,7 +1,8 @@
 import "server-only";
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, paymentLinks, plans, subscriptions, users, type PaymentLink } from "@/db/schema";
+import { activities, paymentLinks, plans, sessions, subscriptions, users, type PaymentLink } from "@/db/schema";
+import { formatDateTime } from "@/lib/format";
 import { activateSubscription } from "@/lib/subscriptions";
 import { createPaymentLink, getAccessToken, getConnection, getPaymentLink, type PaymentLinkStatus } from "@/lib/qonto/client";
 import { qontoConfigured, qontoVatRate } from "@/lib/qonto/config";
@@ -76,29 +77,37 @@ export async function latestPaymentLink(subscriptionId: number): Promise<Payment
 }
 
 /**
- * Lien de paiement à usage unique pour un abonnement en attente.
- * Réutilise le lien ouvert s'il existe, sinon en crée un au prix de l'offre (lu en base, jamais envoyé par le client).
+ * Lien de paiement à usage unique pour un abonnement ou un billet en attente.
+ * Réutilise le lien ouvert s'il existe, sinon en crée un au prix lu en base (jamais envoyé par le client) :
+ * celui de l'offre pour un abonnement, celui de l'activité pour un billet.
  */
 export async function ensurePaymentLink(subscriptionId: number): Promise<PaymentLink | null> {
   const row = (
     await db
-      .select({ subscription: subscriptions, plan: plans, activity: activities, user: users })
+      .select({ subscription: subscriptions, plan: plans, activity: activities, session: sessions, user: users })
       .from(subscriptions)
-      .innerJoin(plans, eq(plans.id, subscriptions.planId))
+      .leftJoin(plans, eq(plans.id, subscriptions.planId))
+      .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .innerJoin(users, eq(users.id, subscriptions.userId))
       .where(eq(subscriptions.id, subscriptionId))
       .limit(1)
   )[0];
   if (!row || row.subscription.paymentStatus === "paid") return null;
+  const ticket = row.subscription.kind === "ticket";
+  if (!ticket && !row.plan) return null;
 
   const current = await latestPaymentLink(subscriptionId);
   if (current && (current.status === "paid" || isLinkUsable(current))) return current;
 
+  const amountCents = ticket ? row.activity.priceCents : row.plan!.priceCents;
+  const customer = `${row.user.firstName} ${row.user.lastName} (${row.user.email})`;
   const created = await createPaymentLink({
-    title: `${row.activity.name} — ${row.plan.name}`,
-    description: `Abonnement n°${row.subscription.id} — ${row.user.firstName} ${row.user.lastName} (${row.user.email})`,
-    amountCents: row.plan.priceCents,
+    title: ticket
+      ? `${row.activity.name} — billet${row.session ? ` du ${formatDateTime(row.session.startsAt)}` : ""}`
+      : `${row.activity.name} — ${row.plan!.name}`,
+    description: `${ticket ? "Billet" : "Abonnement"} n°${row.subscription.id} — ${customer}`,
+    amountCents,
     vatRate: qontoVatRate(),
   });
 
@@ -108,7 +117,7 @@ export async function ensurePaymentLink(subscriptionId: number): Promise<Payment
       subscriptionId,
       externalId: created.id,
       url: created.url,
-      amountCents: row.plan.priceCents,
+      amountCents,
       status: created.status ?? "open",
       expiresAt: created.expiration_date ? new Date(created.expiration_date) : null,
     })

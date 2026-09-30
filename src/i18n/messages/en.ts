@@ -66,6 +66,7 @@ const en: Messages = {
   },
 
   status: {
+    ticket: { pending: "Payment pending", active: "Confirmed", expired: "Past", cancelled: "Cancelled" },
     session: { scheduled: "Scheduled", cancelled: "Cancelled", postponed: "Postponed", done: "Completed" },
     attendance: {
       confirmed: "Attendance confirmed",
@@ -140,6 +141,11 @@ const en: Messages = {
   },
 
   activities: {
+    dateTba: "Date to be announced",
+    ticket: "🎟️ Ticket",
+    free: "Free",
+    date: "📅 Date",
+    book: "Book",
     sortDefault: "Category",
     sortName: "Name (A → Z)",
     sortPrice: "Price, lowest first",
@@ -169,6 +175,24 @@ const en: Messages = {
   },
 
   activity: {
+    dateTba: "Date to be announced",
+    free: "Free",
+    eventDate: "Date",
+    eventDuration: "Duration",
+    ticketPrice: "Ticket price",
+    ticketEyebrow: "Tickets",
+    ticketTitle: "Book your place",
+    ticketSubtitle: "One ticket per person. Pay online: your registration is confirmed as soon as the payment is received.",
+    ticketPerPerson: "per person",
+    noDates: "The dates for this event will be announced very soon. Check back later or contact us.",
+    chooseDate: "Choose your date",
+    soldOut: "Sold out",
+    placesLeft: "{count, plural, one {# place left} other {# places left}}",
+    registerFree: "Register for free",
+    payAndRegister: "Pay and register — {price}",
+    ticketSecurePayment: "Secure payment via an online payment link",
+    ticketSoldOut: "Sorry, this date is sold out. Choose another date if one is available.",
+    ticketUnavailable: "This date is no longer available for booking.",
     breadcrumb: "Activities",
     places: "{count} places",
     description: "Description",
@@ -222,6 +246,15 @@ const en: Messages = {
   },
 
   payment: {
+    ticketIntro: "Check your ticket summary, then pay online: your registration is confirmed as soon as the payment is received.",
+    ticket: "Ticket",
+    ticketOne: "Ticket for 1 person",
+    eventDate: "Event date",
+    eventTime: "Time",
+    seeTickets: "See my tickets",
+    ticketConfirmed: "Registration confirmed ✅",
+    ticketClosed: "This date has passed, been cancelled or is no longer on sale: this ticket can no longer be paid. Contact us if you have any questions.",
+    ticketHelp: "Any questions? Write to us at {email} — your ticket will appear in your personal space once the payment is confirmed.",
     step: "Step 7 of the journey",
     title: "Confirm your order",
     intro: "Check the summary, then pay using the plan’s external payment link.",
@@ -258,6 +291,12 @@ const en: Messages = {
   },
 
   dashboard: {
+    ticketRegistered: "✅ Your registration is confirmed. Your ticket is shown below.",
+    ticketAlreadyBought: "You already have a ticket for this date: it is shown below.",
+    ticketOf: "Ticket — {name}",
+    ticketsEyebrow: "My tickets",
+    ticketsTitle: "Booked events",
+    ticketsSubtitle: "Concerts, evenings, outings…: the date, the place and the status of your ticket.",
     eyebrow: "Personal space",
     hello: "Hello {name} 👋",
     intro: "Find your memberships, your sessions and your progress here.",
@@ -339,6 +378,7 @@ const en: Messages = {
       demoClient: "👤 Client:",
       demoAdmin: "🛠️ Admin:",
       loginToSubscribe: "Log in to subscribe to this plan.",
+      loginToBuyTicket: "Log in to book your ticket.",
     },
     verification: {
       verified: "🎉 Your email address is confirmed and your account is active. You can now log in.",
@@ -530,6 +570,8 @@ const en: Messages = {
       },
     },
     activities: {
+      eventDate: "Event date (optional)",
+      eventDateHint: "For a one-off event: creates the date put on sale right away. More dates can be added from the activity page.",
       searchPlaceholder: "Name, city or address",
       filterCategory: "Category",
       filterStatus: "Status",
@@ -567,6 +609,23 @@ const en: Messages = {
       create: "Create activity",
     },
     activityDetail: {
+      event: {
+        statDates: "Dates",
+        statTickets: "Tickets sold",
+        statTicketsHint: "paid tickets, all dates",
+        statCapacity: "Places per date",
+        statPrice: "Ticket price",
+        price: "Ticket price (€) — 0 = free",
+        capacity: "Places per date",
+        sessionsEyebrow: "Ticketing",
+        sessionsTitle: "Event dates",
+        sessionsSubtitle:
+          "Each date is put on sale at the ticket price and capacity above. Cancelling a date automatically notifies participants by e-mail.",
+        addSession: "Add the date",
+        noSessions: "No date yet: the event is not on sale.",
+        startsAt: "Date and time (Paris time) *",
+        sold: "{sold} / {capacity} tickets sold",
+      },
       breadcrumb: "Activities",
       statSessions: "Sessions",
       statSessionsHint: "{count} upcoming",
@@ -810,6 +869,7 @@ const en: Messages = {
       create: "Create client",
     },
     clientDetail: {
+      ticketFor: "Ticket for {date}",
       breadcrumb: "Clients",
       statSubs: "Memberships",
       statSessions: "Sessions attended",
@@ -888,6 +948,7 @@ const en: Messages = {
       emptyText: "Add your first slide with the form below.",
     },
     payments: {
+      ticketOf: "Ticket — {name}",
       eyebrow: "Online payments",
       title: "Qonto payments",
       subtitle: "Payment through a single-use Qonto link and automatic membership activation as soon as the payment is confirmed.",
@@ -993,6 +1054,14 @@ const en: Messages = {
   },
 
   emails: {
+    ticketConfirmed: {
+      subject: "Registration confirmed — {activity}",
+      confirmed: "Your registration for “{activity}” is confirmed. Thank you!",
+      date: "• Date: {value}",
+      place: "• Place: {value}",
+      reference: "• Ticket no. {id}",
+      follow: "Find your ticket in your personal space:",
+    },
     signature: "See you soon,",
     team: "The WANTED TUN EVENTS team",
     autoNotice: "This email was sent automatically, please do not reply.",

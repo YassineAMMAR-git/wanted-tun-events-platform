@@ -96,7 +96,7 @@ export default async function ActivitiesPage({
         <EmptyState title={t("emptyTitle")} description={t("emptyText")} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {activities.map(({ activity, categoryName, categorySlug, categoryEmoji, sessionCount, planCount, minPrice, nextSession }) => (
+          {activities.map(({ activity, categoryName, categorySlug, categoryEmoji, memberships, sessionCount, planCount, minPrice, nextSession }) => (
             <article key={activity.id} className="card card-hover overflow-hidden">
               <div className="relative h-36 w-full overflow-hidden bg-zinc-100">
                 {activity.imageUrl ? (
@@ -109,7 +109,13 @@ export default async function ActivitiesPage({
                   <span className="badge border-transparent bg-white/95 text-zinc-800 shadow-sm">
                     {categoryEmoji} {categoryName}
                   </span>
-                  <span className="badge border-transparent bg-white/95 text-zinc-800 shadow-sm">{t("upcomingSessions", { count: sessionCount })}</span>
+                  <span className="badge border-transparent bg-white/95 text-zinc-800 shadow-sm">
+                    {memberships
+                      ? t("upcomingSessions", { count: sessionCount })
+                      : nextSession
+                        ? `📅 ${formatDate(nextSession, locale)}`
+                        : t("dateTba")}
+                  </span>
                 </div>
               </div>
 
@@ -125,25 +131,29 @@ export default async function ActivitiesPage({
                       {activity.city ? `, ${activity.city}` : ""}
                     </dd>
                   </div>
-                  <div className="flex gap-2">
-                    <dt className="shrink-0 text-zinc-500">{t("schedule")}</dt>
-                    <dd className="text-zinc-700">{activity.scheduleText}</dd>
-                  </div>
+                  {memberships || activity.scheduleText ? (
+                    <div className="flex gap-2">
+                      <dt className="shrink-0 text-zinc-500">{t("schedule")}</dt>
+                      <dd className="text-zinc-700">{activity.scheduleText}</dd>
+                    </div>
+                  ) : null}
                   <div className="flex gap-2">
                     <dt className="shrink-0 text-zinc-500">{t("duration")}</dt>
                     <dd className="text-zinc-700">{formatDuration(activity.durationMinutes, locale)}</dd>
                   </div>
                   <div className="flex gap-2">
-                    <dt className="shrink-0 text-zinc-500">{t("price")}</dt>
+                    <dt className="shrink-0 text-zinc-500">{memberships ? t("price") : t("ticket")}</dt>
                     <dd className="text-zinc-700">
                       {minPrice
                         ? t("fromPrice", { price: formatPrice(minPrice, locale) })
-                        : formatPrice(activity.priceCents, locale)}
+                        : !memberships && activity.priceCents <= 0
+                          ? t("free")
+                          : formatPrice(activity.priceCents, locale)}
                     </dd>
                   </div>
                   {nextSession ? (
                     <div className="flex gap-2">
-                      <dt className="shrink-0 text-zinc-500">{t("next")}</dt>
+                      <dt className="shrink-0 text-zinc-500">{memberships ? t("next") : t("date")}</dt>
                       <dd className="text-zinc-700">
                         {tCommon("dateAtTime", {
                           date: formatDate(nextSession, locale),
@@ -162,8 +172,11 @@ export default async function ActivitiesPage({
                   ) : (
                     <span />
                   )}
-                  <Link href={`/activites/${activity.slug}`} className="btn btn-primary btn-sm">
-                    {t("view")}
+                  <Link
+                    href={memberships ? `/activites/${activity.slug}` : `/activites/${activity.slug}#billet`}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {memberships ? t("view") : t("book")}
                   </Link>
                 </div>
               </div>

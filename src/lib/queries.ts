@@ -21,6 +21,7 @@ import {
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
 import { MEMBERSHIP_CATEGORY_SLUG, offersMemberships } from "@/lib/memberships";
+import { ticketsSold } from "@/lib/subscriptions";
 
 /*
  * Requêtes des pages publiques et de l'espace personnel : le contenu est renvoyé dans la langue demandée
@@ -121,6 +122,7 @@ export async function listActivities(
     const memberships = offersMemberships(category.slug);
     return {
       ...rest,
+      memberships,
       planCount: memberships ? rest.planCount : 0,
       minPrice: memberships ? rest.minPrice : null,
       activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
@@ -209,9 +211,19 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
     db.select({ count: sql<number>`count(*)::int` }).from(sessions).where(upcomingBase),
   ]);
 
+  // Événement ponctuel : chaque date à venir est proposée à la vente, dans la limite de la capacité.
+  const sold = memberships ? new Map<number, number>() : await ticketsSold(upcoming.map((session) => session.id));
+  const ticketDates = memberships
+    ? []
+    : upcoming.map((session) => ({
+        ...localize(session, locale, SESSION_TRANSLATABLE),
+        placesLeft: Math.max(row.activity.capacity - (sold.get(session.id) ?? 0), 0),
+      }));
+
   return {
     activity: localize(row.activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(row.category, locale, CATEGORY_TRANSLATABLE).name,
+    ticketDates,
     categorySlug: row.category.slug,
     categoryEmoji: row.category.emoji,
     offersMemberships: memberships,
@@ -251,29 +263,35 @@ export async function listActivePlans(locale: Locale, options: { search?: string
   }));
 }
 
+/** Abonnements (club de chant) et billets (événements) du client, les plus récents d'abord. */
 export async function getMySubscriptions(userId: number, locale: Locale) {
   const rows = await db
     .select({
       subscription: subscriptions,
       plan: plans,
+      session: sessions,
       activity: activities,
       category: categories,
       attendedCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.starts_at < now())::int`,
       upcomingCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.starts_at >= now())::int`,
     })
     .from(subscriptions)
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
+    .leftJoin(plans, eq(plans.id, subscriptions.planId))
+    .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
     .innerJoin(activities, eq(activities.id, subscriptions.activityId))
     .innerJoin(categories, eq(categories.id, activities.categoryId))
     .where(eq(subscriptions.userId, userId))
     .orderBy(desc(subscriptions.createdAt));
 
-  return rows.map(({ plan, activity, category, ...rest }) => ({
+  return rows.map(({ plan, session, activity, category, ...rest }) => ({
     ...rest,
-    plan: localize(plan, locale, PLAN_TRANSLATABLE),
+    plan: plan ? localize(plan, locale, PLAN_TRANSLATABLE) : null,
+    session: session ? localize(session, locale, SESSION_TRANSLATABLE) : null,
     activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(category, locale, CATEGORY_TRANSLATABLE).name,
     categoryEmoji: category.emoji,
+    /** Prix payé ou à payer : celui de l'offre pour un abonnement, celui de l'activité pour un billet. */
+    priceCents: plan ? plan.priceCents : activity.priceCents,
   }));
 }
 
@@ -320,7 +338,7 @@ export async function getAdminStats() {
       activities: sql<number>`(select count(*) from activities)::int`,
       sessions: sql<number>`(select count(*) from sessions)::int`,
       upcomingSessions: sql<number>`(select count(*) from sessions where starts_at >= now() and status = 'scheduled')::int`,
-      activeSubscriptions: sql<number>`(select count(*) from subscriptions where status = 'active')::int`,
+      activeSubscriptions: sql<number>`(select count(*) from subscriptions where status = 'active' and kind = 'membership')::int`,
       pendingPayments: sql<number>`(select count(*) from subscriptions where payment_status = 'pending')::int`,
       confirmations: sql<number>`(select count(*) from attendances where status = 'confirmed')::int`,
       awaiting: sql<number>`(select count(*) from attendances where status = 'pending')::int`,
@@ -374,14 +392,14 @@ export async function listAdminClients(filters: AdminClientFilters) {
   if (filters.verifie === "oui") conditions.push(isNotNull(users.emailVerifiedAt));
   if (filters.verifie === "non") conditions.push(isNull(users.emailVerifiedAt));
   if (filters.abo === "actif") {
-    conditions.push(sql`exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.status = 'active')`);
+    conditions.push(sql`exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership' and s.status = 'active')`);
   }
   if (filters.abo === "aucun") {
-    conditions.push(sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id})`);
+    conditions.push(sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')`);
   }
 
-  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id})::int`;
-  const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.status = 'active')::int`;
+  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')::int`;
+  const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership' and s.status = 'active')::int`;
   const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = ${users.id})::int`;
 
   const order = {

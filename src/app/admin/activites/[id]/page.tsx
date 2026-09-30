@@ -4,6 +4,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { CATEGORY_TRANSLATABLE, activities, categories, plans, sessions } from "@/db/schema";
+import { ticketsSold } from "@/lib/subscriptions";
 import {
   createPlanAction,
   createSessionAction,
@@ -56,6 +57,11 @@ export default async function AdminActivityDetail({
   const upcoming = sessionList.filter((s) => !isPast(s.startsAt) && s.status === "scheduled").length;
   const backTo = `/admin/activites/${activity.id}`;
   const memberships = offersMemberships(categoryList.find((category) => category.id === activity.categoryId)?.slug);
+  // Événement ponctuel : les « séances » sont les dates mises en vente, chacune avec ses billets.
+  const sold = memberships ? new Map<number, number>() : await ticketsSold(sessionList.map((session) => session.id));
+  const totalSold = [...sold.values()].reduce((total, count) => total + count, 0);
+  const d = (key: "sessionsTitle" | "sessionsSubtitle" | "addSession" | "noSessions" | "startsAt" | "sessionsEyebrow") =>
+    memberships ? t(key) : t(`event.${key}`);
 
   return (
     <div className="space-y-6">
@@ -70,14 +76,25 @@ export default async function AdminActivityDetail({
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t("statSessions")} value={sessionList.length} hint={t("statSessionsHint", { count: upcoming })} />
         <Stat
-          label={t("statPlans")}
-          value={planList.length}
-          hint={t("statPlansHint", { count: planList.filter((p) => p.isActive).length })}
+          label={memberships ? t("statSessions") : t("event.statDates")}
+          value={sessionList.length}
+          hint={t("statSessionsHint", { count: upcoming })}
         />
-        <Stat label={t("statCapacity")} value={activity.capacity} />
-        <Stat label={t("statPrice")} value={formatPrice(activity.priceCents, locale)} />
+        {memberships ? (
+          <Stat
+            label={t("statPlans")}
+            value={planList.length}
+            hint={t("statPlansHint", { count: planList.filter((p) => p.isActive).length })}
+          />
+        ) : (
+          <Stat label={t("event.statTickets")} value={totalSold} hint={t("event.statTicketsHint")} />
+        )}
+        <Stat label={memberships ? t("statCapacity") : t("event.statCapacity")} value={activity.capacity} />
+        <Stat
+          label={memberships ? t("statPrice") : t("event.statPrice")}
+          value={formatPrice(activity.priceCents, locale)}
+        />
       </section>
 
       {/* ------------------------------ activité ------------------------------ */}
@@ -156,7 +173,7 @@ export default async function AdminActivityDetail({
           </div>
           <div>
             <label className="label" htmlFor="price">
-              {t("price")}
+              {memberships ? t("price") : t("event.price")}
             </label>
             <input
               id="price"
@@ -170,7 +187,7 @@ export default async function AdminActivityDetail({
           </div>
           <div>
             <label className="label" htmlFor="capacity">
-              {t("capacity")}
+              {memberships ? t("capacity") : t("event.capacity")}
             </label>
             <input id="capacity" name="capacity" type="number" min={1} defaultValue={activity.capacity} className="input" />
           </div>
@@ -196,7 +213,7 @@ export default async function AdminActivityDetail({
 
       {/* ------------------------------- séances ------------------------------- */}
       <section>
-        <SectionTitle eyebrow={t("sessionsEyebrow")} title={t("sessionsTitle")} subtitle={t("sessionsSubtitle")} />
+        <SectionTitle eyebrow={d("sessionsEyebrow")} title={d("sessionsTitle")} subtitle={d("sessionsSubtitle")} />
 
         <Card className="mb-5">
           <form action={createSessionAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -212,7 +229,7 @@ export default async function AdminActivityDetail({
             </div>
             <div>
               <label className="label" htmlFor="startsAt">
-                {t("startsAt")}
+                {d("startsAt")}
               </label>
               <input id="startsAt" name="startsAt" type="datetime-local" required className="input" />
             </div>
@@ -237,7 +254,7 @@ export default async function AdminActivityDetail({
             </div>
             <div className="lg:col-span-3">
               <button className="btn btn-primary" type="submit">
-                {t("addSession")}
+                {d("addSession")}
               </button>
             </div>
           </form>
@@ -250,6 +267,9 @@ export default async function AdminActivityDetail({
               <div key={session.id} className={`card p-4 ${past ? "opacity-70" : ""}`}>
                 <p className="mb-3 text-xs text-zinc-500">
                   {past ? "⚪" : "🟢"} {formatDateTime(session.startsAt, locale)}
+                  {memberships
+                    ? null
+                    : ` · ${t("event.sold", { sold: sold.get(session.id) ?? 0, capacity: activity.capacity })}`}
                 </p>
                 <form action={updateSessionAction} className="grid gap-3 lg:grid-cols-4">
                   <input type="hidden" name="id" value={session.id} />
@@ -342,7 +362,7 @@ export default async function AdminActivityDetail({
               </div>
             );
           })}
-          {sessionList.length === 0 ? <p className="text-sm text-zinc-500">{t("noSessions")}</p> : null}
+          {sessionList.length === 0 ? <p className="text-sm text-zinc-500">{d("noSessions")}</p> : null}
         </div>
       </section>
 

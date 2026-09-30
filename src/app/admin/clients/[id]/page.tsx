@@ -76,9 +76,10 @@ export default async function AdminClientDetail({
 
   const [subs, history] = await Promise.all([
     db
-      .select({ subscription: subscriptions, plan: plans, activity: activities })
+      .select({ subscription: subscriptions, plan: plans, session: sessions, activity: activities })
       .from(subscriptions)
-      .innerJoin(plans, eq(plans.id, subscriptions.planId))
+      .leftJoin(plans, eq(plans.id, subscriptions.planId))
+      .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .where(eq(subscriptions.userId, clientId))
       .orderBy(desc(subscriptions.createdAt)),
@@ -251,8 +252,12 @@ export default async function AdminClientDetail({
                 return (
                   <tr key={row.subscription.id}>
                     <td className="text-zinc-800">{localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}</td>
-                    <td className="text-zinc-600">{localize(row.plan, locale, PLAN_TRANSLATABLE).name}</td>
-                    <td className="whitespace-nowrap">{formatPrice(row.plan.priceCents, locale)}</td>
+                    <td className="text-zinc-600">
+                      {row.plan
+                        ? localize(row.plan, locale, PLAN_TRANSLATABLE).name
+                        : t("ticketFor", { date: row.session ? formatDate(row.session.startsAt, locale) : tCommon("none") })}
+                    </td>
+                    <td className="whitespace-nowrap">{formatPrice(row.plan?.priceCents ?? row.activity.priceCents, locale)}</td>
                     <td className="whitespace-nowrap text-zinc-600">
                       {tCommon("dateRange", {
                         start: formatDate(row.subscription.startsAt, locale),
@@ -272,8 +277,6 @@ export default async function AdminClientDetail({
                           <form action={setSubscriptionStatusAction}>
                             <input type="hidden" name="id" value={row.subscription.id} />
                             <input type="hidden" name="userId" value={client.id} />
-                            <input type="hidden" name="activityId" value={row.activity.id} />
-                            <input type="hidden" name="sessionsIncluded" value={row.subscription.sessionsIncluded} />
                             <input type="hidden" name="action" value="markPaid" />
                             <input type="hidden" name="redirectTo" value={back} />
                             <button className="btn btn-primary btn-sm" type="submit">
@@ -292,15 +295,18 @@ export default async function AdminClientDetail({
                             </button>
                           </form>
                         ) : null}
-                        <form action={setSubscriptionStatusAction}>
-                          <input type="hidden" name="id" value={row.subscription.id} />
-                          <input type="hidden" name="userId" value={client.id} />
-                          <input type="hidden" name="action" value="extend" />
-                          <input type="hidden" name="redirectTo" value={back} />
-                          <button className="btn btn-ghost btn-sm" type="submit">
-                            {t("extend")}
-                          </button>
-                        </form>
+                        {/* Un billet vaut pour une date précise : il ne se prolonge pas. */}
+                        {row.subscription.kind === "membership" ? (
+                          <form action={setSubscriptionStatusAction}>
+                            <input type="hidden" name="id" value={row.subscription.id} />
+                            <input type="hidden" name="userId" value={client.id} />
+                            <input type="hidden" name="action" value="extend" />
+                            <input type="hidden" name="redirectTo" value={back} />
+                            <button className="btn btn-ghost btn-sm" type="submit">
+                              {t("extend")}
+                            </button>
+                          </form>
+                        ) : null}
                         {row.subscription.status !== "cancelled" ? (
                           <form action={setSubscriptionStatusAction}>
                             <input type="hidden" name="id" value={row.subscription.id} />

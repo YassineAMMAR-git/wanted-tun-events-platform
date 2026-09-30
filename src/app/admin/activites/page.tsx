@@ -237,6 +237,13 @@ export default async function AdminActivitiesPage({
               </label>
               <input id="capacity" name="capacity" type="number" min={1} defaultValue={30} className="input" />
             </div>
+            <div>
+              <label className="label" htmlFor="startsAt">
+                {t("eventDate")}
+              </label>
+              <input id="startsAt" name="startsAt" type="datetime-local" className="input" />
+              <p className="mt-1 text-xs text-zinc-500">{t("eventDateHint")}</p>
+            </div>
             <div className="sm:col-span-2">
               <label className="label" htmlFor="imageUrl">
                 {t("image")}

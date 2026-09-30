@@ -67,6 +67,7 @@ const fr = {
   },
 
   status: {
+    ticket: { pending: "Paiement en attente", active: "Confirmé", expired: "Passé", cancelled: "Annulé" },
     session: { scheduled: "Programmée", cancelled: "Annulée", postponed: "Reportée", done: "Terminée" },
     attendance: {
       confirmed: "Présence confirmée",
@@ -141,6 +142,11 @@ const fr = {
   },
 
   activities: {
+    dateTba: "Date à venir",
+    ticket: "🎟️ Billet",
+    free: "Gratuit",
+    date: "📅 Date",
+    book: "Réserver",
     sortDefault: "Catégorie",
     sortName: "Nom (A → Z)",
     sortPrice: "Prix croissant",
@@ -171,6 +177,24 @@ const fr = {
   },
 
   activity: {
+    dateTba: "Date bientôt annoncée",
+    free: "Gratuit",
+    eventDate: "Date",
+    eventDuration: "Durée",
+    ticketPrice: "Prix du billet",
+    ticketEyebrow: "Billetterie",
+    ticketTitle: "Réservez votre place",
+    ticketSubtitle: "Un billet par personne. Payez en ligne : votre inscription est confirmée dès la réception du paiement.",
+    ticketPerPerson: "par personne",
+    noDates: "Les dates de cet événement seront annoncées très bientôt. Revenez prochainement ou contactez-nous.",
+    chooseDate: "Choisissez votre date",
+    soldOut: "Complet",
+    placesLeft: "{count, plural, one {# place restante} other {# places restantes}}",
+    registerFree: "Je m’inscris gratuitement",
+    payAndRegister: "Payer et s’inscrire — {price}",
+    ticketSecurePayment: "Paiement sécurisé par lien de paiement en ligne",
+    ticketSoldOut: "Désolé, cette date est complète. Choisissez une autre date si elle est disponible.",
+    ticketUnavailable: "Cette date n’est plus disponible à la réservation.",
     breadcrumb: "Activités",
     places: "{count} places",
     description: "Description",
@@ -224,6 +248,15 @@ const fr = {
   },
 
   payment: {
+    ticketIntro: "Vérifiez le récapitulatif de votre billet puis réglez en ligne : votre inscription est confirmée dès le paiement reçu.",
+    ticket: "Billet",
+    ticketOne: "Billet 1 personne",
+    eventDate: "Date de l’événement",
+    eventTime: "Heure",
+    seeTickets: "Voir mes billets",
+    ticketConfirmed: "Inscription confirmée ✅",
+    ticketClosed: "Cette date est passée, annulée ou n’est plus en vente : ce billet ne peut plus être payé. Contactez-nous en cas de question.",
+    ticketHelp: "Une question ? Écrivez-nous à {email} — votre billet apparaîtra dans votre espace personnel dès le paiement confirmé.",
     step: "Étape 7 du parcours",
     title: "Confirmation de votre commande",
     intro: "Vérifiez le récapitulatif puis réglez via le lien de paiement externe de l’offre.",
@@ -260,6 +293,12 @@ const fr = {
   },
 
   dashboard: {
+    ticketRegistered: "✅ Votre inscription est confirmée. Retrouvez votre billet ci-dessous.",
+    ticketAlreadyBought: "Vous avez déjà un billet pour cette date : il est affiché ci-dessous.",
+    ticketOf: "Billet — {name}",
+    ticketsEyebrow: "Mes billets",
+    ticketsTitle: "Événements réservés",
+    ticketsSubtitle: "Concerts, soirées, sorties… : la date, le lieu et l’état de votre billet.",
     eyebrow: "Espace personnel",
     hello: "Bonjour {name} 👋",
     intro: "Retrouvez ici vos abonnements, vos séances et l’avancement de vos programmes.",
@@ -341,6 +380,7 @@ const fr = {
       demoClient: "👤 Client :",
       demoAdmin: "🛠️ Admin :",
       loginToSubscribe: "Connectez-vous pour souscrire à cette offre.",
+      loginToBuyTicket: "Connectez-vous pour réserver votre billet.",
     },
     verification: {
       verified: "🎉 Votre adresse e-mail est confirmée et votre compte est activé. Vous pouvez maintenant vous connecter.",
@@ -534,6 +574,8 @@ const fr = {
       },
     },
     activities: {
+      eventDate: "Date de l’événement (facultatif)",
+      eventDateHint: "Pour un événement ponctuel : crée directement la date mise en vente. D’autres dates s’ajoutent ensuite depuis la fiche.",
       searchPlaceholder: "Nom, ville ou adresse",
       filterCategory: "Catégorie",
       filterStatus: "Statut",
@@ -571,6 +613,23 @@ const fr = {
       create: "Créer l’activité",
     },
     activityDetail: {
+      event: {
+        statDates: "Dates",
+        statTickets: "Billets vendus",
+        statTicketsHint: "billets payés, toutes dates",
+        statCapacity: "Places par date",
+        statPrice: "Prix du billet",
+        price: "Prix du billet (€) — 0 = gratuit",
+        capacity: "Places par date",
+        sessionsEyebrow: "Billetterie",
+        sessionsTitle: "Dates de l’événement",
+        sessionsSubtitle:
+          "Chaque date est mise en vente avec le prix du billet et la capacité ci-dessus. L’annulation d’une date prévient automatiquement les participants par e-mail.",
+        addSession: "Ajouter la date",
+        noSessions: "Aucune date : l’événement n’est pas encore en vente.",
+        startsAt: "Date et heure (heure de Paris) *",
+        sold: "{sold} / {capacity} billets vendus",
+      },
       breadcrumb: "Activités",
       statSessions: "Séances",
       statSessionsHint: "{count} à venir",
@@ -816,6 +875,7 @@ const fr = {
       create: "Créer le client",
     },
     clientDetail: {
+      ticketFor: "Billet du {date}",
       breadcrumb: "Clients",
       statSubs: "Abonnements",
       statSessions: "Séances suivies",
@@ -895,6 +955,7 @@ const fr = {
       emptyText: "Ajoutez votre première diapositive avec le formulaire ci-dessous.",
     },
     payments: {
+      ticketOf: "Billet — {name}",
       eyebrow: "Encaissement en ligne",
       title: "Paiements Qonto",
       subtitle: "Paiement par lien Qonto à usage unique et activation automatique de l’abonnement dès que le paiement est confirmé.",
@@ -1000,6 +1061,14 @@ const fr = {
   },
 
   emails: {
+    ticketConfirmed: {
+      subject: "Inscription confirmée — {activity}",
+      confirmed: "Votre inscription à « {activity} » est confirmée. Merci !",
+      date: "• Date : {value}",
+      place: "• Lieu : {value}",
+      reference: "• Billet n°{id}",
+      follow: "Retrouvez votre billet dans votre espace personnel :",
+    },
     signature: "À très bientôt,",
     team: "L’équipe WANTED TUN EVENTS",
     autoNotice: "Cet e-mail vous a été envoyé automatiquement, merci de ne pas y répondre.",
