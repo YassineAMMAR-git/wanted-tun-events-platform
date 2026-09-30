@@ -78,23 +78,29 @@ export default async function HomePage() {
               <Link
                 key={category.id}
                 href={available ? `/activites?categorie=${category.slug}` : "/activites"}
-                className={`card card-hover p-4 ${available ? "" : "opacity-75"}`}
+                className={`card card-hover overflow-hidden ${available ? "" : "opacity-75"}`}
               >
-                <div className="flex items-start justify-between">
-                  <span className="text-xl">{category.emoji}</span>
-                  {category.comingSoon ? (
-                    <span className="badge border-sky-200 bg-sky-50 text-sky-700">{t("comingSoon")}</span>
-                  ) : (
-                    <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
-                      {tCommon("activitiesCount", { count: category.activityCount })}
-                    </span>
-                  )}
-                </div>
-                <h3 className="mt-2 text-sm font-bold text-zinc-900">{category.name}</h3>
-                <p className="mt-1.5 line-clamp-3 text-xs text-zinc-600">{category.description}</p>
-                {offersMemberships(category.slug) ? (
-                  <p className="mt-2 text-xs font-semibold text-gold-dark">🎟️ {t("membershipsBadge")}</p>
+                {category.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={category.imageUrl} alt="" className="h-28 w-full object-cover" />
                 ) : null}
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <span className="text-xl">{category.emoji}</span>
+                    {category.comingSoon ? (
+                      <span className="badge border-sky-200 bg-sky-50 text-sky-700">{t("comingSoon")}</span>
+                    ) : (
+                      <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
+                        {tCommon("activitiesCount", { count: category.activityCount })}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-2 text-sm font-bold text-zinc-900">{category.name}</h3>
+                  <p className="mt-1.5 line-clamp-3 text-xs text-zinc-600">{category.description}</p>
+                  {offersMemberships(category.slug) ? (
+                    <p className="mt-2 text-xs font-semibold text-gold-dark">🎟️ {t("membershipsBadge")}</p>
+                  ) : null}
+                </div>
               </Link>
             );
           })}

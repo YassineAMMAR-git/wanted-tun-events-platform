@@ -560,6 +560,8 @@ const en: Messages = {
       counts: "{activities, plural, =0 {no activity} one {# activity} other {# activities}} · {sessions, plural, =0 {no session} one {# session} other {# sessions}}",
       fieldName: "Name",
       fieldDescription: "Description",
+      fieldImage: "Category photo",
+      fieldImageHint: "Shown on the category card on the home page. Optional: without a photo, only the emoji is shown.",
       fieldEmoji: "Emoji",
       fieldAccent: "Colour",
       fieldPosition: "Display order",

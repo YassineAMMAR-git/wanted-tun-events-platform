@@ -108,6 +108,8 @@ export const categories = pgTable(
     slug: varchar("slug", { length: 120 }).notNull(),
     description: text("description"),
     emoji: varchar("emoji", { length: 8 }).default("✨"),
+    /** Photo de la carte de catégorie (page d'accueil) ; sans photo, la carte n'affiche que l'emoji. */
+    imageUrl: text("image_url"),
     accent: varchar("accent", { length: 32 }).default("amber"),
     position: integer("position").notNull().default(0),
     comingSoon: boolean("coming_soon").notNull().default(false),

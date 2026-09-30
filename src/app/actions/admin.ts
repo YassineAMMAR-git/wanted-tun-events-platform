@@ -163,6 +163,7 @@ function categoryValues(formData: FormData) {
     name: str(formData, "name").slice(0, 120),
     description: str(formData, "description") || null,
     emoji: str(formData, "emoji").slice(0, 8) || "✨",
+    imageUrl: safeLink(str(formData, "imageUrl")),
     accent: (ACCENTS as readonly string[]).includes(accent) ? accent : "amber",
     position: Math.round(num(formData, "position")),
     comingSoon: bool(formData, "comingSoon"),
