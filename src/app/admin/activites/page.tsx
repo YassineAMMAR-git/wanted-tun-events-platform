@@ -10,6 +10,7 @@ import { Card, SectionTitle } from "@/components/ui";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
+import { ImageUploadField } from "@/components/image-upload-field";
 
 export const dynamic = "force-dynamic";
 
@@ -245,10 +246,7 @@ export default async function AdminActivitiesPage({
               <p className="mt-1 text-xs text-zinc-500">{t("eventDateHint")}</p>
             </div>
             <div className="sm:col-span-2">
-              <label className="label" htmlFor="imageUrl">
-                {t("image")}
-              </label>
-              <input id="imageUrl" name="imageUrl" type="url" className="input" placeholder="https://…" />
+              <ImageUploadField name="imageUrl" label={t("image")} hint={t("imageHint")} />
             </div>
             <div className="sm:col-span-2">
               <button className="btn btn-primary" type="submit">

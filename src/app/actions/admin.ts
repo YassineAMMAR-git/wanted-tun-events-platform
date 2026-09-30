@@ -291,7 +291,8 @@ function activityValues(formData: FormData) {
     durationMinutes: Math.round(num(formData, "durationMinutes")) || 90,
     priceCents: Math.round(num(formData, "price") * 100),
     capacity: Math.round(num(formData, "capacity")) || 30,
-    imageUrl: str(formData, "imageUrl") || null,
+    // Photo envoyée (/media/…) ou ancienne adresse http(s) ; toute autre valeur est ignorée.
+    imageUrl: safeLink(str(formData, "imageUrl")),
     translations: readTranslations(formData, ACTIVITY_TRANSLATABLE),
   };
 }
