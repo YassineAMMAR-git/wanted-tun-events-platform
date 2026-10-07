@@ -142,6 +142,13 @@ const fr = {
   },
 
   activities: {
+    finished: "Terminé",
+    tookPlace: "📅 A eu lieu",
+    noOpenTitle: "Aucun événement à venir pour le moment",
+    noOpenText: "De nouvelles dates arrivent régulièrement. En attendant, retrouvez ci-dessous nos événements passés.",
+    historyEyebrow: "Historique",
+    historyTitle: "Événements passés",
+    historySubtitle: "Ces événements ont déjà eu lieu : ils ne sont plus ouverts à l’inscription.",
     dateTba: "Date à venir",
     ticket: "🎟️ Billet",
     free: "Gratuit",
@@ -177,6 +184,8 @@ const fr = {
   },
 
   activity: {
+    finished: "Terminé",
+    eventOver: "Cet événement est terminé : il a eu lieu le {date}. Les inscriptions sont closes.",
     bookSession: "Réserver cette séance — {price}",
     sessionSalesHint: "Sans abonnement, réservez une séance à l’unité : {price} la séance.",
     dateTba: "Date bientôt annoncée",

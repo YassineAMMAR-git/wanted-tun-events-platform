@@ -20,7 +20,7 @@ import {
 } from "@/db/schema";
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
-import { isRecurring } from "@/lib/memberships";
+import { isFinished, isRecurring } from "@/lib/memberships";
 import { placesTaken } from "@/lib/subscriptions";
 
 /*
@@ -106,6 +106,9 @@ export async function listActivities(
       nextSession: sql<
         Date | null
       >`(select min(s.starts_at) from sessions s where s.activity_id = ${activities.id} and s.starts_at >= now() and s.status = 'scheduled')`,
+      lastSession: sql<
+        Date | null
+      >`(select max(s.starts_at) from sessions s where s.activity_id = ${activities.id} and s.starts_at < now() and s.status = 'scheduled')`,
     })
     .from(activities)
     .innerJoin(categories, eq(categories.id, activities.categoryId))
@@ -123,9 +126,13 @@ export async function listActivities(
     const localizedCategory = localize(category, locale, CATEGORY_TRANSLATABLE);
     // Événement unique : d'anciennes offres peuvent subsister en base, elles ne sont pas proposées.
     const memberships = isRecurring(activity);
+    const lastSession = toDate(rest.lastSession);
     return {
       ...rest,
       memberships,
+      lastSession,
+      // Terminé : l'événement a eu lieu et plus aucune date n'est à venir (affiché dans l'historique).
+      finished: isFinished(activity, rest.sessionCount, lastSession),
       planCount: memberships ? rest.planCount : 0,
       minPrice: memberships ? rest.minPrice : null,
       activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
@@ -224,6 +231,7 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
   return {
     activity: localize(row.activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(row.category, locale, CATEGORY_TRANSLATABLE).name,
+    finished: isFinished(row.activity, upcomingTotal[0]?.count ?? 0, past[0]?.startsAt ?? null),
     // Événement unique : la ou les dates mises en vente (billet).
     ticketDates: memberships ? [] : upcomingWithPlaces,
     // Activité à séances : achat à la séance possible dès qu'un tarif à la séance est fixé.

@@ -44,8 +44,11 @@ export default async function ActivityDetailPage({
   const free = activity.priceCents <= 0;
   const ticketNotice =
     query.billet === "complet" ? t("ticketSoldOut") : query.billet === "indisponible" ? t("ticketUnavailable") : null;
-  const nextDateLabel = nextDate
-    ? tCommon("dateAtTime", { date: formatDate(nextDate.startsAt, locale), time: formatTime(nextDate.startsAt, locale) })
+  // Événement terminé : on affiche la date à laquelle il a eu lieu.
+  const { finished } = detail;
+  const shownDate = nextDate ?? (finished ? past[0] : undefined);
+  const nextDateLabel = shownDate
+    ? tCommon("dateAtTime", { date: formatDate(shownDate.startsAt, locale), time: formatTime(shownDate.startsAt, locale) })
     : t("dateTba");
   const ticketPrice = free ? t("free") : formatPrice(activity.priceCents, locale);
 
@@ -73,6 +76,7 @@ export default async function ActivityDetailPage({
           <span className="badge border-amber-200 bg-amber-50 text-gold-dark">
             {categoryEmoji} {categoryName}
           </span>
+          {finished ? <span className="badge ms-2 border-zinc-300 bg-zinc-100 text-zinc-700">⚪ {t("finished")}</span> : null}
           <h1 className="mt-3 text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl">{activity.name}</h1>
           <p className="mt-2 text-sm text-zinc-700 sm:text-base">{activity.shortDescription}</p>
           <div className="mt-4 flex flex-wrap gap-1.5 text-xs">
@@ -153,7 +157,9 @@ export default async function ActivityDetailPage({
             </div>
 
             {ticketDates.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-600">{t("noDates")}</p>
+              <p className="mt-4 text-sm text-zinc-600">
+                {finished ? t("eventOver", { date: nextDateLabel }) : t("noDates")}
+              </p>
             ) : (
               <form action={buyTicketAction} className="mt-4 space-y-3">
                 <fieldset className="space-y-2">

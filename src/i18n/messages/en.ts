@@ -141,6 +141,13 @@ const en: Messages = {
   },
 
   activities: {
+    finished: "Finished",
+    tookPlace: "📅 Took place",
+    noOpenTitle: "No upcoming event at the moment",
+    noOpenText: "New dates are added regularly. In the meantime, see our past events below.",
+    historyEyebrow: "History",
+    historyTitle: "Past events",
+    historySubtitle: "These events have already taken place: registration is closed.",
     dateTba: "Date to be announced",
     ticket: "🎟️ Ticket",
     free: "Free",
@@ -175,6 +182,8 @@ const en: Messages = {
   },
 
   activity: {
+    finished: "Finished",
+    eventOver: "This event is over: it took place on {date}. Registration is closed.",
     bookSession: "Book this session — {price}",
     sessionSalesHint: "No membership? Book a single session: {price} per session.",
     dateTba: "Date to be announced",

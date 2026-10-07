@@ -140,6 +140,13 @@ const ar: Messages = {
   },
 
   activities: {
+    finished: "انتهت",
+    tookPlace: "📅 أُقيمت",
+    noOpenTitle: "لا توجد فعاليات قادمة حاليًا",
+    noOpenText: "تُضاف مواعيد جديدة بانتظام. في الأثناء، تجد أدناه فعالياتنا السابقة.",
+    historyEyebrow: "السجل",
+    historyTitle: "الفعاليات السابقة",
+    historySubtitle: "أُقيمت هذه الفعاليات بالفعل: التسجيل فيها مغلق.",
     dateTba: "الموعد قريبًا",
     ticket: "🎟️ التذكرة",
     free: "مجاني",
@@ -176,6 +183,8 @@ const ar: Messages = {
   },
 
   activity: {
+    finished: "انتهت",
+    eventOver: "انتهت هذه الفعالية: أُقيمت يوم {date}. التسجيل مغلق.",
     bookSession: "احجز هذه الحصة — {price}",
     sessionSalesHint: "بدون اشتراك، احجز حصة واحدة: {price} للحصة.",
     dateTba: "سيُعلن عن الموعد قريبًا",

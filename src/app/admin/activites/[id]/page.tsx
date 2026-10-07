@@ -15,7 +15,15 @@ import {
   updatePlanAction,
   updateSessionAction,
 } from "@/app/actions/admin";
-import { centsToEurosInput, formatDateTime, formatPrice, isPast, toDateTimeLocalValue } from "@/lib/format";
+import {
+  SESSION_STATUS_STYLES,
+  centsToEurosInput,
+  formatDateTime,
+  formatPrice,
+  isPast,
+  sessionDisplayStatus,
+  toDateTimeLocalValue,
+} from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -276,7 +284,10 @@ export default async function AdminActivityDetail({
             return (
               <div key={session.id} className={`card p-4 ${past ? "opacity-70" : ""}`}>
                 <p className="mb-3 text-xs text-zinc-500">
-                  {past ? "⚪" : "🟢"} {formatDateTime(session.startsAt, locale)}
+                  {past ? "⚪" : "🟢"} {formatDateTime(session.startsAt, locale)}{" "}
+                  <span className={`badge ms-1 ${SESSION_STATUS_STYLES[sessionDisplayStatus(session)]}`}>
+                    {tStatus(`session.${sessionDisplayStatus(session)}`)}
+                  </span>
                   {memberships
                     ? (sold.get(session.id) ?? 0) > 0
                       ? ` · ${t("sessionTickets", { count: sold.get(session.id) ?? 0 })}`

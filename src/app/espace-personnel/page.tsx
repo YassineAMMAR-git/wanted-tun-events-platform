@@ -12,6 +12,7 @@ import {
   formatPrice,
   formatTime,
   toAttendanceStatus,
+  sessionDisplayStatus,
   toSessionStatus,
   toSubscriptionStatus,
 } from "@/lib/format";
@@ -339,7 +340,8 @@ export default async function DashboardPage({
                           <div>
                             <p className="text-sm text-zinc-700">{row.activity.name}</p>
                             <p className="text-xs text-zinc-500">
-                              {formatDate(row.session.startsAt, locale)} — {formatTime(row.session.startsAt, locale)}
+                              {formatDate(row.session.startsAt, locale)} — {formatTime(row.session.startsAt, locale)} ·{" "}
+                              {tStatus(`session.${sessionDisplayStatus(row.session)}`)}
                             </p>
                           </div>
                         </div>

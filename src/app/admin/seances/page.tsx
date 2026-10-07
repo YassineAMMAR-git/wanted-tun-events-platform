@@ -3,7 +3,7 @@ import { and, asc, desc, eq, gte, ilike, lt, lte, or, sql, type SQL } from "driz
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, CATEGORY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, categories, sessions } from "@/db/schema";
-import { SESSION_STATUS_STYLES, formatDate, formatDuration, formatTime, isPast, parseParisDateTime, toSessionStatus } from "@/lib/format";
+import { SESSION_STATUS_STYLES, formatDate, formatDuration, formatTime, isPast, parseParisDateTime, sessionDisplayStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { FilterBar, FilterDate, FilterSelect, FilterText } from "@/components/filter-bar";
@@ -44,7 +44,10 @@ export default async function AdminSessionsPage({
     conditions.push(or(ilike(sessions.title, like), ilike(sessions.location, like), ilike(activities.name, like))!);
   }
   if (activite) conditions.push(eq(sessions.activityId, Number(activite)));
-  if (statut) conditions.push(eq(sessions.status, statut));
+  // « Terminée » n'est pas stocké : c'est une séance programmée dont la date est passée.
+  if (statut === "done") conditions.push(eq(sessions.status, "scheduled"), lt(sessions.startsAt, new Date()));
+  else if (statut === "scheduled") conditions.push(eq(sessions.status, "scheduled"), gte(sessions.startsAt, new Date()));
+  else if (statut) conditions.push(eq(sessions.status, statut));
   // Les bornes sont interprétées en heure de Paris, comme le reste des dates de l'application.
   const from = du ? parseParisDateTime(`${du}T00:00`) : null;
   const to = au ? parseParisDateTime(`${au}T23:59`) : null;
@@ -180,7 +183,7 @@ export default async function AdminSessionsPage({
             {rows.map((row) => {
               const session = localize(row.session, locale, SESSION_TRANSLATABLE);
               const past = isPast(session.startsAt);
-              const status = toSessionStatus(session.status);
+              const status = sessionDisplayStatus(session);
               return (
                 <tr key={session.id}>
                   <td className="whitespace-nowrap">

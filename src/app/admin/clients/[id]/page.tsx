@@ -28,7 +28,7 @@ import {
   formatTime,
   isPast,
   toAttendanceStatus,
-  toSessionStatus,
+  sessionDisplayStatus,
   toSubscriptionStatus,
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
@@ -364,7 +364,7 @@ export default async function AdminClientDetail({
                     <td className="text-zinc-800">{activity.name}</td>
                     <td className="text-zinc-600">{session.title ?? tCommon("none")}</td>
                     <td className="text-zinc-600">{session.location ?? activity.address}</td>
-                    <td className="text-zinc-600">{tStatus(`session.${toSessionStatus(session.status)}`)}</td>
+                    <td className="text-zinc-600">{tStatus(`session.${sessionDisplayStatus(session)}`)}</td>
                     <td>
                       <span className={`badge ${ATTENDANCE_STATUS[attendance].className}`}>
                         {ATTENDANCE_STATUS[attendance].dot} {tStatus(`attendance.${attendance}`)}

@@ -175,6 +175,19 @@ export const SESSION_STATUS_STYLES: Record<SessionStatus, string> = {
 export const toSessionStatus = (value: string): SessionStatus =>
   (SESSION_STATUSES as readonly string[]).includes(value) ? (value as SessionStatus) : "scheduled";
 
+/**
+ * Statut affiché : une séance programmée dont l'heure de fin est passée est « terminée ».
+ * (En base elle reste « scheduled » : seul l'affichage change, rien n'est à mettre à jour.)
+ */
+export function sessionDisplayStatus(
+  session: { status: string; startsAt: Date; durationMinutes?: number | null },
+  reference: Date = new Date(),
+): SessionStatus {
+  const status = toSessionStatus(session.status);
+  const endsAt = session.startsAt.getTime() + (session.durationMinutes ?? 0) * 60 * 1000;
+  return status === "scheduled" && endsAt < reference.getTime() ? "done" : status;
+}
+
 export const ATTENDANCE_STATUSES = ["confirmed", "pending", "declined"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 export const ATTENDANCE_STATUS: Record<AttendanceStatus, { dot: string; className: string }> = {
