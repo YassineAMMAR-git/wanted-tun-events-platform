@@ -79,7 +79,7 @@ const en: Messages = {
     plan: { active: "Active", inactive: "Disabled" },
     role: { client: "Client", admin: "Administrator" },
     notification: { sent: "Sent", simulated: "Simulated", failed: "Failed", queued: "Queued" },
-    channel: { email: "email", "espace-personnel": "personal space", administration: "administration" },
+    channel: { email: "email", "espace-personnel": "personal space", administration: "administration", rappel: "reminder page", inscription: "at registration", delai: "deadline passed" },
   },
 
   home: {
@@ -102,11 +102,11 @@ const en: Messages = {
       plan: { title: "Ticket, session or membership", text: "A ticket for a one-off event; for a session-based activity, pay per session or take a plan." },
       pay: { title: "Pay with the secure link", text: "Payment through an external link set up for each plan." },
       follow: { title: "Track your sessions", text: "🟢 upcoming session, ⚪ completed session: your progress at a glance." },
-      confirm: { title: "Confirm your attendance", text: "An automatic reminder 48 hours before each session, with one-click confirmation." },
+      confirm: { title: "Confirm your attendance", text: "Reminders 5, 4 and 3 days before each session. Confirm in 1 click, at the latest 48 hours before." },
     },
     ctaTitle: "Ready to join the next session?",
     ctaText:
-      "Create your account in under a minute. You’ll automatically receive a reminder email 48 hours before each of your sessions, with a button to confirm your attendance.",
+      "Create your account in under a minute. You will receive reminder e-mails before each of your sessions, with a button to confirm your attendance up to 48 hours before.",
     ctaOffers: "See activities",
     carousel: {
       label: "About WANTED TUN EVENTS",
@@ -132,7 +132,7 @@ const en: Messages = {
         reminders: {
           eyebrow: "Automatic reminders",
           title: "Never miss a session again",
-          text: "A reminder email 48 hours before each session, with one-click attendance confirmation.",
+          text: "Reminder e-mails 5, 4 and 3 days before each session, with one-click attendance confirmation.",
           cta: "Create my account",
         },
       },
@@ -311,6 +311,8 @@ const en: Messages = {
   },
 
   dashboard: {
+    confirmBefore: "⏳ Confirm before {date}",
+    confirmationsClosed: "🔒 Attendance closed (48 hours before the session)",
     cancelOrder: "Cancel",
     orderCancelled: "✅ Order cancelled. Nothing was charged.",
     ticketRegistered: "✅ Your registration is confirmed. Your ticket is shown below.",
@@ -325,7 +327,7 @@ const en: Messages = {
     newActivity: "New activity",
     myInfo: "My details",
     subscriptionActive: "✅ Your membership is active. Your sessions are listed below.",
-    errors: { subscriptionNotFound: "Membership not found.", paymentInProgress: "A payment is being confirmed for this order: it cannot be cancelled right now. Try again in a few minutes." },
+    errors: { subscriptionNotFound: "Membership not found.", paymentInProgress: "A payment is being confirmed for this order: it cannot be cancelled right now. Try again in a few minutes.", confirmationClosed: "Attendance for this session is closed (48 hours before): online confirmation is no longer possible. Contact us if you still wish to attend." },
     stats: {
       activeSubscriptions: "Active memberships",
       upcoming: "Upcoming sessions",
@@ -504,6 +506,10 @@ const en: Messages = {
   },
 
   reminderPage: {
+    deadline: "⏳ Confirm before {date}: attendance closes 48 hours before the session.",
+    closed: "🔒 Attendance for this session is closed (48 hours before). Without confirmation, you are counted absent. Contact us if you still wish to attend.",
+    closedConfirmed: "🔒 Attendance is closed and yours is confirmed. You can still report an absence.",
+    closedError: "Attendance for this session is closed: online confirmation is no longer possible. Contact us.",
     invalidTitle: "Invalid link",
     invalidText: "This confirmation link is no longer valid. Log in to your personal space to manage your sessions.",
     eyebrow: "Attendance confirmation",
@@ -520,7 +526,7 @@ const en: Messages = {
     past: "This session has already taken place. Thanks for taking part!",
     confirm: "✅ I confirm my attendance",
     decline: "🚫 I can’t make it",
-    footer: "WANTED TUN EVENTS — automatic reminder sent 48 hours before the session.",
+    footer: "WANTED TUN EVENTS — automatic reminders sent 5, 4 and 3 days before the session.",
   },
 
   admin: {
@@ -824,6 +830,8 @@ const en: Messages = {
         "💡 Tip: to add a session, open the activity from the “Activity” column. Adding a session automatically registers every client subscribed to that activity.",
     },
     sessionDetail: {
+      closesOn: "⏳ Participants can confirm until {date}. After that, those who have not confirmed are counted absent.",
+      closedNote: "🔒 Attendance closed since {date}: participants who had not confirmed are counted absent. Only you can still change their status.",
       breadcrumb: "Sessions",
       statParticipants: "Participants",
       statConfirmed: "🟢 Confirmed",
@@ -914,6 +922,12 @@ const en: Messages = {
       empty: "No emails generated yet. Run the reminder engine.",
       legend: "Attendance status legend",
       types: {
+        reminder_j5: "D-5 reminder",
+        reminder_j4: "D-4 reminder",
+        reminder_j3: "D-3 reminder (last)",
+        ticket_confirmed: "Ticket confirmed",
+        password_reset: "Forgot password",
+        password_changed: "Password changed",
         reminder_48h: "D-2 reminder",
         account_created: "Account created",
         email_verification: "Account confirmation",
@@ -1147,7 +1161,7 @@ const en: Messages = {
       planDeleted: "Plan deleted.",
       subscriptionUpdated: "Membership updated.",
       ruleUpdated: "Rule updated.",
-      remindersRun: "D-2 reminders sent.",
+      remindersRun: "Confirmation reminders run and attendance closed.",
       planRecurringOnly: "Memberships are reserved for session-based activities.",
     },
   },
@@ -1208,8 +1222,11 @@ const en: Messages = {
       log: "Sign-up attempt with an existing address: account holder notified.",
     },
     reminder: {
+      subjectLast: "Last reminder — confirm your attendance: {activity} on {date}",
+      deadline: "⚠️ Confirm before {deadline}. Attendance closes {hours} hours before the session: after that, without your confirmation, you will be counted absent and your place may be given to someone else.",
+      lastCall: "This is the last reminder before attendance closes.",
       subject: "Reminder — {activity} on {date}",
-      intro: "Your session is coming up:",
+      intro: "You have not confirmed your attendance at this session yet:",
       activity: "• Activity: {value}",
       date: "• Date: {value}",
       time: "• Time: {time} (duration {duration})",

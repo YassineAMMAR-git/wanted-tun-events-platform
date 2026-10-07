@@ -48,7 +48,7 @@ function isLocked(lockedUntil: Date | null): boolean {
 const PAYMENT_STATUSES = ["pending", "declared", "paid", "cancelled"] as const;
 const toPaymentStatus = (value: string) =>
   (PAYMENT_STATUSES as readonly string[]).includes(value) ? (value as (typeof PAYMENT_STATUSES)[number]) : "pending";
-const RESPONSE_CHANNELS = ["email", "espace-personnel", "administration"] as const;
+const RESPONSE_CHANNELS = ["email", "rappel", "espace-personnel", "administration", "inscription", "delai"] as const;
 const toChannel = (value: string | null) =>
   (RESPONSE_CHANNELS as readonly string[]).includes(value ?? "") ? (value as (typeof RESPONSE_CHANNELS)[number]) : "email";
 

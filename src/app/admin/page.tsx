@@ -1,3 +1,4 @@
+import { closeConfirmations } from "@/lib/subscriptions";
 import Link from "next/link";
 import { and, asc, desc, eq, gte, ne, or, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -28,6 +29,8 @@ export default async function AdminDashboard({
     getTranslations("common"),
     getTranslations("status"),
   ]);
+  // Présences clôturées 48 h avant la séance : les compteurs affichés sont à jour.
+  await closeConfirmations();
   const [stats, revenue, upcoming, latestClients, latestSubs] = await Promise.all([
     getAdminStats(),
     getRevenueStats(),

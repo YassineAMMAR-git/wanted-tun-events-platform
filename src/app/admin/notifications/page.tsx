@@ -8,7 +8,13 @@ import { Flash } from "@/components/flash";
 export const dynamic = "force-dynamic";
 
 const NOTIFICATION_TYPES = [
+  "reminder_j5",
+  "reminder_j4",
+  "reminder_j3",
   "reminder_48h",
+  "ticket_confirmed",
+  "password_reset",
+  "password_changed",
   "account_created",
   "email_verification",
   "account_exists_notice",

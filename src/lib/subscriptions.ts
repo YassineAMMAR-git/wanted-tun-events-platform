@@ -12,10 +12,43 @@ import {
   type Subscription,
 } from "@/db/schema";
 import { randomToken } from "@/lib/auth";
+import { CONFIRMATION_CLOSE_HOURS, isConfirmationClosed } from "@/lib/attendance";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { translatorFor } from "@/i18n/translator";
+
+/**
+ * Statut d'une présence à sa création. Une inscription faite alors que les présences sont déjà clôturées
+ * (achat de dernière minute, ajout par l'administration) vaut confirmation : le participant vient de s'engager.
+ */
+export function newAttendanceState(startsAt: Date) {
+  return isConfirmationClosed(startsAt)
+    ? { status: "confirmed" as const, respondedAt: new Date(), responseChannel: "inscription" }
+    : { status: "pending" as const };
+}
+
+/**
+ * Clôture des présences : pour toute séance programmée qui commence dans moins de 48 h (ou déjà passée),
+ * un participant qui n'a pas confirmé est compté absent. Seule l'administration peut ensuite le confirmer.
+ * Sans effet si tout est déjà à jour : appelée par la tâche quotidienne et avant d'afficher les présences.
+ */
+export async function closeConfirmations(): Promise<number> {
+  const closed = await db
+    .update(attendances)
+    .set({ status: "declined", respondedAt: new Date(), responseChannel: "delai" })
+    .where(
+      and(
+        eq(attendances.status, "pending"),
+        sql`${attendances.sessionId} in (
+          select s.id from sessions s
+          where s.status = 'scheduled' and s.starts_at <= now() + interval '${sql.raw(String(CONFIRMATION_CLOSE_HOURS))} hours'
+        )`,
+      ),
+    )
+    .returning({ id: attendances.id });
+  return closed.length;
+}
 
 /**
  * Crée (si besoin) les lignes de présence d'un client pour les séances à venir
@@ -28,7 +61,7 @@ export async function ensureAttendances(params: {
   limit: number;
 }): Promise<number> {
   const upcoming = await db
-    .select({ id: sessions.id })
+    .select({ id: sessions.id, startsAt: sessions.startsAt })
     .from(sessions)
     .where(
       and(
@@ -65,7 +98,7 @@ export async function ensureAttendances(params: {
         sessionId: session.id,
         userId: params.userId,
         subscriptionId: params.subscriptionId,
-        status: "pending" as const,
+        ...newAttendanceState(session.startsAt),
         token: randomToken(),
       })),
     )
@@ -81,13 +114,17 @@ export async function ensureAttendances(params: {
 export async function grantAttendances(subscription: Subscription): Promise<void> {
   if (subscription.kind === "ticket") {
     if (!subscription.sessionId) return;
+    const session = (
+      await db.select({ startsAt: sessions.startsAt }).from(sessions).where(eq(sessions.id, subscription.sessionId)).limit(1)
+    )[0];
+    if (!session) return;
     await db
       .insert(attendances)
       .values({
         sessionId: subscription.sessionId,
         userId: subscription.userId,
         subscriptionId: subscription.id,
-        status: "pending",
+        ...newAttendanceState(session.startsAt),
         token: randomToken(),
       })
       .onConflictDoNothing();
@@ -110,7 +147,15 @@ export async function placesTaken(sessionIds: number[]): Promise<Map<number, num
   const rows = await db
     .select({ sessionId: attendances.sessionId, count: sql<number>`count(*)::int` })
     .from(attendances)
-    .where(and(inArray(attendances.sessionId, sessionIds), ne(attendances.status, "declined")))
+    .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+    .where(
+      and(
+        inArray(attendances.sessionId, sessionIds),
+        ne(attendances.status, "declined"),
+        // Présences clôturées : un participant qui n'a pas confirmé libère sa place.
+        sql`not (${attendances.status} = 'pending' and ${sessions.startsAt} <= now() + interval '${sql.raw(String(CONFIRMATION_CLOSE_HOURS))} hours')`,
+      ),
+    )
     .groupBy(attendances.sessionId);
   return new Map(rows.map((row) => [row.sessionId, row.count]));
 }
@@ -267,16 +312,36 @@ export async function attachSubscribersToSession(sessionId: number, activityId: 
     .onConflictDoNothing();
 }
 
-/** Enregistre la réponse d'un participant (depuis l'e-mail ou la page de rappel). */
-export async function respondToToken(
-  token: string,
+export type RespondResult = "ok" | "closed" | "invalid";
+
+/**
+ * Enregistre la réponse d'un participant (e-mail de rappel, page de rappel ou espace personnel).
+ * Confirmer n'est possible que jusqu'à la clôture des présences (48 h avant) ; signaler son absence reste
+ * possible jusqu'au début de la séance, pour libérer la place.
+ */
+export async function respondToAttendance(
+  where: { token: string } | { id: number; userId: number },
   response: "confirmed" | "declined",
-  channel: "email" | "rappel" = "email",
-): Promise<boolean> {
-  const updated = await db
+  channel: "email" | "rappel" | "espace-personnel",
+): Promise<RespondResult> {
+  const row = (
+    await db
+      .select({ id: attendances.id, startsAt: sessions.startsAt, sessionStatus: sessions.status })
+      .from(attendances)
+      .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+      .where(
+        "token" in where
+          ? eq(attendances.token, where.token)
+          : and(eq(attendances.id, where.id), eq(attendances.userId, where.userId)),
+      )
+      .limit(1)
+  )[0];
+  if (!row || row.sessionStatus !== "scheduled" || row.startsAt.getTime() <= Date.now()) return "invalid";
+  if (response === "confirmed" && isConfirmationClosed(row.startsAt)) return "closed";
+
+  await db
     .update(attendances)
     .set({ status: response, respondedAt: new Date(), responseChannel: channel })
-    .where(eq(attendances.token, token))
-    .returning({ id: attendances.id });
-  return updated.length > 0;
+    .where(eq(attendances.id, row.id));
+  return "ok";
 }

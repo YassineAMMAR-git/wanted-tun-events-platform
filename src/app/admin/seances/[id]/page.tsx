@@ -1,3 +1,5 @@
+import { confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
+import { closeConfirmations } from "@/lib/subscriptions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq, ne } from "drizzle-orm";
@@ -20,6 +22,7 @@ import {
   toAttendanceStatus,
   toDateTimeLocalValue,
   minutesToHoursInput,
+  isPast,
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -64,6 +67,8 @@ export default async function AdminSessionDetail({
   const { session } = row;
   const activity = localize(row.activity, locale, ACTIVITY_TRANSLATABLE);
 
+  // Présences clôturées 48 h avant la séance : les compteurs affichés sont à jour.
+  await closeConfirmations();
   const [participants, clients] = await Promise.all([
     db
       .select({ attendance: attendances, user: users })
@@ -109,6 +114,13 @@ export default async function AdminSessionDetail({
             place: session.location ?? activity.address ?? tCommon("none"),
           })}
         </p>
+        {session.status === "scheduled" && !isPast(session.startsAt) ? (
+          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-gold-dark">
+            {isConfirmationClosed(session.startsAt)
+              ? t("closedNote", { date: formatDateTime(confirmationDeadline(session.startsAt), locale) })
+              : t("closesOn", { date: formatDateTime(confirmationDeadline(session.startsAt), locale) })}
+          </p>
+        ) : null}
         <form action={updateSessionAction} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <input type="hidden" name="id" value={session.id} />
           <input type="hidden" name="activityId" value={row.activity.id} />

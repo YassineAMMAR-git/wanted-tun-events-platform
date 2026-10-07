@@ -25,7 +25,12 @@ import {
 import { hashPassword, randomToken, requireAdmin, revokeUserSessions, sendVerificationEmail } from "@/lib/auth";
 import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema } from "@/lib/validation/account";
 import { firstIssueMessage, readFields } from "@/lib/validation/form";
-import { activateSubscription, attachSubscribersToSession, grantAttendances } from "@/lib/subscriptions";
+import {
+  activateSubscription,
+  attachSubscribersToSession,
+  grantAttendances,
+  newAttendanceState,
+} from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
 import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
@@ -546,6 +551,7 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const sessionId = num(formData, "sessionId");
   const userId = num(formData, "userId");
+  const session = (await db.select({ startsAt: sessions.startsAt }).from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
   // Rattachement à l'abonnement actif du client pour cette activité, s'il en a un (jamais au billet d'une autre date).
   const subscription = (
     await db
@@ -570,7 +576,8 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
       sessionId,
       userId,
       subscriptionId: subscription?.id ?? null,
-      status: "pending",
+      // Ajouté après la clôture des présences : l'administration le confirme du même geste.
+      ...(session ? newAttendanceState(session.startsAt) : { status: "pending" as const }),
       token: randomToken(),
     })
     .onConflictDoNothing();

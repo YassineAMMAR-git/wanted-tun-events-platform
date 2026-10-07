@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, attendances, sessions } from "@/db/schema";
-import { respondToToken } from "@/lib/subscriptions";
+import { confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
+import { respondToAttendance } from "@/lib/subscriptions";
 import {
   ATTENDANCE_STATUS,
   formatDate,
+  formatDateTime,
   formatDuration,
   formatTime,
   isPast,
@@ -55,6 +57,8 @@ export default async function ReminderPage({
   const status = toAttendanceStatus(attendance.status);
   const cancelled = session.status !== "scheduled";
   const past = isPast(session.startsAt);
+  // Présences clôturées 48 h avant : plus de confirmation en ligne ; une absence peut encore être signalée.
+  const closed = isConfirmationClosed(session.startsAt);
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
@@ -75,7 +79,7 @@ export default async function ReminderPage({
       ) : null}
       {erreur ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
-          {t("error")}
+          {erreur === "cloture" ? t("closedError") : t("error")}
         </div>
       ) : null}
 
@@ -114,29 +118,48 @@ export default async function ReminderPage({
         ) : past ? (
           <p className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">{t("past")}</p>
         ) : (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <form
-              action={async () => {
-                "use server";
-                const done = await respondToToken(token, "confirmed", "rappel");
-                redirect(`/rappel/${token}?${done ? "fait=confirme" : "erreur=1"}`);
-              }}
+          <div className="mt-5 space-y-3">
+            <p
+              className={`rounded-xl border p-3 text-sm ${
+                closed ? "border-zinc-200 bg-zinc-50 text-zinc-700" : "border-amber-200 bg-amber-50 text-gold-dark"
+              }`}
             >
-              <button className="btn btn-primary w-full" type="submit">
-                {t("confirm")}
-              </button>
-            </form>
-            <form
-              action={async () => {
-                "use server";
-                const done = await respondToToken(token, "declined", "rappel");
-                redirect(`/rappel/${token}?${done ? "fait=absent" : "erreur=1"}`);
-              }}
-            >
-              <button className="btn btn-danger w-full" type="submit">
-                {t("decline")}
-              </button>
-            </form>
+              {closed
+                ? status === "confirmed"
+                  ? t("closedConfirmed")
+                  : t("closed")
+                : t("deadline", { date: formatDateTime(confirmationDeadline(session.startsAt), locale) })}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {closed ? null : (
+                <form
+                  action={async () => {
+                    "use server";
+                    const result = await respondToAttendance({ token }, "confirmed", "rappel");
+                    redirect(
+                      `/rappel/${token}?${result === "ok" ? "fait=confirme" : result === "closed" ? "erreur=cloture" : "erreur=1"}`,
+                    );
+                  }}
+                >
+                  <button className="btn btn-primary w-full" type="submit">
+                    {t("confirm")}
+                  </button>
+                </form>
+              )}
+              {closed && status !== "confirmed" ? null : (
+                <form
+                  action={async () => {
+                    "use server";
+                    const result = await respondToAttendance({ token }, "declined", "rappel");
+                    redirect(`/rappel/${token}?${result === "ok" ? "fait=absent" : "erreur=1"}`);
+                  }}
+                >
+                  <button className="btn btn-danger w-full" type="submit">
+                    {t("decline")}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         )}
       </Card>

@@ -3,9 +3,11 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getMySessions, getMySubscriptions } from "@/lib/queries";
 import { cancelPendingAction, respondAttendanceAction } from "@/app/actions/booking";
+import { confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
 import {
   ATTENDANCE_STATUS,
   SESSION_STATUS_STYLES,
+  formatDateTime,
   SUBSCRIPTION_STATUS,
   formatDate,
   formatDuration,
@@ -89,6 +91,11 @@ export default async function DashboardPage({
       {flags.commande === "annulee" ? (
         <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {t("orderCancelled")}
+        </div>
+      ) : null}
+      {flags.erreur === "confirmationClosed" ? (
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
+          {t("errors.confirmationClosed")}
         </div>
       ) : null}
       {flags.erreur === "paymentInProgress" ? (
@@ -294,6 +301,8 @@ export default async function DashboardPage({
                   {upcoming.map((row) => {
                     const attendance = toAttendanceStatus(row.attendance.status);
                     const sessionStatus = toSessionStatus(row.session.status);
+                    // Présences clôturées 48 h avant : plus de confirmation ; une absence peut encore être signalée.
+                    const closed = isConfirmationClosed(row.session.startsAt);
                     return (
                       <li
                         key={row.attendance.id}
@@ -313,6 +322,15 @@ export default async function DashboardPage({
                               {formatDuration(row.session.durationMinutes, locale)})
                             </p>
                             <p className="text-xs text-zinc-500">📍 {row.session.location ?? row.activity.address}</p>
+                            {row.session.status !== "scheduled" ? null : closed ? (
+                              <p className="mt-1 text-xs text-zinc-500">{t("confirmationsClosed")}</p>
+                            ) : attendance === "pending" ? (
+                              <p className="mt-1 text-xs font-semibold text-gold-dark">
+                                {t("confirmBefore", {
+                                  date: formatDateTime(confirmationDeadline(row.session.startsAt), locale),
+                                })}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -324,20 +342,24 @@ export default async function DashboardPage({
                           </span>
                           {row.session.status === "scheduled" ? (
                             <div className="flex gap-2">
-                              <form action={respondAttendanceAction}>
-                                <input type="hidden" name="attendanceId" value={row.attendance.id} />
-                                <input type="hidden" name="response" value="confirmed" />
-                                <button className="btn btn-primary btn-sm" type="submit">
-                                  {t("confirm")}
-                                </button>
-                              </form>
-                              <form action={respondAttendanceAction}>
-                                <input type="hidden" name="attendanceId" value={row.attendance.id} />
-                                <input type="hidden" name="response" value="declined" />
-                                <button className="btn btn-ghost btn-sm" type="submit">
-                                  {t("absent")}
-                                </button>
-                              </form>
+                              {closed ? null : (
+                                <form action={respondAttendanceAction}>
+                                  <input type="hidden" name="attendanceId" value={row.attendance.id} />
+                                  <input type="hidden" name="response" value="confirmed" />
+                                  <button className="btn btn-primary btn-sm" type="submit">
+                                    {t("confirm")}
+                                  </button>
+                                </form>
+                              )}
+                              {closed && attendance !== "confirmed" ? null : (
+                                <form action={respondAttendanceAction}>
+                                  <input type="hidden" name="attendanceId" value={row.attendance.id} />
+                                  <input type="hidden" name="response" value="declined" />
+                                  <button className="btn btn-ghost btn-sm" type="submit">
+                                    {t("absent")}
+                                  </button>
+                                </form>
+                              )}
                             </div>
                           ) : null}
                         </div>

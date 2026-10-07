@@ -80,7 +80,7 @@ const fr = {
     plan: { active: "Active", inactive: "Désactivée" },
     role: { client: "Client", admin: "Administrateur" },
     notification: { sent: "Envoyé", simulated: "Simulé", failed: "Échec", queued: "En file" },
-    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration" },
+    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration", rappel: "page de rappel", inscription: "à l’inscription", delai: "délai dépassé" },
   },
 
   home: {
@@ -103,11 +103,11 @@ const fr = {
       plan: { title: "Billet, séance ou abonnement", text: "Un billet pour un événement unique ; pour une activité à séances, payez à la séance ou prenez une formule." },
       pay: { title: "Payez via le lien sécurisé", text: "Paiement par lien externe configuré pour chaque offre." },
       follow: { title: "Suivez vos séances", text: "🟢 séance à venir, ⚪ séance réalisée : votre avancement en un coup d’œil." },
-      confirm: { title: "Confirmez votre présence", text: "Un rappel automatique 48 h avant chaque séance, avec confirmation en 1 clic." },
+      confirm: { title: "Confirmez votre présence", text: "Des rappels 5, 4 et 3 jours avant chaque séance. Confirmez en 1 clic, au plus tard 48 h avant." },
     },
     ctaTitle: "Prêt à rejoindre la prochaine séance ?",
     ctaText:
-      "Créez votre compte en moins d’une minute. Vous recevrez automatiquement un e-mail de rappel 48 h avant chacune de vos séances, avec un bouton de confirmation de participation.",
+      "Créez votre compte en moins d’une minute. Vous recevrez des e-mails de rappel avant chacune de vos séances, avec un bouton pour confirmer votre participation jusqu’à 48 h avant.",
     ctaOffers: "Voir les activités",
     carousel: {
       label: "Présentation de WANTED TUN EVENTS",
@@ -133,7 +133,7 @@ const fr = {
         reminders: {
           eyebrow: "Rappels automatiques",
           title: "Ne manquez plus aucune séance",
-          text: "Un e-mail de rappel 48 h avant chaque séance, avec confirmation de présence en un clic.",
+          text: "Des e-mails de rappel 5, 4 et 3 jours avant chaque séance, avec confirmation de présence en un clic.",
           cta: "Créer mon compte",
         },
       },
@@ -313,6 +313,8 @@ const fr = {
   },
 
   dashboard: {
+    confirmBefore: "⏳ À confirmer avant le {date}",
+    confirmationsClosed: "🔒 Présences clôturées (48 h avant la séance)",
     cancelOrder: "Annuler",
     orderCancelled: "✅ Commande annulée. Rien n’a été débité.",
     ticketRegistered: "✅ Votre inscription est confirmée. Retrouvez votre billet ci-dessous.",
@@ -327,7 +329,7 @@ const fr = {
     newActivity: "Nouvelle activité",
     myInfo: "Mes informations",
     subscriptionActive: "✅ Votre abonnement est activé. Vos séances sont affichées ci-dessous.",
-    errors: { subscriptionNotFound: "Abonnement introuvable.", paymentInProgress: "Un paiement est en cours de confirmation pour cette commande : elle ne peut pas être annulée pour l’instant. Réessayez dans quelques minutes." },
+    errors: { subscriptionNotFound: "Abonnement introuvable.", paymentInProgress: "Un paiement est en cours de confirmation pour cette commande : elle ne peut pas être annulée pour l’instant. Réessayez dans quelques minutes.", confirmationClosed: "Les présences de cette séance sont clôturées (48 h avant) : la confirmation n’est plus possible en ligne. Contactez-nous si vous souhaitez encore participer." },
     stats: {
       activeSubscriptions: "Abonnements actifs",
       upcoming: "Séances à venir",
@@ -508,6 +510,10 @@ const fr = {
   },
 
   reminderPage: {
+    deadline: "⏳ Confirmez avant le {date} : les présences sont clôturées 48 h avant la séance.",
+    closed: "🔒 Les présences de cette séance sont clôturées (48 h avant). Sans confirmation, vous êtes compté(e) absent(e). Contactez-nous si vous souhaitez encore participer.",
+    closedConfirmed: "🔒 Les présences sont clôturées et la vôtre est confirmée. Vous pouvez encore signaler une absence.",
+    closedError: "Les présences de cette séance sont clôturées : la confirmation n’est plus possible en ligne. Contactez-nous.",
     invalidTitle: "Lien invalide",
     invalidText: "Ce lien de confirmation n’est plus valide. Connectez-vous à votre espace personnel pour gérer vos séances.",
     eyebrow: "Confirmation de participation",
@@ -524,7 +530,7 @@ const fr = {
     past: "Cette séance est déjà passée. Merci de votre participation !",
     confirm: "✅ Je confirme ma participation",
     decline: "🚫 Je ne pourrai pas participer",
-    footer: "WANTED TUN EVENTS — rappel automatique envoyé 48 heures avant la séance.",
+    footer: "WANTED TUN EVENTS — rappels automatiques envoyés 5, 4 et 3 jours avant la séance.",
   },
 
   admin: {
@@ -829,6 +835,8 @@ const fr = {
         "💡 Astuce : pour ajouter une séance, ouvrez l’activité concernée depuis la colonne « Activité ». L’ajout inscrit automatiquement tous les clients abonnés à cette activité.",
     },
     sessionDetail: {
+      closesOn: "⏳ Les participants peuvent confirmer jusqu’au {date}. Ensuite, ceux qui n’ont pas confirmé sont comptés absents.",
+      closedNote: "🔒 Présences clôturées depuis le {date} : les participants qui n’avaient pas confirmé sont comptés absents. Vous seul pouvez encore modifier leur statut.",
       breadcrumb: "Séances",
       statParticipants: "Participants",
       statConfirmed: "🟢 Confirmés",
@@ -919,6 +927,12 @@ const fr = {
       empty: "Aucun e-mail généré pour l’instant. Lancez le moteur de rappels.",
       legend: "Légende des statuts de participation",
       types: {
+        reminder_j5: "Rappel J-5",
+        reminder_j4: "Rappel J-4",
+        reminder_j3: "Rappel J-3 (dernier)",
+        ticket_confirmed: "Billet confirmé",
+        password_reset: "Mot de passe oublié",
+        password_changed: "Mot de passe modifié",
         reminder_48h: "Rappel J-2",
         account_created: "Création de compte",
         email_verification: "Confirmation de compte",
@@ -1154,7 +1168,7 @@ const fr = {
       planDeleted: "Offre supprimée.",
       subscriptionUpdated: "Abonnement mis à jour.",
       ruleUpdated: "Règle mise à jour.",
-      remindersRun: "Rappels J-2 exécutés.",
+      remindersRun: "Rappels de confirmation exécutés et présences clôturées.",
       planRecurringOnly: "Les abonnements sont réservés aux activités à séances.",
     },
   },
@@ -1216,8 +1230,11 @@ const fr = {
       log: "Tentative d’inscription avec une adresse déjà enregistrée : titulaire prévenu.",
     },
     reminder: {
+      subjectLast: "Dernier rappel — confirmez votre présence : {activity} le {date}",
+      deadline: "⚠️ Confirmez avant le {deadline}. Les présences sont clôturées {hours} h avant la séance : passé ce délai, sans confirmation de votre part, vous serez compté(e) absent(e) et votre place pourra être attribuée à une autre personne.",
+      lastCall: "Ceci est le dernier rappel avant la clôture des présences.",
       subject: "Rappel — {activity} le {date}",
-      intro: "Votre séance approche :",
+      intro: "Vous n’avez pas encore confirmé votre présence à cette séance :",
       activity: "• Activité : {value}",
       date: "• Date : {value}",
       time: "• Heure : {time} (durée {duration})",

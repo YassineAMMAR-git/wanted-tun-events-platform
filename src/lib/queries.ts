@@ -22,7 +22,8 @@ import {
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
 import { isFinished, isRecurring } from "@/lib/memberships";
-import { placesTaken } from "@/lib/subscriptions";
+import { closeConfirmations, placesTaken } from "@/lib/subscriptions";
+import { ensureReminderRules } from "@/lib/reminders";
 
 /*
  * Requêtes des pages publiques et de l'espace personnel : le contenu est renvoyé dans la langue demandée
@@ -327,6 +328,8 @@ export async function getMySubscriptions(userId: number, locale: Locale) {
 }
 
 export async function getMySessions(userId: number, locale: Locale) {
+  // Présences clôturées 48 h avant : les statuts affichés sont à jour même entre deux passages de la tâche quotidienne.
+  await closeConfirmations();
   const rows = await db
     .select({ attendance: attendances, session: sessions, activity: activities, category: categories })
     .from(attendances)
@@ -359,6 +362,7 @@ export async function getNotifications(limit = 60) {
 }
 
 export async function getNotificationRules() {
+  await ensureReminderRules();
   return db.select().from(notificationRules).orderBy(asc(notificationRules.id));
 }
 
@@ -374,7 +378,7 @@ export async function getAdminStats() {
       confirmations: sql<number>`(select count(*) from attendances where status = 'confirmed')::int`,
       awaiting: sql<number>`(select count(*) from attendances where status = 'pending')::int`,
       declines: sql<number>`(select count(*) from attendances where status = 'declined')::int`,
-      reminders: sql<number>`(select count(*) from notifications where type = 'reminder_48h')::int`,
+      reminders: sql<number>`(select count(*) from notifications where type like 'reminder_%')::int`,
     })
     .from(sql`(select 1) as one`);
   return counts;

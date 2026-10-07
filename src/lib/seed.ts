@@ -600,15 +600,14 @@ async function seed(): Promise<void> {
 
   /* ------------------------- règles de notification ----------------------- */
   await db.insert(notificationRules).values([
-    {
-      type: "reminder_48h",
-      label: "Rappel J-2 + demande de confirmation",
-      description:
-        "E-mail automatique envoyé 48 heures avant chaque séance : date, heure, lieu et boutons de confirmation de participation.",
-      offsetHours: 48,
+    ...[5, 4, 3].map((days) => ({
+      type: `reminder_j${days}`,
+      label: `Rappel de confirmation J-${days}`,
+      description: `E-mail envoyé ${days} jours avant la séance aux participants qui n'ont pas encore confirmé leur présence, avec la date limite de confirmation (48 h avant la séance).`,
+      offsetHours: days * 24,
       channel: "email",
       isEnabled: true,
-    },
+    })),
     {
       type: "subscription_activated",
       label: "Confirmation d'activation d'abonnement",

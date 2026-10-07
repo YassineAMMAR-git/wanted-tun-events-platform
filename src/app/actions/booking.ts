@@ -5,10 +5,10 @@ import { revalidatePath } from "next/cache";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { activities, attendances, plans, sessions, subscriptions, ticketPrices } from "@/db/schema";
-import { getCurrentUser, randomToken } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
 import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
-import { activateSubscription, placesTaken } from "@/lib/subscriptions";
+import { activateSubscription, placesTaken, respondToAttendance } from "@/lib/subscriptions";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -300,22 +300,14 @@ export async function declarePaymentAction(formData: FormData): Promise<void> {
   redirect(`/abonnement/${subscription.id}/paiement?declare=1`);
 }
 
-/** Réponse à un rappel depuis l'espace personnel. */
+/** Réponse à une séance depuis l'espace personnel (confirmation possible jusqu'à 48 h avant). */
 export async function respondAttendanceAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const attendanceId = Number(formData.get("attendanceId") ?? 0);
   const response = String(formData.get("response") ?? "confirmed") === "declined" ? "declined" : "confirmed";
 
-  await db
-    .update(attendances)
-    .set({
-      status: response,
-      respondedAt: new Date(),
-      responseChannel: "espace-personnel",
-      token: randomToken(),
-    })
-    .where(and(eq(attendances.id, attendanceId), eq(attendances.userId, user.id)));
-
+  const result = await respondToAttendance({ id: attendanceId, userId: user.id }, response, "espace-personnel");
   revalidatePath("/espace-personnel");
+  if (result === "closed") redirect("/espace-personnel?erreur=confirmationClosed");
 }

@@ -1,3 +1,4 @@
+import { closeConfirmations } from "@/lib/subscriptions";
 import Link from "next/link";
 import { and, asc, desc, eq, gte, ilike, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -34,6 +35,9 @@ export default async function AdminSessionsPage({
     getTranslations("common"),
     getTranslations("status"),
   ]);
+
+  // Présences clôturées 48 h avant la séance : les compteurs affichés sont à jour.
+  await closeConfirmations();
 
   const search = q?.trim().slice(0, 100);
   const conditions: SQL[] =
