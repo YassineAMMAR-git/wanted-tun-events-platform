@@ -1081,6 +1081,9 @@ const ar: Messages = {
       emptyText: "أضف أول شريحة باستخدام النموذج أدناه.",
     },
     payments: {
+      pageNewer: "→ الأحدث",
+      pageOlder: "المدفوعات العشر السابقة ←",
+      pageStatus: "الصفحة {page} من {count} · {total, plural, one {محاولة واحدة} other {# محاولات}}",
       ticketOf: "تذكرة — {name}",
       eyebrow: "التحصيل الإلكتروني",
       title: "مدفوعات Mollie",
@@ -1107,7 +1110,7 @@ const ar: Messages = {
       webhookNote: "يُرسل تلقائيًا إلى Mollie مع كل دفعة.",
       openDashboard: "فتح لوحة تحكم Mollie",
       recentTitle: "المدفوعات",
-      recentSubtitle: "آخر 100 محاولة دفع إلكتروني. الدفعة « المدفوعة » تفعّل الاشتراك أو التذكرة تلقائيًا.",
+      recentSubtitle: "محاولات الدفع الإلكتروني، من الأحدث إلى الأقدم. الدفعة « المدفوعة » تفعّل الاشتراك أو التذكرة تلقائيًا.",
       recentEmpty: "لا توجد روابط دفع حتى الآن.",
       colDate: "تاريخ الإنشاء",
       colClient: "العميل",

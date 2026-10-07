@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { activities, paymentLinks, plans, subscriptions, users } from "@/db/schema";
@@ -7,12 +7,20 @@ import { mollieConfigured, mollieMode } from "@/lib/mollie/config";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
+import { Pagination, readPage } from "@/components/pagination";
 
 export const dynamic = "force-dynamic";
 
-async function loadRecent() {
+/** Nombre de paiements affichés par page. */
+const PAGE_SIZE = 10;
+
+/** Une page de paiements, du plus récent au plus ancien, et leur nombre total. */
+async function loadPayments(rawPage: string | undefined) {
   try {
-    return await db
+    const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(paymentLinks);
+    const pageCount = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+    const page = readPage(rawPage, pageCount);
+    const rows = await db
       .select({
         link: paymentLinks,
         subscription: subscriptions,
@@ -25,8 +33,10 @@ async function loadRecent() {
       .innerJoin(users, eq(users.id, subscriptions.userId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .leftJoin(plans, eq(plans.id, subscriptions.planId))
-      .orderBy(desc(paymentLinks.createdAt))
-      .limit(100);
+      .orderBy(desc(paymentLinks.createdAt), desc(paymentLinks.id))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE);
+    return { rows, total, page, pageCount };
   } catch {
     // Table payment_links absente : schéma pas encore appliqué sur cette base.
     return null;
@@ -44,9 +54,9 @@ const LINK_STATUS_STYLE: Record<string, string> = {
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; page?: string }>;
 }) {
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, page: rawPage } = await searchParams;
   const [locale, t] = await Promise.all([getLocale(), getTranslations("admin.payments")]);
   const configured = mollieConfigured();
 
@@ -61,8 +71,9 @@ export default async function AdminPaymentsPage({
       problem = t("checkApiError", { error: error instanceof Error ? error.message : String(error) });
     }
   }
-  const recent = await loadRecent();
-  if (recent === null) problem = t("checkTablesHint");
+  const payments = await loadPayments(rawPage);
+  if (payments === null) problem = t("checkTablesHint");
+  const recent = payments?.rows ?? null;
 
   return (
     <div className="space-y-6">
@@ -78,7 +89,7 @@ export default async function AdminPaymentsPage({
         </div>
       ) : null}
 
-      <section>
+      <section id="paiements" className="scroll-mt-20">
         <SectionTitle eyebrow={t("eyebrow")} title={t("recentTitle")} subtitle={t("recentSubtitle")} />
         {!recent || recent.length === 0 ? (
           <EmptyState title={t("recentEmpty")} />
@@ -124,6 +135,19 @@ export default async function AdminPaymentsPage({
             </table>
           </div>
         )}
+        {payments ? (
+          <Pagination
+            page={payments.page}
+            pageCount={payments.pageCount}
+            basePath="/admin/paiements"
+            anchor="paiements"
+            labels={{
+              previous: t("pageNewer"),
+              next: t("pageOlder"),
+              status: t("pageStatus", { page: payments.page, count: payments.pageCount, total: payments.total }),
+            }}
+          />
+        ) : null}
       </section>
     </div>
   );

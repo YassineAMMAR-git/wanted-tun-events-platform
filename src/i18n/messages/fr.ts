@@ -1085,6 +1085,9 @@ const fr = {
       emptyText: "Ajoutez votre première diapositive avec le formulaire ci-dessous.",
     },
     payments: {
+      pageNewer: "← Plus récents",
+      pageOlder: "10 paiements précédents →",
+      pageStatus: "Page {page} sur {count} · {total, plural, one {# tentative} other {# tentatives}}",
       ticketOf: "Billet — {name}",
       eyebrow: "Encaissement en ligne",
       title: "Paiements Mollie",
@@ -1111,7 +1114,7 @@ const fr = {
       webhookNote: "Transmise automatiquement à Mollie avec chaque paiement.",
       openDashboard: "Ouvrir le tableau de bord Mollie",
       recentTitle: "Paiements",
-      recentSubtitle: "Les 100 dernières tentatives de paiement en ligne. Un paiement « Payé » active automatiquement l’abonnement ou le billet.",
+      recentSubtitle: "Les tentatives de paiement en ligne, de la plus récente à la plus ancienne. Un paiement « Payé » active automatiquement l’abonnement ou le billet.",
       recentEmpty: "Aucun lien de paiement pour le moment.",
       colDate: "Créé le",
       colClient: "Client",

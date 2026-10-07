@@ -1078,6 +1078,9 @@ const en: Messages = {
       emptyText: "Add your first slide with the form below.",
     },
     payments: {
+      pageNewer: "← Newer",
+      pageOlder: "Previous 10 payments →",
+      pageStatus: "Page {page} of {count} · {total, plural, one {# attempt} other {# attempts}}",
       ticketOf: "Ticket — {name}",
       eyebrow: "Online payments",
       title: "Mollie payments",
@@ -1104,7 +1107,7 @@ const en: Messages = {
       webhookNote: "Sent to Mollie automatically with every payment.",
       openDashboard: "Open the Mollie dashboard",
       recentTitle: "Payments",
-      recentSubtitle: "The last 100 online payment attempts. A “Paid” payment automatically activates the membership or ticket.",
+      recentSubtitle: "Online payment attempts, most recent first. A “Paid” payment automatically activates the membership or ticket.",
       recentEmpty: "No payment links yet.",
       colDate: "Created",
       colClient: "Client",
