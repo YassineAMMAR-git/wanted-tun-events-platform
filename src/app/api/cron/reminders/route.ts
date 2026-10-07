@@ -16,6 +16,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
+  // En production, sans secret configuré la route reste fermée : elle envoie des e-mails et modifie des données.
+  if (!secret && process.env.NODE_ENV === "production") {
+    return Response.json({ ok: false, error: "CRON_SECRET manquant" }, { status: 503 });
+  }
   if (secret) {
     const provided =
       request.headers.get("x-cron-secret") ?? request.headers.get("authorization")?.replace("Bearer ", "");
