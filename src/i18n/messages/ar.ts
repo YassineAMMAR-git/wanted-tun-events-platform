@@ -889,6 +889,9 @@ const ar: Messages = {
       noRecurringActivity: "لا يوجد نشاط بحصص: أنشئ واحدًا (النوع «نشاط بحصص») قبل إضافة صيغة.",
     },
     notifications: {
+      logNewer: "→ الأحدث",
+      logOlder: "الرسائل العشر السابقة ←",
+      logPage: "الصفحة {page} من {count} · {total, plural, one {رسالة واحدة} other {# رسائل}}",
       eyebrow: "الإشعارات التلقائية",
       title: "محرك التذكيرات وسجل الإرسال",
       subtitle:
@@ -942,6 +945,9 @@ const ar: Messages = {
       },
     },
     clients: {
+      pagePrevious: "→ السابقون",
+      pageNext: "العملاء العشرة التالون ←",
+      pageStatus: "الصفحة {page} من {count}",
       colSpent: "المبلغ المنفق",
       sortSpent: "المبلغ المنفق",
       revenueTotal: "إجمالي رقم المعاملات",

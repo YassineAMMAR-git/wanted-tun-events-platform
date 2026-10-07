@@ -890,6 +890,9 @@ const fr = {
       noRecurringActivity: "Aucune activité à séances : créez-en une (type « activité à séances ») avant d’ajouter une formule.",
     },
     notifications: {
+      logNewer: "← Plus récents",
+      logOlder: "10 e-mails précédents →",
+      logPage: "Page {page} sur {count} · {total, plural, one {# e-mail} other {# e-mails}}",
       eyebrow: "Notifications automatiques",
       title: "Moteur de rappels & journal d’envoi",
       subtitle:
@@ -943,6 +946,9 @@ const fr = {
       },
     },
     clients: {
+      pagePrevious: "← Précédents",
+      pageNext: "10 clients suivants →",
+      pageStatus: "Page {page} sur {count}",
       colSpent: "Dépensé",
       sortSpent: "Montant dépensé",
       revenueTotal: "Chiffre d’affaires total",

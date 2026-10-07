@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClientAction, deleteClientAction } from "@/app/actions/admin";
-import { getRevenueStats, hasClientFilters, listAdminClients } from "@/lib/queries";
+import { countAdminClients, getRevenueStats, hasClientFilters, listAdminClients } from "@/lib/queries";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 import { formatDate, formatPrice } from "@/lib/format";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/validation/constants";
 import { localeNames, locales } from "@/i18n/config";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
+import { Pagination, readPage } from "@/components/pagination";
 
 export const dynamic = "force-dynamic";
+
+/** Nombre de clients affichés par page. */
+const PAGE_SIZE = 10;
 
 export default async function AdminClientsPage({
   searchParams,
@@ -22,9 +26,10 @@ export default async function AdminClientsPage({
     verifie?: string;
     abo?: string;
     tri?: string;
+    page?: string;
   }>;
 }) {
-  const { ok, erreur, ...filters } = await searchParams;
+  const { ok, erreur, page: rawPage, ...filters } = await searchParams;
   const [locale, t, tCommon, tStatus, tAuth, tDetail] = await Promise.all([
     getLocale(),
     getTranslations("admin.clients"),
@@ -33,7 +38,11 @@ export default async function AdminClientsPage({
     getTranslations("auth"),
     getTranslations("admin.clientDetail"),
   ]);
-  const [clients, revenue] = await Promise.all([listAdminClients(filters), getRevenueStats()]);
+  const [total, revenue] = await Promise.all([countAdminClients(filters), getRevenueStats()]);
+  // Liste par pages de 10 ; l'export Excel, lui, contient toujours tous les clients filtrés.
+  const pageCount = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+  const page = readPage(rawPage, pageCount);
+  const clients = await listAdminClients(filters, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const filtered = hasClientFilters(filters);
   const exportHref = `/admin/clients/export${new URLSearchParams(
     Object.entries(filters).filter(([, value]) => value) as [string, string][],
@@ -119,8 +128,8 @@ export default async function AdminClientsPage({
         />
       </FilterBar>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-zinc-600">{t("resultCount", { count: clients.length })}</p>
+      <div id="liste" className="flex scroll-mt-20 flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-600">{t("resultCount", { count: total })}</p>
         <a className="btn btn-ghost sm:w-auto" href={exportHref} download>
           {t("exportExcel")}
         </a>
@@ -188,7 +197,7 @@ export default async function AdminClientsPage({
             ))}
             {clients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center text-zinc-500">
+                <td colSpan={9} className="text-center text-zinc-500">
                   {t("empty")}
                 </td>
               </tr>
@@ -196,6 +205,18 @@ export default async function AdminClientsPage({
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        basePath="/admin/clients"
+        params={filters}
+        anchor="liste"
+        labels={{
+          previous: t("pagePrevious"),
+          next: t("pageNext"),
+          status: t("pageStatus", { page, count: pageCount }),
+        }}
+      />
 
       <section>
         <SectionTitle eyebrow={t("newEyebrow")} title={t("newTitle")} />

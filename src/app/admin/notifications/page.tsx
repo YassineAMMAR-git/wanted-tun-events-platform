@@ -1,9 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { runRemindersAction, toggleRuleAction, updateRuleAction } from "@/app/actions/admin";
-import { getNotificationRules, getNotifications } from "@/lib/queries";
+import { getNotificationCounts, getNotificationRules, getNotifications } from "@/lib/queries";
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUSES, formatDate, formatTime } from "@/lib/format";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
+import { Pagination, readPage } from "@/components/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,9 @@ const NOTIFICATION_TYPES = [
 const isKnownType = (value: string): value is (typeof NOTIFICATION_TYPES)[number] =>
   (NOTIFICATION_TYPES as readonly string[]).includes(value);
 
+/** Nombre d'e-mails affichés par page dans le journal. */
+const LOG_PAGE_SIZE = 10;
+
 const NOTIFICATION_STATUSES = ["sent", "simulated", "failed", "queued"] as const;
 const toNotificationStatus = (value: string) =>
   (NOTIFICATION_STATUSES as readonly string[]).includes(value) ? (value as (typeof NOTIFICATION_STATUSES)[number]) : "queued";
@@ -32,19 +36,20 @@ const toNotificationStatus = (value: string) =>
 export default async function AdminNotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; page?: string }>;
 }) {
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, page: rawPage } = await searchParams;
   const [locale, t, tStatus] = await Promise.all([
     getLocale(),
     getTranslations("admin.notifications"),
     getTranslations("status"),
   ]);
-  const [rules, log] = await Promise.all([getNotificationRules(), getNotifications(50)]);
-
-  const sent = log.filter((row) => row.notification.status === "sent").length;
-  const simulated = log.filter((row) => row.notification.status === "simulated").length;
-  const failed = log.filter((row) => row.notification.status === "failed").length;
+  const [rules, counts] = await Promise.all([getNotificationRules(), getNotificationCounts()]);
+  // Journal par pages de 10, du plus récent au plus ancien.
+  const pageCount = Math.max(Math.ceil(counts.total / LOG_PAGE_SIZE), 1);
+  const page = readPage(rawPage, pageCount);
+  const log = await getNotifications(LOG_PAGE_SIZE, (page - 1) * LOG_PAGE_SIZE);
+  const { sent, simulated, failed } = counts;
   const typeLabel = (type: string) => (isKnownType(type) ? t(`types.${type}`) : type);
 
   return (
@@ -141,7 +146,9 @@ export default async function AdminNotificationsPage({
       </section>
 
       <section>
-        <SectionTitle eyebrow={t("logEyebrow")} title={t("logTitle")} />
+        <div id="journal" className="scroll-mt-20">
+          <SectionTitle eyebrow={t("logEyebrow")} title={t("logTitle")} />
+        </div>
         <div className="card scroll-x">
           <table className="data">
             <thead>
@@ -205,6 +212,17 @@ export default async function AdminNotificationsPage({
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={page}
+          pageCount={pageCount}
+          basePath="/admin/notifications"
+          anchor="journal"
+          labels={{
+            previous: t("logNewer"),
+            next: t("logOlder"),
+            status: t("logPage", { page, count: pageCount, total: counts.total }),
+          }}
+        />
       </section>
 
       <Card>

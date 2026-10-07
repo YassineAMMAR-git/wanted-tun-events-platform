@@ -885,6 +885,9 @@ const en: Messages = {
       noRecurringActivity: "No session-based activity: create one (type “session-based activity”) before adding a plan.",
     },
     notifications: {
+      logNewer: "← Newer",
+      logOlder: "Previous 10 e-mails →",
+      logPage: "Page {page} of {count} · {total, plural, one {# e-mail} other {# e-mails}}",
       eyebrow: "Automatic notifications",
       title: "Reminder engine & sending log",
       subtitle:
@@ -938,6 +941,9 @@ const en: Messages = {
       },
     },
     clients: {
+      pagePrevious: "← Previous",
+      pageNext: "Next 10 clients →",
+      pageStatus: "Page {page} of {count}",
       colSpent: "Spent",
       sortSpent: "Amount spent",
       revenueTotal: "Total revenue",

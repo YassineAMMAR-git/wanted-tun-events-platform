@@ -348,7 +348,8 @@ export async function getMySessions(userId: number, locale: Locale) {
   }));
 }
 
-export async function getNotifications(limit = 60) {
+/** Journal des e-mails, du plus récent au plus ancien, par pages. */
+export async function getNotifications(limit = 10, offset = 0) {
   return db
     .select({
       notification: notifications,
@@ -357,8 +358,22 @@ export async function getNotifications(limit = 60) {
     })
     .from(notifications)
     .leftJoin(users, eq(users.id, notifications.userId))
-    .orderBy(desc(notifications.createdAt))
-    .limit(limit);
+    .orderBy(desc(notifications.createdAt), desc(notifications.id))
+    .limit(limit)
+    .offset(offset);
+}
+
+/** Totaux du journal des e-mails (toutes pages confondues). */
+export async function getNotificationCounts() {
+  const [counts] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      sent: sql<number>`(count(*) filter (where ${notifications.status} = 'sent'))::int`,
+      simulated: sql<number>`(count(*) filter (where ${notifications.status} = 'simulated'))::int`,
+      failed: sql<number>`(count(*) filter (where ${notifications.status} = 'failed'))::int`,
+    })
+    .from(notifications);
+  return counts ?? { total: 0, sent: 0, simulated: 0, failed: 0 };
 }
 
 export async function getNotificationRules() {
@@ -472,7 +487,7 @@ export function hasClientFilters(filters: AdminClientFilters): boolean {
  * Partagée par la page et par l'export Excel : le fichier téléchargé contient
  * donc exactement les lignes affichées, avec le même tri.
  */
-export async function listAdminClients(filters: AdminClientFilters) {
+function adminClientConditions(filters: AdminClientFilters): SQL[] {
   const search = filters.q?.trim().slice(0, 100);
   const conditions: SQL[] = [];
 
@@ -506,6 +521,26 @@ export async function listAdminClients(filters: AdminClientFilters) {
     );
   }
 
+  return conditions;
+}
+
+/** Nombre de clients correspondant aux filtres (pagination de la liste). */
+export async function countAdminClients(filters: AdminClientFilters): Promise<number> {
+  const conditions = adminClientConditions(filters);
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(users)
+    .where(conditions.length ? and(...conditions) : undefined);
+  return row?.count ?? 0;
+}
+
+/**
+ * Liste des clients pour l'administration, avec leurs compteurs.
+ * Sans `paging`, toutes les lignes sont renvoyées (export Excel) ; avec, une seule page.
+ */
+export async function listAdminClients(filters: AdminClientFilters, paging?: { limit: number; offset: number }) {
+  const conditions = adminClientConditions(filters);
+
   /*
    * Le client est désigné par "users"."id" écrit en toutes lettres : dans une requête sur une seule table, Drizzle
    * écrit les colonnes de la sélection sans nom de table ("id"), et PostgreSQL le lirait alors, à l'intérieur de la
@@ -529,7 +564,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
     depense: [desc(spentCents), desc(users.createdAt)],
   }[filters.tri ?? ""] ?? [desc(users.createdAt)];
 
-  return db
+  const query = db
     .select({
       user: users,
       subscriptions: subscriptionCount,
@@ -540,5 +575,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
     })
     .from(users)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(...order);
+    // L'identifiant départage les égalités : l'ordre est le même d'une page à l'autre.
+    .orderBy(...order, desc(users.id));
+  return paging ? query.limit(paging.limit).offset(paging.offset) : query;
 }
