@@ -264,6 +264,9 @@ const fr = {
   },
 
   payment: {
+    cancelOrder: "Je me suis trompé : annuler cette commande",
+    orderCancelled: "Cette commande a été annulée. Rien n’a été débité.",
+    backToActivity: "Retour à l’activité",
     onlineVerifying: "Nous vérifions votre paiement… Si vous n’avez pas payé, vous pouvez relancer le paiement avec le bouton ci-dessus.",
     ticketIntro: "Vérifiez le récapitulatif de votre billet puis réglez en ligne : votre inscription est confirmée dès le paiement reçu.",
     ticket: "Billet",
@@ -310,6 +313,8 @@ const fr = {
   },
 
   dashboard: {
+    cancelOrder: "Annuler",
+    orderCancelled: "✅ Commande annulée. Rien n’a été débité.",
     ticketRegistered: "✅ Votre inscription est confirmée. Retrouvez votre billet ci-dessous.",
     ticketAlreadyBought: "Vous avez déjà un billet pour cette date : il est affiché ci-dessous.",
     ticketOf: "Billet — {name}",
@@ -322,7 +327,7 @@ const fr = {
     newActivity: "Nouvelle activité",
     myInfo: "Mes informations",
     subscriptionActive: "✅ Votre abonnement est activé. Vos séances sont affichées ci-dessous.",
-    errors: { subscriptionNotFound: "Abonnement introuvable." },
+    errors: { subscriptionNotFound: "Abonnement introuvable.", paymentInProgress: "Un paiement est en cours de confirmation pour cette commande : elle ne peut pas être annulée pour l’instant. Réessayez dans quelques minutes." },
     stats: {
       activeSubscriptions: "Abonnements actifs",
       upcoming: "Séances à venir",

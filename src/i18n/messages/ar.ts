@@ -264,6 +264,9 @@ const ar: Messages = {
   },
 
   payment: {
+    cancelOrder: "أخطأت: إلغاء هذا الطلب",
+    orderCancelled: "تم إلغاء هذا الطلب. لم يُخصم أي مبلغ.",
+    backToActivity: "العودة إلى النشاط",
     onlineVerifying: "نتحقق من دفعتك… إن لم تدفع، يمكنك إعادة الدفع عبر الزر أعلاه.",
     ticketIntro: "راجع ملخص تذكرتك ثم ادفع عبر الإنترنت: يُؤكَّد تسجيلك فور استلام الدفع.",
     ticket: "التذكرة",
@@ -310,6 +313,8 @@ const ar: Messages = {
   },
 
   dashboard: {
+    cancelOrder: "إلغاء",
+    orderCancelled: "✅ تم إلغاء الطلب. لم يُخصم أي مبلغ.",
     ticketRegistered: "✅ تم تأكيد تسجيلك. تجد تذكرتك أدناه.",
     ticketAlreadyBought: "لديك بالفعل تذكرة لهذا الموعد: وهي معروضة أدناه.",
     ticketOf: "تذكرة — {name}",
@@ -322,7 +327,7 @@ const ar: Messages = {
     newActivity: "نشاط جديد",
     myInfo: "معلوماتي",
     subscriptionActive: "✅ تم تفعيل اشتراكك. حصصك معروضة أدناه.",
-    errors: { subscriptionNotFound: "الاشتراك غير موجود." },
+    errors: { subscriptionNotFound: "الاشتراك غير موجود.", paymentInProgress: "هناك دفعة قيد التأكيد لهذا الطلب: لا يمكن إلغاؤه الآن. أعد المحاولة بعد بضع دقائق." },
     stats: {
       activeSubscriptions: "الاشتراكات النشطة",
       upcoming: "الحصص القادمة",

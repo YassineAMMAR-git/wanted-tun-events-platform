@@ -13,7 +13,7 @@ import {
   subscriptions,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { declarePaymentAction, startPaymentAction } from "@/app/actions/booking";
+import { cancelPendingAction, declarePaymentAction, startPaymentAction } from "@/app/actions/booking";
 import { formatDate, formatDuration, formatPrice, formatTime, isPast } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { CONTACT_EMAIL } from "@/lib/site";
@@ -66,9 +66,12 @@ export default async function PaymentPage({
     subscription.paymentStatus !== "paid" &&
     (!row.session || row.session.status !== "scheduled" || isPast(row.session.startsAt));
 
+  // Commande annulée par le client avant paiement.
+  const cancelled = subscription.status === "cancelled" && subscription.paymentStatus !== "paid";
+
   // Paiement Mollie : relu chez Mollie à chaque affichage (notamment au retour du client), ce qui active la commande si elle est payée.
   const online = await onlinePaymentsEnabled();
-  const link = online && subscription.paymentStatus !== "paid" && !ticketClosed ? await latestPaymentLink(subscription.id) : null;
+  const link = online && subscription.paymentStatus !== "paid" && !ticketClosed && !cancelled ? await latestPaymentLink(subscription.id) : null;
   // Retour de Mollie : « ouvert » peut vouloir dire que la confirmation n'est pas encore arrivée (on vérifie
   // quelques secondes) ; annulé, refusé ou expiré signifie que le paiement n'a pas abouti.
   const verifying = Boolean(retour) && link?.status === "open";
@@ -146,7 +149,7 @@ export default async function PaymentPage({
           <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
         ) : null}
 
-        {online || alreadyPaid || ticketClosed ? null : (
+        {online || alreadyPaid || ticketClosed || cancelled ? null : (
           <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-sm font-semibold text-gold-dark">{t("externalLink")}</p>
             <p className="mt-1 text-xs break-all text-zinc-600" dir="ltr">
@@ -161,6 +164,15 @@ export default async function PaymentPage({
               {ticket ? t("seeTickets") : t("seeSessions")}
             </Link>
             <span className="btn btn-ghost flex-1">{ticket ? t("ticketConfirmed") : t("alreadyActive")}</span>
+          </div>
+        ) : cancelled ? (
+          <div className="mt-5 space-y-3">
+            <div role="status" className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+              {t("orderCancelled")}
+            </div>
+            <Link href={`/activites/${activity.slug}`} className="btn btn-primary w-full">
+              {t("backToActivity")}
+            </Link>
           </div>
         ) : ticketClosed ? (
           <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
@@ -246,6 +258,15 @@ export default async function PaymentPage({
           </div>
         )}
       </Card>
+
+      {!alreadyPaid && !cancelled && subscription.paymentStatus === "pending" && link?.status !== "processing" ? (
+        <form action={cancelPendingAction} className="text-center">
+          <input type="hidden" name="subscriptionId" value={subscription.id} />
+          <button className="text-xs text-zinc-500 underline hover:text-rose-700" type="submit">
+            {t("cancelOrder")}
+          </button>
+        </form>
+      ) : null}
 
       <p className="text-center text-xs text-zinc-500">
         {ticket ? t("ticketHelp", { email: CONTACT_EMAIL }) : t("help", { email: CONTACT_EMAIL })}

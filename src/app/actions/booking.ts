@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { activities, attendances, plans, sessions, subscriptions, ticketPrices } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
-import { ensurePaymentLink } from "@/lib/mollie/payments";
+import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
 import { activateSubscription, placesTaken } from "@/lib/subscriptions";
 
 /**
@@ -192,6 +192,8 @@ export async function startPaymentAction(formData: FormData): Promise<void> {
   )[0];
   if (!owned) redirect("/espace-personnel?erreur=subscriptionNotFound");
   const page = `/abonnement/${owned.subscription.id}/paiement`;
+  // Commande annulée par le client : elle ne se paie plus (il peut en refaire une).
+  if (owned.subscription.status === "cancelled") redirect(page);
 
   // Billet d'une date annulée ou passée : plus en vente (la page de paiement l'explique).
   const { session } = owned;
@@ -212,6 +214,51 @@ export async function startPaymentAction(formData: FormData): Promise<void> {
   }
   // Déjà payé ou confirmation en cours : la page de paiement affiche l'état.
   redirect(checkoutUrl ?? page);
+}
+
+/**
+ * Le client annule une commande qu'il n'a pas payée (abonnement ou billet choisi par erreur) :
+ * elle quitte « Paiement en attente » et il peut en refaire une autre.
+ * Jamais sur une commande payée, ni pendant qu'un paiement est en cours de confirmation.
+ */
+export async function cancelPendingAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/connexion");
+  const subscriptionId = Number(formData.get("subscriptionId") ?? 0);
+
+  const owned = (
+    await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.id, subscriptionId), eq(subscriptions.userId, user.id)))
+      .limit(1)
+  )[0];
+  if (!owned) redirect("/espace-personnel?erreur=subscriptionNotFound");
+
+  // Dernière vérification chez Mollie : si le paiement vient d'aboutir, la commande est activée au lieu d'être annulée.
+  if (await onlinePaymentsEnabled()) {
+    const link = await latestPaymentLink(owned.id);
+    if (link?.status === "paid") redirect("/espace-personnel");
+    if (link?.status === "processing") redirect("/espace-personnel?erreur=paymentInProgress");
+  }
+
+  // Seule une commande encore en attente, sans paiement signalé, peut être annulée (condition revérifiée en base).
+  const cancelled = await db
+    .update(subscriptions)
+    .set({ status: "cancelled", paymentStatus: "cancelled" })
+    .where(
+      and(
+        eq(subscriptions.id, owned.id),
+        eq(subscriptions.userId, user.id),
+        eq(subscriptions.status, "pending"),
+        eq(subscriptions.paymentStatus, "pending"),
+      ),
+    )
+    .returning({ id: subscriptions.id });
+
+  revalidatePath("/espace-personnel");
+  revalidatePath("/admin");
+  redirect(cancelled[0] ? "/espace-personnel?commande=annulee" : "/espace-personnel");
 }
 
 /**

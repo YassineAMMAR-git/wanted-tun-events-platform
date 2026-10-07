@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getMySessions, getMySubscriptions } from "@/lib/queries";
-import { respondAttendanceAction } from "@/app/actions/booking";
+import { cancelPendingAction, respondAttendanceAction } from "@/app/actions/booking";
 import {
   ATTENDANCE_STATUS,
   SESSION_STATUS_STYLES,
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ abonnement?: string; billet?: string; erreur?: string }>;
+  searchParams: Promise<{ abonnement?: string; billet?: string; commande?: string; erreur?: string }>;
 }) {
   const user = await requireUser();
   const flags = await searchParams;
@@ -33,10 +33,14 @@ export default async function DashboardPage({
     getTranslations("common"),
     getTranslations("status"),
   ]);
-  const [subscriptionRows, sessionRows] = await Promise.all([
+  const [allSubscriptionRows, sessionRows] = await Promise.all([
     getMySubscriptions(user.id, locale),
     getMySessions(user.id, locale),
   ]);
+  // Une commande annulée sans avoir été payée (choisie par erreur) n'est plus affichée au client.
+  const subscriptionRows = allSubscriptionRows.filter(
+    (row) => !(row.subscription.status === "cancelled" && row.subscription.paymentStatus !== "paid"),
+  );
 
   const now = new Date();
   const upcoming = sessionRows.filter((row) => row.session.startsAt.getTime() >= now.getTime());
@@ -82,6 +86,16 @@ export default async function DashboardPage({
           {flags.billet === "confirme" ? t("ticketRegistered") : t("ticketAlreadyBought")}
         </div>
       ) : null}
+      {flags.commande === "annulee" ? (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {t("orderCancelled")}
+        </div>
+      ) : null}
+      {flags.erreur === "paymentInProgress" ? (
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
+          {t("errors.paymentInProgress")}
+        </div>
+      ) : null}
       {flags.erreur === "subscriptionNotFound" ? (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {t("errors.subscriptionNotFound")}
@@ -116,9 +130,20 @@ export default async function DashboardPage({
                         : tCommon("none")}
                   </p>
                 </div>
-                <Link href={`/abonnement/${row.subscription.id}/paiement`} className="btn btn-primary btn-sm">
-                  {t("finalize")}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/abonnement/${row.subscription.id}/paiement`} className="btn btn-primary btn-sm">
+                    {t("finalize")}
+                  </Link>
+                  {/* Un paiement déjà signalé est en cours de vérification : il ne s'annule pas d'ici. */}
+                  {row.subscription.paymentStatus === "pending" ? (
+                    <form action={cancelPendingAction}>
+                      <input type="hidden" name="subscriptionId" value={row.subscription.id} />
+                      <button className="btn btn-ghost btn-sm" type="submit">
+                        {t("cancelOrder")}
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

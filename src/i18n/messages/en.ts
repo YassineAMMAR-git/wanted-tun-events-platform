@@ -262,6 +262,9 @@ const en: Messages = {
   },
 
   payment: {
+    cancelOrder: "I made a mistake: cancel this order",
+    orderCancelled: "This order has been cancelled. Nothing was charged.",
+    backToActivity: "Back to the activity",
     onlineVerifying: "We are checking your payment… If you have not paid, you can restart the payment with the button above.",
     ticketIntro: "Check your ticket summary, then pay online: your registration is confirmed as soon as the payment is received.",
     ticket: "Ticket",
@@ -308,6 +311,8 @@ const en: Messages = {
   },
 
   dashboard: {
+    cancelOrder: "Cancel",
+    orderCancelled: "✅ Order cancelled. Nothing was charged.",
     ticketRegistered: "✅ Your registration is confirmed. Your ticket is shown below.",
     ticketAlreadyBought: "You already have a ticket for this date: it is shown below.",
     ticketOf: "Ticket — {name}",
@@ -320,7 +325,7 @@ const en: Messages = {
     newActivity: "New activity",
     myInfo: "My details",
     subscriptionActive: "✅ Your membership is active. Your sessions are listed below.",
-    errors: { subscriptionNotFound: "Membership not found." },
+    errors: { subscriptionNotFound: "Membership not found.", paymentInProgress: "A payment is being confirmed for this order: it cannot be cancelled right now. Try again in a few minutes." },
     stats: {
       activeSubscriptions: "Active memberships",
       upcoming: "Upcoming sessions",
