@@ -1,9 +1,16 @@
-/**
- * Les abonnements ne concernent que le club de chant : c'est la seule activité régulière.
- * Les autres catégories (concerts, campings, soirées…) sont des événements ponctuels, sans formule.
- *
- * Le slug d'une catégorie est fixé à sa création et n'est jamais modifié ensuite : il sert donc de repère stable.
- */
-export const MEMBERSHIP_CATEGORY_SLUG = "club-de-chant";
+import type { ActivityKind } from "@/db/schema";
 
-export const offersMemberships = (categorySlug: string | null | undefined) => categorySlug === MEMBERSHIP_CATEGORY_SLUG;
+/**
+ * Le type d'un événement est choisi par l'administration, activité par activité :
+ *  - « recurring » : activité à séances, payable à la séance ou par abonnement ;
+ *  - « single »    : événement unique, payable par billet.
+ */
+export const isRecurring = (activity: { kind: ActivityKind | null }) => activity.kind === "recurring";
+
+export const toActivityKind = (value: unknown): ActivityKind => (value === "recurring" ? "recurring" : "single");
+
+/**
+ * Avant ce choix, seule la catégorie « club de chant » avait des séances et des abonnements :
+ * ses activités existantes deviennent « recurring », toutes les autres « single » (voir backfillActivityKinds).
+ */
+export const LEGACY_RECURRING_CATEGORY_SLUG = "club-de-chant";

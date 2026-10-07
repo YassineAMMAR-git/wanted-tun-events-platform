@@ -124,6 +124,14 @@ export const categories = pgTable(
 /* ------------------------------------------------------------------ */
 /* Activités (cours / ateliers / événements)                           */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Type d'événement, choisi par l'administration :
+ * « single »    : événement unique (concert, soirée…) — une date, le client achète un billet ;
+ * « recurring » : activité à séances — le client paie à la séance ou prend un abonnement.
+ */
+export const ACTIVITY_KINDS = ["single", "recurring"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 export const activities = pgTable(
   "activities",
   {
@@ -133,6 +141,8 @@ export const activities = pgTable(
       .references(() => categories.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 180 }).notNull(),
     slug: varchar("slug", { length: 180 }).notNull(),
+    /** Vide sur les activités antérieures à ce champ : renseigné au démarrage (voir backfillActivityKinds). */
+    kind: varchar("kind", { length: 16 }).$type<ActivityKind>(),
     shortDescription: varchar("short_description", { length: 280 }),
     description: text("description"),
     address: varchar("address", { length: 240 }),
@@ -214,8 +224,9 @@ export const plans = pgTable(
 /* ------------------------------------------------------------------ */
 
 /**
- * « membership » : formule du club de chant (plan_id renseigné, plusieurs séances).
- * « ticket » : billet d'un événement ponctuel (plan_id vide, session_id = la date choisie, prix = celui de l'activité).
+ * « membership » : abonnement à une activité à séances (plan_id renseigné, plusieurs séances).
+ * « ticket » : billet d'un événement unique, ou séance achetée à l'unité
+ *              (plan_id vide, session_id = la date choisie, prix = celui de l'activité).
  */
 export const SUBSCRIPTION_KINDS = ["membership", "ticket"] as const;
 export type SubscriptionKind = (typeof SUBSCRIPTION_KINDS)[number];

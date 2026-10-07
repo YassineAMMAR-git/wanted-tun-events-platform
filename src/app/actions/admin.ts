@@ -29,7 +29,7 @@ import { runReminderJob } from "@/lib/reminders";
 import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
 import { logAndSend } from "@/lib/mailer";
-import { offersMemberships } from "@/lib/memberships";
+import { isRecurring, toActivityKind } from "@/lib/memberships";
 import { translatorFor } from "@/i18n/translator";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -283,6 +283,7 @@ export async function deleteSlideAction(formData: FormData): Promise<void> {
 function activityValues(formData: FormData) {
   return {
     categoryId: num(formData, "categoryId"),
+    kind: toActivityKind(str(formData, "kind")),
     name: str(formData, "name"),
     shortDescription: str(formData, "shortDescription") || null,
     description: str(formData, "description") || null,
@@ -546,17 +547,10 @@ function planBackPath(formData: FormData): string {
   return requested.startsWith("/admin/") ? requested : "/admin/abonnements";
 }
 
-/** Les abonnements sont réservés aux activités du club de chant. */
+/** Les abonnements sont réservés aux activités à séances (un événement unique se vend par billet). */
 async function activityOffersMemberships(activityId: number): Promise<boolean> {
-  const row = (
-    await db
-      .select({ slug: categories.slug })
-      .from(activities)
-      .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .where(eq(activities.id, activityId))
-      .limit(1)
-  )[0];
-  return offersMemberships(row?.slug);
+  const row = (await db.select({ kind: activities.kind }).from(activities).where(eq(activities.id, activityId)).limit(1))[0];
+  return row ? isRecurring(row) : false;
 }
 
 export async function createPlanAction(formData: FormData): Promise<void> {
@@ -565,7 +559,7 @@ export async function createPlanAction(formData: FormData): Promise<void> {
   const values = planValues(formData);
   const back = planBackPath(formData);
   if (!activityId || !values.name) redirect(withMessage(back, "erreur", "planRequiredFields"));
-  if (!(await activityOffersMemberships(activityId))) redirect(withMessage(back, "erreur", "planClubOnly"));
+  if (!(await activityOffersMemberships(activityId))) redirect(withMessage(back, "erreur", "planRecurringOnly"));
   await db.insert(plans).values({ ...values, activityId });
   revalidatePath(back);
   redirect(withMessage(back, "ok", "planCreated"));
@@ -579,7 +573,7 @@ export async function updatePlanAction(formData: FormData): Promise<void> {
   if (!values.name) redirect(withMessage(back, "erreur", "planRequiredFields"));
   const current = (await db.select({ activityId: plans.activityId }).from(plans).where(eq(plans.id, id)).limit(1))[0];
   if (!current || !(await activityOffersMemberships(current.activityId))) {
-    redirect(withMessage(back, "erreur", "planClubOnly"));
+    redirect(withMessage(back, "erreur", "planRecurringOnly"));
   }
   await db.update(plans).set(values).where(eq(plans.id, id));
   revalidatePath(back);

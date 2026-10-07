@@ -38,7 +38,7 @@ export default async function ActivityDetailPage({
   const today = toDateTimeLocalValue(new Date()).slice(0, 10);
   const pagePath = `/activites/${activity.slug}`;
   const address = [activity.address, activity.city].filter(Boolean).join(", ");
-  const { ticketDates } = detail;
+  const { ticketDates, sessionSales } = detail;
   const nextDate = ticketDates[0];
   const firstAvailable = ticketDates.find((date) => date.placesLeft > 0);
   const free = activity.priceCents <= 0;
@@ -212,7 +212,7 @@ export default async function ActivityDetailPage({
         </section>
       )}
 
-      {detail.offersMemberships ? (
+      {detail.offersMemberships && (plans.length > 0 || !sessionSales) ? (
         <section>
           <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
           {plans.length === 0 ? (
@@ -280,6 +280,17 @@ export default async function ActivityDetailPage({
               </p>
             </div>
 
+            {sessionSales ? (
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-zinc-700">
+                🎟️ {t("sessionSalesHint", { price: formatPrice(activity.priceCents, locale) })}
+              </p>
+            ) : null}
+            {ticketNotice ? (
+              <div role="alert" className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-gold-dark">
+                {ticketNotice}
+              </div>
+            ) : null}
+
             {upcomingTotal > 0 ? (
               <form
                 action={`${pagePath}#seances`}
@@ -339,6 +350,18 @@ export default async function ActivityDetailPage({
                     <p className="truncate text-xs text-zinc-600">
                       📍 {session.location || address} · {formatDuration(session.durationMinutes, locale)}
                     </p>
+                    {sessionSales ? (
+                      session.placesLeft > 0 ? (
+                        <form action={buyTicketAction} className="mt-2">
+                          <input type="hidden" name="sessionId" value={session.id} />
+                          <button className="btn btn-primary btn-sm w-full" type="submit">
+                            {t("bookSession", { price: formatPrice(activity.priceCents, locale) })}
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="mt-2 text-center text-xs font-semibold text-rose-700">{t("soldOut")}</p>
+                      )
+                    ) : null}
                   </li>
                 ))}
               </ul>

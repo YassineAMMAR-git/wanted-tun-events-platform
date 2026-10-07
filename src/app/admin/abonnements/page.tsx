@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -18,7 +18,6 @@ import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
-import { MEMBERSHIP_CATEGORY_SLUG } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +35,8 @@ export default async function AdminPlansPage({
     getTranslations("admin.planForm"),
   ]);
   const search = q?.trim().slice(0, 100);
-  // Seules les offres du club de chant sont gérées ici ; les autres sont listées à part (anciennes offres).
-  const conditions: SQL[] = [eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG)];
+  // Seules les offres des activités à séances sont gérées ici ; celles d'un événement unique sont listées à part.
+  const conditions: SQL[] = [eq(activities.kind, "recurring")];
   if (search) conditions.push(or(ilike(plans.name, `%${search}%`), ilike(activities.name, `%${search}%`))!);
   if (activite) conditions.push(eq(plans.activityId, Number(activite)));
   if (etat === "active") conditions.push(eq(plans.isActive, true));
@@ -70,20 +69,20 @@ export default async function AdminPlansPage({
       .select({ activity: activities, category: categories })
       .from(activities)
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .where(eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG))
+      .where(eq(activities.kind, "recurring"))
       .orderBy(asc(activities.name)),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(subscriptions)
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .where(and(eq(subscriptions.status, "active"), eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG))),
+      .where(and(eq(subscriptions.status, "active"), eq(subscriptions.kind, "membership"))),
     db
       .select({ plan: plans, activity: activities, category: categories, sold: soldCount })
       .from(plans)
       .innerJoin(activities, eq(activities.id, plans.activityId))
       .innerJoin(categories, eq(categories.id, activities.categoryId))
-      .where(ne(categories.slug, MEMBERSHIP_CATEGORY_SLUG))
+      .where(or(ne(activities.kind, "recurring"), isNull(activities.kind)))
       .orderBy(asc(categories.position), asc(activities.name), asc(plans.priceCents)),
   ]);
 
@@ -248,7 +247,7 @@ export default async function AdminPlansPage({
       <section>
         <SectionTitle eyebrow={t("newEyebrow")} title={t("newTitle")} />
         <Card>
-          {activityList.length === 0 ? <p className="mb-3 text-sm text-rose-700">⚠️ {t("noClubActivity")}</p> : null}
+          {activityList.length === 0 ? <p className="mb-3 text-sm text-rose-700">⚠️ {t("noRecurringActivity")}</p> : null}
           <form action={createPlanAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <input type="hidden" name="redirectTo" value="/admin/abonnements" />
             <div className="sm:col-span-2 lg:col-span-4">

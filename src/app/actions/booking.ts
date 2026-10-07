@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, attendances, categories, plans, sessions, subscriptions } from "@/db/schema";
+import { activities, attendances, plans, sessions, subscriptions } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
-import { offersMemberships } from "@/lib/memberships";
+import { isRecurring } from "@/lib/memberships";
 import { ensurePaymentLink } from "@/lib/mollie/payments";
-import { activateSubscription, ticketsSold } from "@/lib/subscriptions";
+import { activateSubscription, placesTaken } from "@/lib/subscriptions";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -21,19 +21,18 @@ export async function subscribeAction(formData: FormData): Promise<void> {
 
   const row = (
     await db
-      .select({ plan: plans, activitySlug: activities.slug, categorySlug: categories.slug })
+      .select({ plan: plans, activity: activities })
       .from(plans)
       .innerJoin(activities, eq(activities.id, plans.activityId))
-      .innerJoin(categories, eq(categories.id, activities.categoryId))
       .where(eq(plans.id, planId))
       .limit(1)
   )[0];
-  // Offre désactivée, ou ancienne offre d'une catégorie sans abonnement : plus en vente.
-  if (!row || !row.plan.isActive || !offersMemberships(row.categorySlug)) redirect("/abonnements");
+  // Offre désactivée, ou ancienne offre d'un événement unique : plus en vente.
+  if (!row || !row.plan.isActive || !isRecurring(row.activity)) redirect("/abonnements");
   const { plan } = row;
 
   if (!user) {
-    redirect(`/connexion?erreur=loginToSubscribe&next=/activites/${row.activitySlug}`);
+    redirect(`/connexion?erreur=loginToSubscribe&next=/activites/${row.activity.slug}`);
   }
 
   const startsAt = new Date();
@@ -60,9 +59,9 @@ export async function subscribeAction(formData: FormData): Promise<void> {
 }
 
 /**
- * Billet d'un événement ponctuel (toutes les catégories sauf le club de chant) :
- * une date → un billet au prix de l'activité, en attente de paiement → page de paiement.
- * Un événement gratuit est confirmé immédiatement.
+ * Achat à la date : billet d'un événement unique, ou une séance d'une activité à séances payée à l'unité.
+ * Une date → un billet au prix de l'activité, en attente de paiement → page de paiement.
+ * Un événement unique gratuit est confirmé immédiatement.
  */
 export async function buyTicketAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -71,20 +70,22 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
 
   const row = (
     await db
-      .select({ session: sessions, activity: activities, categorySlug: categories.slug })
+      .select({ session: sessions, activity: activities })
       .from(sessions)
       .innerJoin(activities, eq(activities.id, sessions.activityId))
-      .innerJoin(categories, eq(categories.id, activities.categoryId))
       .where(eq(sessions.id, sessionId))
       .limit(1)
   )[0];
-  // Le club de chant se souscrit par formule, jamais à la date.
-  if (!row || row.activity.status !== "active" || offersMemberships(row.categorySlug)) redirect("/activites");
+  if (!row || row.activity.status !== "active") redirect("/activites");
   const { session, activity } = row;
+  const recurring = isRecurring(activity);
   const back = `/activites/${activity.slug}`;
+  const anchor = recurring ? "seances" : "billet";
+  // Activité à séances sans tarif à la séance : elle ne se vend que par abonnement.
+  if (recurring && activity.priceCents <= 0) redirect(back);
 
   if (session.status !== "scheduled" || session.startsAt.getTime() <= Date.now()) {
-    redirect(`${back}?billet=indisponible#billet`);
+    redirect(`${back}?billet=indisponible#${anchor}`);
   }
   if (!user) redirect(`/connexion?erreur=loginToBuyTicket&next=${back}`);
 
@@ -108,8 +109,18 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
     redirect(existing.paymentStatus === "paid" ? "/espace-personnel?billet=deja" : `/abonnement/${existing.id}/paiement`);
   }
 
-  const sold = (await ticketsSold([session.id])).get(session.id) ?? 0;
-  if (sold >= activity.capacity) redirect(`${back}?billet=complet#billet`);
+  // Déjà inscrit à cette date par un abonnement (ou ajouté par l'administration) : rien à payer.
+  const attending = (
+    await db
+      .select({ id: attendances.id })
+      .from(attendances)
+      .where(and(eq(attendances.sessionId, session.id), eq(attendances.userId, user.id)))
+      .limit(1)
+  )[0];
+  if (attending) redirect("/espace-personnel?billet=deja");
+
+  const taken = (await placesTaken([session.id])).get(session.id) ?? 0;
+  if (taken >= activity.capacity) redirect(`${back}?billet=complet#${anchor}`);
 
   const inserted = await db
     .insert(subscriptions)

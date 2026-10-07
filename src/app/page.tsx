@@ -5,7 +5,6 @@ import { getCategoriesWithCounts, getHeroSlides, getUpcomingSessions } from "@/l
 import { formatDate, formatTime, safeLink } from "@/lib/format";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import { HeroCarousel, type HeroSlideView } from "@/components/hero-carousel";
-import { offersMemberships } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +96,7 @@ export default async function HomePage() {
                   </div>
                   <h3 className="mt-2 text-sm font-bold text-zinc-900">{category.name}</h3>
                   <p className="mt-1.5 line-clamp-3 text-xs text-zinc-600">{category.description}</p>
-                  {offersMemberships(category.slug) ? (
+                  {category.recurringCount > 0 ? (
                     <p className="mt-2 text-xs font-semibold text-gold-dark">🎟️ {t("membershipsBadge")}</p>
                   ) : null}
                 </div>

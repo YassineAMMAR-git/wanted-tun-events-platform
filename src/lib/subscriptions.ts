@@ -100,7 +100,21 @@ export async function grantAttendances(subscription: Subscription): Promise<void
   });
 }
 
-/** Billets payés pour une date d'événement (les billets en attente de paiement ne réservent pas de place). */
+/**
+ * Places occupées par séance : tous les inscrits (abonnés rattachés à la séance, billets payés, ajouts manuels),
+ * sauf ceux qui ont prévenu de leur absence. Un billet en attente de paiement ne réserve pas de place.
+ */
+export async function placesTaken(sessionIds: number[]): Promise<Map<number, number>> {
+  if (sessionIds.length === 0) return new Map();
+  const rows = await db
+    .select({ sessionId: attendances.sessionId, count: sql<number>`count(*)::int` })
+    .from(attendances)
+    .where(and(inArray(attendances.sessionId, sessionIds), ne(attendances.status, "declined")))
+    .groupBy(attendances.sessionId);
+  return new Map(rows.map((row) => [row.sessionId, row.count]));
+}
+
+/** Billets payés par séance (statistiques de l'administration). */
 export async function ticketsSold(sessionIds: number[]): Promise<Map<number, number>> {
   if (sessionIds.length === 0) return new Map();
   const rows = await db

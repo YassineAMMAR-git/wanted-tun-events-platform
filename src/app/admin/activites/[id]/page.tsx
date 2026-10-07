@@ -22,7 +22,7 @@ import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
 import { ImageUploadField } from "@/components/image-upload-field";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
-import { offersMemberships } from "@/lib/memberships";
+import { isRecurring } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +57,9 @@ export default async function AdminActivityDetail({
 
   const upcoming = sessionList.filter((s) => !isPast(s.startsAt) && s.status === "scheduled").length;
   const backTo = `/admin/activites/${activity.id}`;
-  const memberships = offersMemberships(categoryList.find((category) => category.id === activity.categoryId)?.slug);
-  // Événement ponctuel : les « séances » sont les dates mises en vente, chacune avec ses billets.
-  const sold = memberships ? new Map<number, number>() : await ticketsSold(sessionList.map((session) => session.id));
+  const memberships = isRecurring(activity);
+  // Billets payés par date : billets d'un événement unique, ou séances achetées à l'unité.
+  const sold = await ticketsSold(sessionList.map((session) => session.id));
   const totalSold = [...sold.values()].reduce((total, count) => total + count, 0);
   const d = (key: "sessionsTitle" | "sessionsSubtitle" | "addSession" | "noSessions" | "startsAt" | "sessionsEyebrow") =>
     memberships ? t(key) : t(`event.${key}`);
@@ -125,6 +125,16 @@ export default async function AdminActivityDetail({
                 { name: "description", label: t("description"), multiline: true, maxLength: 5000, className: "sm:col-span-2" },
               ]}
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="kind">
+              {t("kind")}
+            </label>
+            <select id="kind" name="kind" defaultValue={memberships ? "recurring" : "single"} className="select">
+              <option value="single">{t("kindSingle")}</option>
+              <option value="recurring">{t("kindRecurring")}</option>
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">{t("kindHint")}</p>
           </div>
           <div>
             <label className="label" htmlFor="categoryId">
@@ -213,6 +223,7 @@ export default async function AdminActivityDetail({
       <section>
         <SectionTitle eyebrow={d("sessionsEyebrow")} title={d("sessionsTitle")} subtitle={d("sessionsSubtitle")} />
 
+        {memberships || sessionList.length === 0 ? (
         <Card className="mb-5">
           <form action={createSessionAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <input type="hidden" name="activityId" value={activity.id} />
@@ -257,6 +268,7 @@ export default async function AdminActivityDetail({
             </div>
           </form>
         </Card>
+        ) : null}
 
         <div className="space-y-3">
           {sessionList.map((session) => {
@@ -266,7 +278,9 @@ export default async function AdminActivityDetail({
                 <p className="mb-3 text-xs text-zinc-500">
                   {past ? "⚪" : "🟢"} {formatDateTime(session.startsAt, locale)}
                   {memberships
-                    ? null
+                    ? (sold.get(session.id) ?? 0) > 0
+                      ? ` · ${t("sessionTickets", { count: sold.get(session.id) ?? 0 })}`
+                      : null
                     : ` · ${t("event.sold", { sold: sold.get(session.id) ?? 0, capacity: activity.capacity })}`}
                 </p>
                 <form action={updateSessionAction} className="grid gap-3 lg:grid-cols-4">
@@ -365,6 +379,7 @@ export default async function AdminActivityDetail({
       </section>
 
       {/* -------------------------------- offres -------------------------------- */}
+      {memberships || planList.length > 0 ? (
       <section>
         <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
         {memberships ? (
@@ -403,15 +418,14 @@ export default async function AdminActivityDetail({
           </>
         ) : (
           <Card className="border-amber-200 bg-gold-soft">
-            <p className="text-sm text-zinc-700">🎶 {t("plansClubOnly")}</p>
-            {planList.length > 0 ? (
-              <Link href="/admin/abonnements#anciennes-offres" className="mt-2 inline-block text-sm font-medium text-gold-dark hover:underline">
-                {t("plansLegacy", { count: planList.length })}
-              </Link>
-            ) : null}
+            <p className="text-sm text-zinc-700">🎟️ {t("plansSingleNotice")}</p>
+            <Link href="/admin/abonnements#anciennes-offres" className="mt-2 inline-block text-sm font-medium text-gold-dark hover:underline">
+              {t("plansLegacy", { count: planList.length })}
+            </Link>
           </Card>
         )}
       </section>
+      ) : null}
     </div>
   );
 }

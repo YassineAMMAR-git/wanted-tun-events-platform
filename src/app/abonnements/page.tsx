@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ensureSeeded } from "@/lib/seed";
-import { getCategoriesWithCounts, listActivePlans } from "@/lib/queries";
+import { listActivePlans } from "@/lib/queries";
 import { subscribeAction } from "@/app/actions/booking";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
-import { MEMBERSHIP_CATEGORY_SLUG } from "@/lib/memberships";
 
 export const dynamic = "force-dynamic";
 
@@ -19,22 +18,18 @@ export default async function PlansPage({
   const params = await searchParams;
   const [locale, t, tCommon] = await Promise.all([getLocale(), getTranslations("plansPage"), getTranslations("common")]);
   const search = params.q?.trim().slice(0, 100);
-  const [rows, categoryList] = await Promise.all([
-    listActivePlans(locale, { search, sort: params.tri }),
-    getCategoriesWithCounts(locale),
-  ]);
-  const club = categoryList.find((category) => category.slug === MEMBERSHIP_CATEGORY_SLUG);
+  const rows = await listActivePlans(locale, { search, sort: params.tri });
   const filtered = Boolean(search || params.tri);
 
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow={`${club?.emoji ?? "🎶"} ${club?.name ?? t("eyebrow")}`}
+        eyebrow={t("eyebrow")}
         title={t("title")}
         subtitle={t("subtitle")}
         action={
-          <Link href={`/activites?categorie=${MEMBERSHIP_CATEGORY_SLUG}`} className="btn btn-ghost btn-sm self-start sm:self-auto">
-            {t("seeClub")}
+          <Link href="/activites" className="btn btn-ghost btn-sm self-start sm:self-auto">
+            {t("seeActivities")}
           </Link>
         }
       />

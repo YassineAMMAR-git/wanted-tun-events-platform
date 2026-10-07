@@ -140,6 +140,9 @@ export default async function AdminActivitiesPage({
                     <span className="block text-xs text-zinc-500" dir="ltr">
                       /{activity.slug}
                     </span>
+                    <span className="block text-xs text-zinc-500">
+                      {activity.kind === "recurring" ? t("kindRecurringShort") : t("kindSingleShort")}
+                    </span>
                   </td>
                   <td className="text-zinc-600">{localize(row.category, locale, CATEGORY_TRANSLATABLE).name}</td>
                   <td className="text-zinc-600">
@@ -195,6 +198,16 @@ export default async function AdminActivitiesPage({
                   { name: "description", label: t("description"), multiline: true, maxLength: 5000, className: "sm:col-span-2" },
                 ]}
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="kind">
+                {t("kind")}
+              </label>
+              <select id="kind" name="kind" defaultValue="single" className="select">
+                <option value="single">{t("kindSingle")}</option>
+                <option value="recurring">{t("kindRecurring")}</option>
+              </select>
+              <p className="mt-1 text-xs text-zinc-500">{t("kindHint")}</p>
             </div>
             <div>
               <label className="label" htmlFor="categoryId">

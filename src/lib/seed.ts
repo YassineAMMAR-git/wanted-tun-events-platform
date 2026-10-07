@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { hashPassword, randomToken } from "@/lib/auth";
 import { parseParisDateTime, toDateTimeLocalValue } from "@/lib/format";
+import { LEGACY_RECURRING_CATEGORY_SLUG } from "@/lib/memberships";
 import {
   ACTIVITY_TRANSLATIONS,
   CATEGORY_TRANSLATIONS,
@@ -24,11 +25,28 @@ let seedPromise: Promise<void> | null = null;
 
 /** Exécute le seed une seule fois par instance de serveur. */
 export function ensureSeeded(): Promise<void> {
-  seedPromise ??= seed().catch((error) => {
-    console.error("[seed] échec", error);
-    seedPromise = null;
-  });
+  seedPromise ??= seed()
+    .then(backfillActivityKinds)
+    .catch((error) => {
+      console.error("[seed] échec", error);
+      seedPromise = null;
+    });
   return seedPromise;
+}
+
+/**
+ * Activités créées avant le choix du type d'événement : celles du club de chant deviennent des activités
+ * à séances, les autres des événements uniques. Ne touche jamais une activité dont le type est déjà choisi.
+ */
+async function backfillActivityKinds(): Promise<void> {
+  await db.execute(sql`
+    update activities
+    set kind = case
+      when category_id in (select id from categories where slug = ${LEGACY_RECURRING_CATEGORY_SLUG}) then 'recurring'
+      else 'single'
+    end
+    where kind is null
+  `);
 }
 
 type SeedUser = typeof users.$inferInsert;

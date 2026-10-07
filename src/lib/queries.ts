@@ -20,8 +20,8 @@ import {
 } from "@/db/schema";
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
-import { MEMBERSHIP_CATEGORY_SLUG, offersMemberships } from "@/lib/memberships";
-import { ticketsSold } from "@/lib/subscriptions";
+import { isRecurring } from "@/lib/memberships";
+import { placesTaken } from "@/lib/subscriptions";
 
 /*
  * Requêtes des pages publiques et de l'espace personnel : le contenu est renvoyé dans la langue demandée
@@ -33,15 +33,18 @@ export async function getCategoriesWithCounts(locale: Locale) {
     .select({
       category: categories,
       activityCount: sql<number>`count(distinct case when ${activities.status} = 'active' then ${activities.id} end)::int`,
+      // Activités à séances de la catégorie : sert à afficher « Abonnements disponibles ».
+      recurringCount: sql<number>`count(distinct case when ${activities.status} = 'active' and ${activities.kind} = 'recurring' then ${activities.id} end)::int`,
     })
     .from(categories)
     .leftJoin(activities, eq(activities.categoryId, categories.id))
     .groupBy(categories.id)
     .orderBy(asc(categories.position), asc(categories.id));
 
-  return rows.map(({ category, activityCount }) => ({
+  return rows.map(({ category, activityCount, recurringCount }) => ({
     ...localize(category, locale, CATEGORY_TRANSLATABLE),
     activityCount,
+    recurringCount,
   }));
 }
 
@@ -118,8 +121,8 @@ export async function listActivities(
 
   const normalized = rows.map(({ activity, category, ...rest }) => {
     const localizedCategory = localize(category, locale, CATEGORY_TRANSLATABLE);
-    // Hors club de chant, d'anciennes offres peuvent subsister en base : elles ne sont plus proposées.
-    const memberships = offersMemberships(category.slug);
+    // Événement unique : d'anciennes offres peuvent subsister en base, elles ne sont pas proposées.
+    const memberships = isRecurring(activity);
     return {
       ...rest,
       memberships,
@@ -166,7 +169,7 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
   )[0];
   if (!row) return null;
 
-  const memberships = offersMemberships(row.category.slug);
+  const memberships = isRecurring(row.activity);
   // Une séance sans lieu propre se tient à l'adresse de l'activité : c'est ce lieu qui est filtré et proposé.
   const activityAddress = [row.activity.address, row.activity.city].filter(Boolean).join(", ");
   const place = sql<string>`coalesce(nullif(${sessions.location}, ''), ${activityAddress})`;
@@ -211,33 +214,34 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
     db.select({ count: sql<number>`count(*)::int` }).from(sessions).where(upcomingBase),
   ]);
 
-  // Événement ponctuel : chaque date à venir est proposée à la vente, dans la limite de la capacité.
-  const sold = memberships ? new Map<number, number>() : await ticketsSold(upcoming.map((session) => session.id));
-  const ticketDates = memberships
-    ? []
-    : upcoming.map((session) => ({
-        ...localize(session, locale, SESSION_TRANSLATABLE),
-        placesLeft: Math.max(row.activity.capacity - (sold.get(session.id) ?? 0), 0),
-      }));
+  // Chaque séance (ou date d'événement) à venir est vendue dans la limite de la capacité.
+  const taken = await placesTaken(upcoming.map((session) => session.id));
+  const upcomingWithPlaces = upcoming.map((session) => ({
+    ...localize(session, locale, SESSION_TRANSLATABLE),
+    placesLeft: Math.max(row.activity.capacity - (taken.get(session.id) ?? 0), 0),
+  }));
 
   return {
     activity: localize(row.activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(row.category, locale, CATEGORY_TRANSLATABLE).name,
-    ticketDates,
+    // Événement unique : la ou les dates mises en vente (billet).
+    ticketDates: memberships ? [] : upcomingWithPlaces,
+    // Activité à séances : achat à la séance possible dès qu'un tarif à la séance est fixé.
+    sessionSales: memberships && row.activity.priceCents > 0,
     categorySlug: row.category.slug,
     categoryEmoji: row.category.emoji,
     offersMemberships: memberships,
     plans: plansList.map((plan) => localize(plan, locale, PLAN_TRANSLATABLE)),
-    upcoming: upcoming.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
+    upcoming: upcomingWithPlaces,
     upcomingTotal: upcomingTotal[0]?.count ?? 0,
     upcomingPlaces: [...new Set(places.map((row) => row.place).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale)),
     past: past.map((session) => localize(session, locale, SESSION_TRANSLATABLE)),
   };
 }
 
-/** Formules du club de chant (seule catégorie à proposer des abonnements). */
+/** Formules d'abonnement en vente : celles des activités à séances visibles. */
 export async function listActivePlans(locale: Locale, options: { search?: string; sort?: string } = {}) {
-  const filters: SQL[] = [eq(plans.isActive, true), eq(categories.slug, MEMBERSHIP_CATEGORY_SLUG)];
+  const filters: SQL[] = [eq(plans.isActive, true), eq(activities.kind, "recurring"), eq(activities.status, "active")];
   if (options.search) {
     const like = `%${options.search}%`;
     filters.push(or(ilike(plans.name, like), ilike(activities.name, like))!);
