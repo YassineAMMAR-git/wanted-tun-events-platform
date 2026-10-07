@@ -437,11 +437,16 @@ export async function listAdminClients(filters: AdminClientFilters) {
     );
   }
 
-  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')::int`;
-  const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership' and s.status = 'active')::int`;
+  /*
+   * Le client est désigné par "users"."id" écrit en toutes lettres : dans une requête sur une seule table, Drizzle
+   * écrit les colonnes de la sélection sans nom de table ("id"), et PostgreSQL le lirait alors, à l'intérieur de la
+   * sous-requête, comme l'identifiant de l'abonnement lui-même — les compteurs vaudraient presque toujours 0.
+   */
+  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership')::int`;
+  const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership' and s.status = 'active')::int`;
   // Billets payés : billets d'événement et séances achetées à l'unité.
-  const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'ticket' and s.payment_status = 'paid')::int`;
-  const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = ${users.id})::int`;
+  const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'ticket' and s.payment_status = 'paid')::int`;
+  const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = "users"."id")::int`;
 
   const order = {
     ancien: [asc(users.createdAt)],
