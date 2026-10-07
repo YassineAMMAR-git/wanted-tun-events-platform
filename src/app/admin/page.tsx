@@ -3,9 +3,9 @@ import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, plans, sessions, subscriptions, users } from "@/db/schema";
-import { getAdminStats } from "@/lib/queries";
+import { getAdminStats, getRevenueStats } from "@/lib/queries";
 import { runRemindersAction } from "@/app/actions/admin";
-import { formatDate, formatTime, toSubscriptionStatus } from "@/lib/format";
+import { formatDate, formatPrice, formatTime, toSubscriptionStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -28,8 +28,9 @@ export default async function AdminDashboard({
     getTranslations("common"),
     getTranslations("status"),
   ]);
-  const [stats, upcoming, latestClients, latestSubs] = await Promise.all([
+  const [stats, revenue, upcoming, latestClients, latestSubs] = await Promise.all([
     getAdminStats(),
+    getRevenueStats(),
     db
       .select({
         session: sessions,
@@ -71,6 +72,11 @@ export default async function AdminDashboard({
       <Flash ok={ok} erreur={erreur} />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          label={t("revenue")}
+          value={formatPrice(revenue.total, locale)}
+          hint={t("revenueMonthHint", { amount: formatPrice(revenue.month, locale) })}
+        />
         <Stat label={t("clients")} value={stats.clients} />
         <Stat label={t("activities")} value={stats.activities} />
         <Stat label={t("scheduled")} value={stats.upcomingSessions} hint={t("scheduledHint", { count: stats.sessions })} />

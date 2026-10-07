@@ -43,6 +43,7 @@ export async function GET(request: Request) {
     { header: "Abonnements", key: "subscriptions", width: 13 },
     { header: "Dont actifs", key: "active", width: 12 },
     { header: "Billets payés", key: "tickets", width: 13 },
+    { header: "Dépensé (€)", key: "spent", width: 14 },
     { header: "Séances suivies", key: "attendances", width: 15 },
     { header: "Inscrit le", key: "createdAt", width: 18 },
     { header: "Notes", key: "notes", width: 40 },
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
   header.alignment = { vertical: "middle" };
   header.height = 22;
 
-  for (const { user, subscriptions, active, tickets, attendances } of rows) {
+  for (const { user, subscriptions, active, tickets, attendances, spentCents } of rows) {
     sheet.addRow({
       lastName: user.lastName,
       firstName: user.firstName,
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
       subscriptions,
       active,
       tickets,
+      spent: spentCents / 100,
       attendances,
       createdAt: user.createdAt,
       notes: user.notes ?? "",
@@ -74,6 +76,7 @@ export async function GET(request: Request) {
   }
 
   sheet.getColumn("createdAt").numFmt = "dd/mm/yyyy hh:mm";
+  sheet.getColumn("spent").numFmt = "#,##0.00";
   for (const key of ["subscriptions", "active", "tickets", "attendances"]) {
     sheet.getColumn(key).alignment = { horizontal: "center" };
   }

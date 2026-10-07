@@ -572,6 +572,8 @@ const fr = {
       missing: "Traduction manquante",
     },
     dashboard: {
+      revenue: "Chiffre d’affaires",
+      revenueMonthHint: "dont {amount} ce mois-ci",
       purchaseMembership: "🔁 Abonnement {name}",
       purchaseTicket: "🎟️ Billet {label}",
       clients: "Clients",
@@ -927,6 +929,14 @@ const fr = {
       },
     },
     clients: {
+      colSpent: "Dépensé",
+      sortSpent: "Montant dépensé",
+      revenueTotal: "Chiffre d’affaires total",
+      revenueOrders: "{count, plural, =0 {aucune vente} one {# vente payée} other {# ventes payées}}",
+      revenueMonth: "Ce mois-ci",
+      revenueMemberships: "Dont abonnements",
+      revenueTickets: "Dont billets et séances",
+      revenueNote: "Ventes payées sur le site, montants bruts (avant frais de paiement). Ne comprend pas les ventes faites sur une billetterie externe ni les remboursements effectués chez Mollie.",
       sortTickets: "Nombre de billets",
       subTicket: "A un billet payé",
       colTickets: "Billets payés",
@@ -973,6 +983,8 @@ const fr = {
       create: "Créer le client",
     },
     clientDetail: {
+      statSpent: "Total dépensé",
+      statSpentHint: "{count, plural, =0 {aucune commande} one {# commande} other {# commandes}}",
       ticketFor: "Billet du {date}",
       breadcrumb: "Clients",
       statSubs: "Abonnements",

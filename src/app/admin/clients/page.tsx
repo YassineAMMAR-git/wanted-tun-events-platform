@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClientAction, deleteClientAction } from "@/app/actions/admin";
-import { hasClientFilters, listAdminClients } from "@/lib/queries";
+import { getRevenueStats, hasClientFilters, listAdminClients } from "@/lib/queries";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPrice } from "@/lib/format";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/validation/constants";
 import { localeNames, locales } from "@/i18n/config";
-import { Card, SectionTitle } from "@/components/ui";
+import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function AdminClientsPage({
     getTranslations("auth"),
     getTranslations("admin.clientDetail"),
   ]);
-  const clients = await listAdminClients(filters);
+  const [clients, revenue] = await Promise.all([listAdminClients(filters), getRevenueStats()]);
   const filtered = hasClientFilters(filters);
   const exportHref = `/admin/clients/export${new URLSearchParams(
     Object.entries(filters).filter(([, value]) => value) as [string, string][],
@@ -44,6 +44,21 @@ export default async function AdminClientsPage({
       <Flash ok={ok} erreur={erreur} />
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+
+      {/* Suivi des ventes : toutes les commandes payées du site, quels que soient les filtres ci-dessous. */}
+      <section>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat
+            label={t("revenueTotal")}
+            value={formatPrice(revenue.total, locale)}
+            hint={t("revenueOrders", { count: revenue.orders })}
+          />
+          <Stat label={t("revenueMonth")} value={formatPrice(revenue.month, locale)} />
+          <Stat label={t("revenueMemberships")} value={formatPrice(revenue.memberships, locale)} />
+          <Stat label={t("revenueTickets")} value={formatPrice(revenue.tickets, locale)} />
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">{t("revenueNote")}</p>
+      </section>
 
       <FilterBar
         action="/admin/clients"
@@ -98,6 +113,7 @@ export default async function AdminClientsPage({
             { value: "nom", label: t("sortName") },
             { value: "abonnements", label: t("sortSubscriptions") },
             { value: "billets", label: t("sortTickets") },
+            { value: "depense", label: t("sortSpent") },
             { value: "seances", label: t("sortSessions") },
           ]}
         />
@@ -119,6 +135,7 @@ export default async function AdminClientsPage({
               <th>{t("colRole")}</th>
               <th>{t("colSubs")}</th>
               <th>{t("colTickets")}</th>
+              <th>{t("colSpent")}</th>
               <th>{t("colSessions")}</th>
               <th>{t("colJoined")}</th>
               <th></th>
@@ -151,6 +168,7 @@ export default async function AdminClientsPage({
                   <span className="ms-1 text-xs text-emerald-700">{t("activeCount", { count: row.active })}</span>
                 </td>
                 <td className="text-zinc-800">{row.tickets}</td>
+                <td className="font-semibold whitespace-nowrap text-zinc-900">{formatPrice(row.spentCents, locale)}</td>
                 <td className="text-zinc-700">{row.attendances}</td>
                 <td className="whitespace-nowrap text-zinc-600">{formatDate(row.user.createdAt, locale)}</td>
                 <td>

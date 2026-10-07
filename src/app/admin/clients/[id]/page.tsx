@@ -32,6 +32,7 @@ import {
   toSubscriptionStatus,
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
+import { getClientSpent } from "@/lib/queries";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/validation/constants";
 import { localeNames, locales } from "@/i18n/config";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -74,7 +75,7 @@ export default async function AdminClientDetail({
   const client = (await db.select().from(users).where(eq(users.id, clientId)).limit(1))[0];
   if (!client) notFound();
 
-  const [subs, history] = await Promise.all([
+  const [subs, history, spentCents] = await Promise.all([
     db
       .select({ subscription: subscriptions, plan: plans, session: sessions, activity: activities })
       .from(subscriptions)
@@ -90,6 +91,7 @@ export default async function AdminClientDetail({
       .innerJoin(activities, eq(activities.id, sessions.activityId))
       .where(eq(attendances.userId, clientId))
       .orderBy(desc(sessions.startsAt)),
+    getClientSpent(clientId),
   ]);
 
   const confirmed = history.filter((row) => row.attendance.status === "confirmed").length;
@@ -112,7 +114,7 @@ export default async function AdminClientDetail({
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t("statSubs")} value={subs.length} />
+        <Stat label={t("statSpent")} value={formatPrice(spentCents, locale)} hint={t("statSpentHint", { count: subs.length })} />
         <Stat label={t("statSessions")} value={history.length} hint={t("statSessionsHint", { count: past })} />
         <Stat label={t("statConfirmed")} value={confirmed} />
         <Stat label={t("statDeclined")} value={declined} />

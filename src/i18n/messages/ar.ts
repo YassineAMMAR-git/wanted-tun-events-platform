@@ -572,6 +572,8 @@ const ar: Messages = {
       missing: "ترجمة ناقصة",
     },
     dashboard: {
+      revenue: "رقم المعاملات",
+      revenueMonthHint: "منها {amount} هذا الشهر",
       purchaseMembership: "🔁 اشتراك {name}",
       purchaseTicket: "🎟️ تذكرة {label}",
       clients: "العملاء",
@@ -926,6 +928,14 @@ const ar: Messages = {
       },
     },
     clients: {
+      colSpent: "المبلغ المنفق",
+      sortSpent: "المبلغ المنفق",
+      revenueTotal: "إجمالي رقم المعاملات",
+      revenueOrders: "{count, plural, =0 {لا مبيعات} one {عملية بيع مدفوعة واحدة} other {# عمليات بيع مدفوعة}}",
+      revenueMonth: "هذا الشهر",
+      revenueMemberships: "منها الاشتراكات",
+      revenueTickets: "منها التذاكر والحصص",
+      revenueNote: "المبيعات المدفوعة على الموقع، مبالغ إجمالية (قبل رسوم الدفع). لا تشمل المبيعات عبر موقع تذاكر خارجي ولا المبالغ المستردة عبر Mollie.",
       sortTickets: "عدد التذاكر",
       subTicket: "لديه تذكرة مدفوعة",
       colTickets: "التذاكر المدفوعة",
@@ -971,6 +981,8 @@ const ar: Messages = {
       create: "إنشاء العميل",
     },
     clientDetail: {
+      statSpent: "إجمالي ما أنفقه",
+      statSpentHint: "{count, plural, =0 {لا طلبات} one {طلب واحد} other {# طلبات}}",
       ticketFor: "تذكرة يوم {date}",
       breadcrumb: "العملاء",
       statSubs: "الاشتراكات",

@@ -381,6 +381,65 @@ export async function getAdminStats() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Administration : suivi des ventes                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Montant encaissé pour une commande payée (alias SQL : s = subscriptions, p = plans, a = activities) :
+ * le montant réellement payé chez Mollie s'il existe ; sinon, pour une commande marquée payée à la main,
+ * le tarif retenu sur le billet, le prix de la formule, ou le prix de l'activité.
+ */
+const PAID_AMOUNT = `coalesce(
+  (select pl.amount_cents from payment_links pl where pl.subscription_id = s.id and pl.status = 'paid' order by pl.created_at desc limit 1),
+  s.amount_cents,
+  case when s.kind = 'ticket' then a.price_cents else p.price_cents end,
+  0
+)`;
+/** Date d'encaissement : confirmation Mollie si elle existe, sinon création de la commande. */
+const PAID_AT = `coalesce(
+  (select pl.updated_at from payment_links pl where pl.subscription_id = s.id and pl.status = 'paid' order by pl.created_at desc limit 1),
+  s.created_at
+)`;
+const PAID_ORDERS = `subscriptions s
+  join activities a on a.id = s.activity_id
+  left join plans p on p.id = s.plan_id
+  where s.payment_status = 'paid'`;
+
+/**
+ * Chiffre d'affaires du site : somme des commandes payées (abonnements, billets, séances à l'unité).
+ * Montants bruts, avant frais de paiement ; ne comprend ni les ventes faites sur une billetterie externe,
+ * ni les remboursements effectués directement chez Mollie. Le mois est celui de Paris.
+ */
+export async function getRevenueStats() {
+  const result = await db.execute<{
+    total: number;
+    month: number;
+    memberships: number;
+    tickets: number;
+    orders: number;
+  }>(
+    sql.raw(`
+      select
+        coalesce(sum(amount), 0)::int as total,
+        coalesce(sum(amount) filter (where (paid_at at time zone 'Europe/Paris') >= date_trunc('month', now() at time zone 'Europe/Paris')), 0)::int as month,
+        coalesce(sum(amount) filter (where kind = 'membership'), 0)::int as memberships,
+        coalesce(sum(amount) filter (where kind = 'ticket'), 0)::int as tickets,
+        (count(*) filter (where amount > 0))::int as orders
+      from (select ${PAID_AMOUNT} as amount, ${PAID_AT} as paid_at, s.kind as kind from ${PAID_ORDERS}) paid
+    `),
+  );
+  return result.rows[0] ?? { total: 0, month: 0, memberships: 0, tickets: 0, orders: 0 };
+}
+
+/** Total dépensé par un client (commandes payées). */
+export async function getClientSpent(userId: number): Promise<number> {
+  const result = await db.execute<{ spent: number }>(
+    sql`select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0)::int as spent from ${sql.raw(PAID_ORDERS)} and s.user_id = ${userId}`,
+  );
+  return result.rows[0]?.spent ?? 0;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Administration : listes filtrées                                           */
 /* -------------------------------------------------------------------------- */
 
@@ -447,6 +506,8 @@ export async function listAdminClients(filters: AdminClientFilters) {
   // Billets payés : billets d'événement et séances achetées à l'unité.
   const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'ticket' and s.payment_status = 'paid')::int`;
   const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = "users"."id")::int`;
+  // Total dépensé sur le site : somme des commandes payées du client.
+  const spentCents = sql<number>`(select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0) from ${sql.raw(PAID_ORDERS)} and s.user_id = "users"."id")::int`;
 
   const order = {
     ancien: [asc(users.createdAt)],
@@ -454,6 +515,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
     abonnements: [desc(subscriptionCount), desc(users.createdAt)],
     billets: [desc(ticketCount), desc(users.createdAt)],
     seances: [desc(attendanceCount), desc(users.createdAt)],
+    depense: [desc(spentCents), desc(users.createdAt)],
   }[filters.tri ?? ""] ?? [desc(users.createdAt)];
 
   return db
@@ -463,6 +525,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
       active: activeCount,
       tickets: ticketCount,
       attendances: attendanceCount,
+      spentCents,
     })
     .from(users)
     .where(conditions.length ? and(...conditions) : undefined)

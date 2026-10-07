@@ -568,6 +568,8 @@ const en: Messages = {
       missing: "Missing translation",
     },
     dashboard: {
+      revenue: "Revenue",
+      revenueMonthHint: "of which {amount} this month",
       purchaseMembership: "🔁 Membership {name}",
       purchaseTicket: "🎟️ Ticket {label}",
       clients: "Clients",
@@ -922,6 +924,14 @@ const en: Messages = {
       },
     },
     clients: {
+      colSpent: "Spent",
+      sortSpent: "Amount spent",
+      revenueTotal: "Total revenue",
+      revenueOrders: "{count, plural, =0 {no sale} one {# paid sale} other {# paid sales}}",
+      revenueMonth: "This month",
+      revenueMemberships: "Of which memberships",
+      revenueTickets: "Of which tickets and sessions",
+      revenueNote: "Sales paid on the site, gross amounts (before payment fees). Does not include sales made on an external ticketing site or refunds made in Mollie.",
       sortTickets: "Number of tickets",
       subTicket: "Has a paid ticket",
       colTickets: "Paid tickets",
@@ -967,6 +977,8 @@ const en: Messages = {
       create: "Create client",
     },
     clientDetail: {
+      statSpent: "Total spent",
+      statSpentHint: "{count, plural, =0 {no order} one {# order} other {# orders}}",
       ticketFor: "Ticket for {date}",
       breadcrumb: "Clients",
       statSubs: "Memberships",
