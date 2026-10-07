@@ -395,6 +395,7 @@ const fr = {
       demoTitle: "Comptes de démonstration (développement uniquement)",
       demoClient: "👤 Client :",
       demoAdmin: "🛠️ Admin :",
+      demoHint: "Les mots de passe sont ceux des variables indiquées, dans votre fichier .env. Les comptes sont créés au premier démarrage sur une base vide.",
       loginToSubscribe: "Connectez-vous pour souscrire à cette offre.",
       loginToBuyTicket: "Connectez-vous pour réserver votre billet.",
     },

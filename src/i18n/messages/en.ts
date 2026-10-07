@@ -393,6 +393,7 @@ const en: Messages = {
       demoTitle: "Demo accounts (development only)",
       demoClient: "👤 Client:",
       demoAdmin: "🛠️ Admin:",
+      demoHint: "The passwords are the values of the variables shown, in your .env file. Accounts are created on first start on an empty database.",
       loginToSubscribe: "Log in to subscribe to this plan.",
       loginToBuyTicket: "Log in to book your ticket.",
     },

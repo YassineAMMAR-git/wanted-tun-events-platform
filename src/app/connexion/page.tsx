@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
-import { ensureSeeded } from "@/lib/seed";
+import { DEMO_CLIENT_EMAIL, ensureSeeded } from "@/lib/seed";
 import { safeRedirectPath } from "@/lib/validation/form";
 import { Card } from "@/components/ui";
 import { LoginForm } from "@/app/connexion/login-form";
@@ -72,12 +72,14 @@ export default async function LoginPage({
           <p className="text-xs font-bold tracking-wider text-gold-dark uppercase">{t("login.demoTitle")}</p>
           <ul className="mt-2 space-y-1 text-sm text-zinc-700">
             <li>
-              {t("login.demoClient")} <code className="text-gold-dark">client@wantedtun.tn</code> / <code>***</code>
+              {t("login.demoClient")} <code className="text-gold-dark">{DEMO_CLIENT_EMAIL}</code> — <code>DEMO_PASSWORD</code>
             </li>
             <li>
-              {t("login.demoAdmin")} <code className="text-gold-dark">admin@wantedtun.tn</code> / <code>***</code>
+              {t("login.demoAdmin")} <code className="text-gold-dark">{process.env.ADMIN_EMAIL || "ADMIN_EMAIL"}</code> —{" "}
+              <code>ADMIN_PASSWORD</code>
             </li>
           </ul>
+          <p className="mt-2 text-xs text-zinc-500">{t("login.demoHint")}</p>
         </Card>
       ) : null}
     </div>

@@ -51,67 +51,64 @@ async function backfillActivityKinds(): Promise<void> {
 
 type SeedUser = typeof users.$inferInsert;
 
+/** Adresses des clients de démonstration (développement) ; leur mot de passe vient de DEMO_PASSWORD. */
+export const DEMO_CLIENT_EMAIL = "client@wantedtun.tn";
+const DEMO_CLIENT_2_EMAIL = "youssef@wantedtun.tn";
+
 /**
- * Comptes créés au premier démarrage.
- * — développement : administrateur + deux clients de démonstration (mots de passe documentés).
- * — production : uniquement l'administrateur défini par ADMIN_EMAIL / ADMIN_PASSWORD.
+ * Comptes créés au premier démarrage sur une base vide. Aucun mot de passe n'est écrit dans le code :
+ * — administrateur : ADMIN_EMAIL / ADMIN_PASSWORD (développement comme production) ;
+ * — deux clients de démonstration, en développement seulement, si DEMO_PASSWORD est défini.
  */
 async function seedUsers(): Promise<SeedUser[]> {
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD;
+  const accounts: SeedUser[] = [];
 
-  if (process.env.NODE_ENV === "production") {
-    if (!adminEmail || !adminPassword) {
-      console.error(
-        "[seed] ADMIN_EMAIL / ADMIN_PASSWORD absents : aucun compte administrateur n'a été créé. " +
-          "Renseignez ces variables puis relancez l'application.",
-      );
-      return [];
-    }
-    return [
-      {
-        firstName: "Administrateur",
-        lastName: "WANTED TUN",
-        email: adminEmail,
-        passwordHash: await hashPassword(adminPassword),
-        role: "admin",
-        emailVerifiedAt: new Date(),
-      },
-    ];
-  }
-
-  return [
-    {
+  if (adminEmail && adminPassword) {
+    accounts.push({
       firstName: "Administrateur",
       lastName: "WANTED TUN",
-      email: adminEmail ?? "admin@wantedtun.tn",
-      phone: "+33 1 23 45 67 89",
-      city: "Paris",
-      passwordHash: await hashPassword(adminPassword ?? "***"),
+      email: adminEmail,
+      passwordHash: await hashPassword(adminPassword),
       role: "admin",
       emailVerifiedAt: new Date(),
-    },
-    {
-      firstName: "Sara",
-      lastName: "Ben Salah",
-      email: "client@wantedtun.tn",
-      phone: "+33 6 12 34 56 78",
-      city: "Saint-Denis",
-      passwordHash: await hashPassword("***"),
-      role: "client",
-      emailVerifiedAt: new Date(),
-    },
-    {
-      firstName: "Youssef",
-      lastName: "Trabelsi",
-      email: "youssef@wantedtun.tn",
-      phone: "+33 7 81 23 45 67",
-      city: "Montreuil",
-      passwordHash: await hashPassword("***"),
-      role: "client",
-      emailVerifiedAt: new Date(),
-    },
-  ];
+    });
+  } else {
+    console.error(
+      "[seed] ADMIN_EMAIL / ADMIN_PASSWORD absents : aucun compte administrateur n'a été créé. " +
+        "Renseignez ces variables (fichier .env en développement) puis relancez l'application sur une base vide.",
+    );
+  }
+
+  const demoPassword = process.env.DEMO_PASSWORD;
+  if (process.env.NODE_ENV !== "production" && demoPassword) {
+    const passwordHash = await hashPassword(demoPassword);
+    accounts.push(
+      {
+        firstName: "Sara",
+        lastName: "Ben Salah",
+        email: DEMO_CLIENT_EMAIL,
+        phone: "+33 6 12 34 56 78",
+        city: "Saint-Denis",
+        passwordHash,
+        role: "client",
+        emailVerifiedAt: new Date(),
+      },
+      {
+        firstName: "Youssef",
+        lastName: "Trabelsi",
+        email: DEMO_CLIENT_2_EMAIL,
+        phone: "+33 7 81 23 45 67",
+        city: "Montreuil",
+        passwordHash,
+        role: "client",
+        emailVerifiedAt: new Date(),
+      },
+    );
+  }
+
+  return accounts;
 }
 
 /** Date située à `daysFromNow` jours d'aujourd'hui, à l'heure donnée (heure de Paris). */
@@ -219,8 +216,8 @@ async function seed(): Promise<void> {
     ? await db.insert(users).values(seededUsers).returning({ id: users.id, email: users.email })
     : [];
 
-  const clientId = userRows.find((row) => row.email === "client@wantedtun.tn")?.id ?? null;
-  const client2Id = userRows.find((row) => row.email === "youssef@wantedtun.tn")?.id ?? null;
+  const clientId = userRows.find((row) => row.email === DEMO_CLIENT_EMAIL)?.id ?? null;
+  const client2Id = userRows.find((row) => row.email === DEMO_CLIENT_2_EMAIL)?.id ?? null;
 
   /* ------------------------------ activités ------------------------------ */
   const activityRows = await db
