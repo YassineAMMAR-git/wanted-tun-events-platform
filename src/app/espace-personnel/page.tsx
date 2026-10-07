@@ -155,7 +155,10 @@ export default async function DashboardPage({
                     <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`ticket.${status}`)}</span>
                   </div>
                   <div className="mt-4 flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gold-dark">{formatPrice(row.priceCents, locale)}</span>
+                    <span className="text-sm font-semibold text-gold-dark">
+                      {row.subscription.priceLabel ? `${row.subscription.priceLabel} · ` : ""}
+                      {formatPrice(row.priceCents, locale)}
+                    </span>
                     {pending ? (
                       <Link href={`/abonnement/${row.subscription.id}/paiement`} className="btn btn-primary btn-sm ms-3">
                         {t("finalize")}

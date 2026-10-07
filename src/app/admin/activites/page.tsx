@@ -259,6 +259,39 @@ export default async function AdminActivitiesPage({
               <p className="mt-1 text-xs text-zinc-500">{t("eventDateHint")}</p>
             </div>
             <div className="sm:col-span-2">
+              <label className="label" htmlFor="ticketUrl">
+                {t("ticketUrl")}
+              </label>
+              <input id="ticketUrl" name="ticketUrl" type="url" maxLength={500} placeholder="https://…" className="input" dir="ltr" />
+              <p className="mt-1 text-xs text-zinc-500">{t("ticketUrlHint")}</p>
+            </div>
+            <fieldset className="sm:col-span-2">
+              <legend className="label">{t("tiers")}</legend>
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((row) => (
+                  <div key={row} className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+                    <input
+                      name="tierName"
+                      maxLength={120}
+                      className="input"
+                      placeholder={t("tierNamePlaceholder")}
+                      aria-label={t("tierName", { row })}
+                    />
+                    <input
+                      name="tierPrice"
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      className="input"
+                      placeholder={t("tierPricePlaceholder")}
+                      aria-label={t("tierPrice", { row })}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">{t("tiersHint")}</p>
+            </fieldset>
+            <div className="sm:col-span-2">
               <ImageUploadField name="imageUrl" label={t("image")} hint={t("imageHint")} />
             </div>
             <div className="sm:col-span-2">

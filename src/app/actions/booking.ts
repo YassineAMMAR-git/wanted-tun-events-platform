@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { activities, attendances, plans, sessions, subscriptions } from "@/db/schema";
+import { activities, attendances, plans, sessions, subscriptions, ticketPrices } from "@/db/schema";
 import { getCurrentUser, randomToken } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
 import { ensurePaymentLink } from "@/lib/mollie/payments";
@@ -29,6 +29,8 @@ export async function subscribeAction(formData: FormData): Promise<void> {
   )[0];
   // Offre désactivée, ou ancienne offre d'un événement unique : plus en vente.
   if (!row || !row.plan.isActive || !isRecurring(row.activity)) redirect("/abonnements");
+  // Billetterie externe : rien ne se vend sur le site pour cette activité.
+  if (row.activity.ticketUrl) redirect(`/activites/${row.activity.slug}`);
   const { plan } = row;
 
   if (!user) {
@@ -81,8 +83,23 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
   const recurring = isRecurring(activity);
   const back = `/activites/${activity.slug}`;
   const anchor = recurring ? "seances" : "billet";
+  // Billetterie externe : la réservation se fait sur le site partenaire.
+  if (activity.ticketUrl) redirect(`${back}#${anchor}`);
   // Activité à séances sans tarif à la séance : elle ne se vend que par abonnement.
   if (recurring && activity.priceCents <= 0) redirect(back);
+
+  // Événement unique à plusieurs tarifs : le client doit en avoir choisi un (le prix est relu en base).
+  let amountCents = activity.priceCents;
+  let priceLabel: string | null = null;
+  if (!recurring) {
+    const tiers = await db.select().from(ticketPrices).where(eq(ticketPrices.activityId, activity.id));
+    if (tiers.length > 0) {
+      const chosen = tiers.find((tier) => tier.id === Number(formData.get("priceId") ?? 0));
+      if (!chosen) redirect(`${back}?billet=tarif#billet`);
+      amountCents = chosen.priceCents;
+      priceLabel = chosen.name;
+    }
+  }
 
   if (session.status !== "scheduled" || session.startsAt.getTime() <= Date.now()) {
     redirect(`${back}?billet=indisponible#${anchor}`);
@@ -106,7 +123,10 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
       .limit(1)
   )[0];
   if (existing) {
-    redirect(existing.paymentStatus === "paid" ? "/espace-personnel?billet=deja" : `/abonnement/${existing.id}/paiement`);
+    if (existing.paymentStatus === "paid") redirect("/espace-personnel?billet=deja");
+    // Billet commencé mais pas payé : il prend le tarif choisi cette fois-ci.
+    await db.update(subscriptions).set({ amountCents, priceLabel }).where(eq(subscriptions.id, existing.id));
+    redirect(`/abonnement/${existing.id}/paiement`);
   }
 
   // Déjà inscrit à cette date par un abonnement (ou ajouté par l'administration) : rien à payer.
@@ -137,11 +157,13 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
       endsAt: new Date(session.startsAt.getTime() + session.durationMinutes * 60 * 1000),
       sessionsIncluded: 1,
       sessionsUsed: 0,
+      amountCents,
+      priceLabel,
     })
     .returning({ id: subscriptions.id });
   const ticketId = inserted[0]!.id;
 
-  if (activity.priceCents <= 0) {
+  if (amountCents <= 0) {
     await activateSubscription(ticketId);
     revalidatePath("/espace-personnel");
     redirect("/espace-personnel?billet=confirme");

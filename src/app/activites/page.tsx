@@ -36,6 +36,8 @@ export default async function ActivitiesPage({
     sessionCount,
     planCount,
     minPrice,
+    tierCount,
+    tierMin,
     nextSession,
     lastSession,
     finished,
@@ -93,7 +95,13 @@ export default async function ActivitiesPage({
               <dd className="text-zinc-700">
                 {minPrice
                   ? t("fromPrice", { price: formatPrice(minPrice, locale) })
-                  : !memberships && activity.priceCents <= 0
+                  : !memberships && tierCount > 0
+                    ? tierCount > 1 && (tierMin ?? 0) > 0
+                      ? t("fromPrice", { price: formatPrice(tierMin ?? 0, locale) })
+                      : (tierMin ?? 0) > 0
+                        ? formatPrice(tierMin ?? 0, locale)
+                        : t("free")
+                    : !memberships && activity.priceCents <= 0
                     ? t("free")
                     : formatPrice(activity.priceCents, locale)}
               </dd>

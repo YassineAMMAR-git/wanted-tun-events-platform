@@ -19,6 +19,7 @@ import {
   plans,
   sessions,
   subscriptions,
+  ticketPrices,
   users,
 } from "@/db/schema";
 import { hashPassword, randomToken, requireAdmin, revokeUserSessions, sendVerificationEmail } from "@/lib/auth";
@@ -295,14 +296,40 @@ function activityValues(formData: FormData) {
     capacity: Math.round(num(formData, "capacity")) || 30,
     // Photo envoyée (/media/…) ou ancienne adresse http(s) ; toute autre valeur est ignorée.
     imageUrl: safeLink(str(formData, "imageUrl")),
+    ticketUrl: externalLink(str(formData, "ticketUrl")),
     translations: readTranslations(formData, ACTIVITY_TRANSLATABLE),
   };
+}
+
+/** Adresse http(s) complète uniquement (billetterie externe) ; « www.site.com » est complété en https. */
+function externalLink(value: string): string | null {
+  if (!value) return null;
+  const link = safeLink(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+  return link && !link.startsWith("/") ? link : null;
+}
+
+/** Un lien de billetterie saisi mais inutilisable est refusé plutôt qu'ignoré en silence. */
+const ticketUrlRejected = (formData: FormData, values: { ticketUrl: string | null }) =>
+  Boolean(str(formData, "ticketUrl")) && !values.ticketUrl;
+
+/** Tarifs saisis à la création (lignes « tierName » / « tierPrice ») ; les lignes sans nom sont ignorées. */
+function tierRows(formData: FormData) {
+  const names = formData.getAll("tierName").map((value) => String(value).trim().slice(0, 120));
+  const prices = formData.getAll("tierPrice").map((value) => Number(String(value).replace(",", ".")));
+  return names
+    .map((name, index) => ({
+      name,
+      priceCents: Math.max(Math.round((Number.isFinite(prices[index]) ? prices[index]! : 0) * 100), 0),
+      position: index + 1,
+    }))
+    .filter((tier) => tier.name);
 }
 
 export async function createActivityAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const values = activityValues(formData);
   if (!values.name) redirect(withMessage("/admin/activites", "erreur", "activityNameRequired"));
+  if (ticketUrlRejected(formData, values)) redirect(withMessage("/admin/activites", "erreur", "ticketUrlInvalid"));
   // Date facultative : pour un événement ponctuel, elle crée directement la date mise en vente.
   const rawDate = str(formData, "startsAt");
   const startsAt = rawDate ? parseParisDateTime(rawDate) : null;
@@ -323,6 +350,8 @@ export async function createActivityAction(formData: FormData): Promise<void> {
       status: "scheduled",
     });
   }
+  const tiers = tierRows(formData);
+  if (tiers.length > 0) await db.insert(ticketPrices).values(tiers.map((tier) => ({ ...tier, activityId })));
   redirect(withMessage(`/admin/activites/${activityId}`, "ok", "activityCreated"));
 }
 
@@ -331,6 +360,7 @@ export async function updateActivityAction(formData: FormData): Promise<void> {
   const id = num(formData, "id");
   const values = activityValues(formData);
   if (!values.name) redirect(withMessage(`/admin/activites/${id}`, "erreur", "activityNameRequired"));
+  if (ticketUrlRejected(formData, values)) redirect(withMessage(`/admin/activites/${id}`, "erreur", "ticketUrlInvalid"));
   await db
     .update(activities)
     .set({ ...values, status: str(formData, "status") === "hidden" ? "hidden" : "active" })
@@ -344,6 +374,45 @@ export async function deleteActivityAction(formData: FormData): Promise<void> {
   const id = num(formData, "id");
   await db.delete(activities).where(eq(activities.id, id));
   redirect(withMessage("/admin/activites", "ok", "activityDeleted"));
+}
+
+/* -------------------------- tarifs d'un événement ------------------------ */
+
+function ticketPriceValues(formData: FormData) {
+  return {
+    name: str(formData, "name").slice(0, 120),
+    priceCents: Math.max(Math.round(num(formData, "price") * 100), 0),
+    position: Math.round(num(formData, "position")),
+  };
+}
+
+export async function createTicketPriceAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const activityId = num(formData, "activityId");
+  const back = `/admin/activites/${activityId}`;
+  const values = ticketPriceValues(formData);
+  if (!activityId || !values.name) redirect(withMessage(back, "erreur", "ticketPriceNameRequired"));
+  await db.insert(ticketPrices).values({ ...values, activityId });
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "ticketPriceSaved"));
+}
+
+export async function updateTicketPriceAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const back = `/admin/activites/${num(formData, "activityId")}`;
+  const values = ticketPriceValues(formData);
+  if (!values.name) redirect(withMessage(back, "erreur", "ticketPriceNameRequired"));
+  await db.update(ticketPrices).set(values).where(eq(ticketPrices.id, num(formData, "id")));
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "ticketPriceSaved"));
+}
+
+export async function deleteTicketPriceAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const back = `/admin/activites/${num(formData, "activityId")}`;
+  await db.delete(ticketPrices).where(eq(ticketPrices.id, num(formData, "id")));
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "ticketPriceDeleted"));
 }
 
 /* -------------------------------- séances -------------------------------- */

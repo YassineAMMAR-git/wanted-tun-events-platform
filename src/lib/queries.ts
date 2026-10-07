@@ -16,6 +16,7 @@ import {
   plans,
   sessions,
   subscriptions,
+  ticketPrices,
   users,
 } from "@/db/schema";
 import type { Locale } from "@/i18n/config";
@@ -106,6 +107,11 @@ export async function listActivities(
       nextSession: sql<
         Date | null
       >`(select min(s.starts_at) from sessions s where s.activity_id = ${activities.id} and s.starts_at >= now() and s.status = 'scheduled')`,
+      // Événement unique à plusieurs tarifs : le moins cher sert de prix « à partir de ».
+      tierCount: sql<number>`(select count(*) from ticket_prices tp where tp.activity_id = ${activities.id})::int`,
+      tierMin: sql<
+        number | null
+      >`(select min(tp.price_cents) from ticket_prices tp where tp.activity_id = ${activities.id})::int`,
       lastSession: sql<
         Date | null
       >`(select max(s.starts_at) from sessions s where s.activity_id = ${activities.id} and s.starts_at < now() and s.status = 'scheduled')`,
@@ -190,7 +196,7 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
   if (filters.to) upcomingFilters.push(lte(sessions.startsAt, filters.to));
   if (filters.place) upcomingFilters.push(eq(place, filters.place));
 
-  const [plansList, upcoming, past, places, upcomingTotal] = await Promise.all([
+  const [plansList, upcoming, past, places, upcomingTotal, priceList] = await Promise.all([
     memberships
       ? db
           .select()
@@ -219,7 +225,17 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
     // Dédoublonnage et tri côté serveur Node : l'adresse passée en paramètre empêche un DISTINCT … ORDER BY en SQL.
     db.select({ place }).from(sessions).where(upcomingBase),
     db.select({ count: sql<number>`count(*)::int` }).from(sessions).where(upcomingBase),
+    memberships
+      ? []
+      : db
+          .select()
+          .from(ticketPrices)
+          .where(eq(ticketPrices.activityId, row.activity.id))
+          .orderBy(asc(ticketPrices.position), asc(ticketPrices.id)),
   ]);
+
+  // Billetterie externe : rien ne se vend sur le site, le client est envoyé sur le site partenaire.
+  const externalTicketUrl = row.activity.ticketUrl || null;
 
   // Chaque séance (ou date d'événement) à venir est vendue dans la limite de la capacité.
   const taken = await placesTaken(upcoming.map((session) => session.id));
@@ -235,11 +251,14 @@ export async function getActivityDetail(slug: string, locale: Locale, filters: U
     // Événement unique : la ou les dates mises en vente (billet).
     ticketDates: memberships ? [] : upcomingWithPlaces,
     // Activité à séances : achat à la séance possible dès qu'un tarif à la séance est fixé.
-    sessionSales: memberships && row.activity.priceCents > 0,
+    sessionSales: memberships && row.activity.priceCents > 0 && !externalTicketUrl,
+    externalTicketUrl,
+    // Tarifs d'un événement unique ; vide = un seul prix, celui de l'activité.
+    prices: priceList,
     categorySlug: row.category.slug,
     categoryEmoji: row.category.emoji,
     offersMemberships: memberships,
-    plans: plansList.map((plan) => localize(plan, locale, PLAN_TRANSLATABLE)),
+    plans: externalTicketUrl ? [] : plansList.map((plan) => localize(plan, locale, PLAN_TRANSLATABLE)),
     upcoming: upcomingWithPlaces,
     upcomingTotal: upcomingTotal[0]?.count ?? 0,
     upcomingPlaces: [...new Set(places.map((row) => row.place).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale)),
@@ -302,8 +321,8 @@ export async function getMySubscriptions(userId: number, locale: Locale) {
     activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(category, locale, CATEGORY_TRANSLATABLE).name,
     categoryEmoji: category.emoji,
-    /** Prix payé ou à payer : celui de l'offre pour un abonnement, celui de l'activité pour un billet. */
-    priceCents: plan ? plan.priceCents : activity.priceCents,
+    /** Prix payé ou à payer : celui de l'offre pour un abonnement ; pour un billet, le tarif retenu à l'achat. */
+    priceCents: plan ? plan.priceCents : (rest.subscription.amountCents ?? activity.priceCents),
   }));
 }
 

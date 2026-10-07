@@ -38,19 +38,35 @@ export default async function ActivityDetailPage({
   const today = toDateTimeLocalValue(new Date()).slice(0, 10);
   const pagePath = `/activites/${activity.slug}`;
   const address = [activity.address, activity.city].filter(Boolean).join(", ");
-  const { ticketDates, sessionSales } = detail;
+  const { ticketDates, sessionSales, prices, externalTicketUrl } = detail;
+  // Plusieurs tarifs (chaises, gradin…) : le client en choisit un ; sinon le billet est au prix de l'activité.
+  const hasTiers = prices.length > 0;
+  const minTierCents = hasTiers ? Math.min(...prices.map((price) => price.priceCents)) : 0;
+  const tierPrice = (cents: number) => (cents <= 0 ? t("free") : formatPrice(cents, locale));
   const nextDate = ticketDates[0];
   const firstAvailable = ticketDates.find((date) => date.placesLeft > 0);
-  const free = activity.priceCents <= 0;
+  const free = !hasTiers && activity.priceCents <= 0;
   const ticketNotice =
-    query.billet === "complet" ? t("ticketSoldOut") : query.billet === "indisponible" ? t("ticketUnavailable") : null;
+    query.billet === "complet"
+      ? t("ticketSoldOut")
+      : query.billet === "indisponible"
+        ? t("ticketUnavailable")
+        : query.billet === "tarif"
+          ? t("ticketChoosePrice")
+          : null;
   // Événement terminé : on affiche la date à laquelle il a eu lieu.
   const { finished } = detail;
   const shownDate = nextDate ?? (finished ? past[0] : undefined);
   const nextDateLabel = shownDate
     ? tCommon("dateAtTime", { date: formatDate(shownDate.startsAt, locale), time: formatTime(shownDate.startsAt, locale) })
     : t("dateTba");
-  const ticketPrice = free ? t("free") : formatPrice(activity.priceCents, locale);
+  const ticketPrice = hasTiers
+    ? prices.length > 1
+      ? t("fromPrice", { price: tierPrice(minTierCents) })
+      : tierPrice(minTierCents)
+    : free
+      ? t("free")
+      : formatPrice(activity.priceCents, locale);
 
   return (
     <div className="space-y-8">
@@ -156,12 +172,54 @@ export default async function ActivityDetailPage({
               <p className="text-sm text-zinc-600">{t("ticketPerPerson")}</p>
             </div>
 
-            {ticketDates.length === 0 ? (
+            {finished || (ticketDates.length === 0 && !externalTicketUrl) ? (
               <p className="mt-4 text-sm text-zinc-600">
                 {finished ? t("eventOver", { date: nextDateLabel }) : t("noDates")}
               </p>
+            ) : externalTicketUrl ? (
+              <div className="mt-4 space-y-3">
+                {hasTiers ? (
+                  <ul className="space-y-1.5">
+                    {prices.map((price) => (
+                      <li
+                        key={price.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                      >
+                        <span className="font-medium text-zinc-800">{price.name}</span>
+                        <span className="font-bold text-gold-dark">{tierPrice(price.priceCents)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <a href={externalTicketUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">
+                  🎟️ {t("externalTicket")} ↗
+                </a>
+                <p className="text-center text-[11px] text-zinc-500">{t("externalTicketHint")}</p>
+              </div>
             ) : (
               <form action={buyTicketAction} className="mt-4 space-y-3">
+                {hasTiers ? (
+                  <fieldset className="space-y-2">
+                    <legend className="label">{t("choosePrice")}</legend>
+                    {prices.map((price, index) => (
+                      <label
+                        key={price.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5"
+                      >
+                        <input
+                          type="radio"
+                          name="priceId"
+                          value={price.id}
+                          required
+                          defaultChecked={index === 0}
+                          className="accent-amber-600"
+                        />
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-zinc-900">{price.name}</span>
+                        <span className="text-sm font-black text-gold-dark">{tierPrice(price.priceCents)}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
                 <fieldset className="space-y-2">
                   <legend className="label">{ticketDates.length > 1 ? t("chooseDate") : t("eventDate")}</legend>
                   {ticketDates.map((date) => {
@@ -207,9 +265,11 @@ export default async function ActivityDetailPage({
                 <button className="btn btn-primary w-full" type="submit" disabled={!firstAvailable}>
                   {!firstAvailable
                     ? t("soldOut")
-                    : free
-                      ? t("registerFree")
-                      : t("payAndRegister", { price: formatPrice(activity.priceCents, locale) })}
+                    : hasTiers
+                      ? t("payAndRegisterChoice")
+                      : free
+                        ? t("registerFree")
+                        : t("payAndRegister", { price: formatPrice(activity.priceCents, locale) })}
                 </button>
                 {free ? null : <p className="text-center text-[11px] text-zinc-500">{t("ticketSecurePayment")}</p>}
               </form>
@@ -218,7 +278,18 @@ export default async function ActivityDetailPage({
         </section>
       )}
 
-      {detail.offersMemberships && (plans.length > 0 || !sessionSales) ? (
+      {detail.offersMemberships && externalTicketUrl && !finished ? (
+        <section id="billet" className="scroll-mt-20">
+          <SectionTitle eyebrow={t("ticketEyebrow")} title={t("ticketTitle")} subtitle={t("externalTicketHint")} />
+          <Card className="max-w-2xl">
+            <a href={externalTicketUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">
+              🎟️ {t("externalTicket")} ↗
+            </a>
+          </Card>
+        </section>
+      ) : null}
+
+      {detail.offersMemberships && !externalTicketUrl && (plans.length > 0 || !sessionSales) ? (
         <section>
           <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
           {plans.length === 0 ? (

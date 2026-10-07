@@ -255,9 +255,11 @@ export default async function AdminClientDetail({
                     <td className="text-zinc-600">
                       {row.plan
                         ? localize(row.plan, locale, PLAN_TRANSLATABLE).name
-                        : t("ticketFor", { date: row.session ? formatDate(row.session.startsAt, locale) : tCommon("none") })}
+                        : `${t("ticketFor", { date: row.session ? formatDate(row.session.startsAt, locale) : tCommon("none") })}${
+                            row.subscription.priceLabel ? ` · ${row.subscription.priceLabel}` : ""
+                          }`}
                     </td>
-                    <td className="whitespace-nowrap">{formatPrice(row.plan?.priceCents ?? row.activity.priceCents, locale)}</td>
+                    <td className="whitespace-nowrap">{formatPrice(row.plan?.priceCents ?? row.subscription.amountCents ?? row.activity.priceCents, locale)}</td>
                     <td className="whitespace-nowrap text-zinc-600">
                       {tCommon("dateRange", {
                         start: formatDate(row.subscription.startsAt, locale),

@@ -152,6 +152,8 @@ export const activities = pgTable(
     priceCents: integer("price_cents").notNull().default(0),
     capacity: integer("capacity").notNull().default(30),
     imageUrl: text("image_url"),
+    /** Billetterie externe (facultatif) : si renseignée, la réservation se fait sur ce site et non sur le nôtre. */
+    ticketUrl: text("ticket_url"),
     status: varchar("status", { length: 16 }).notNull().default("active"),
     translations: jsonb("translations")
       .$type<ContentTranslations<(typeof ACTIVITY_TRANSLATABLE)[number]>>()
@@ -163,6 +165,29 @@ export const activities = pgTable(
     uniqueIndex("activities_slug_unique").on(table.slug),
     index("activities_category_idx").on(table.categoryId),
   ],
+);
+
+/* ------------------------------------------------------------------ */
+/* Tarifs d'un événement unique (chaises 40 €, gradin 20 €…)           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Tarifs facultatifs d'un événement unique. S'il y en a, le client en choisit un et le prix de l'activité
+ * n'est plus utilisé ; sans tarif, le billet est au prix de l'activité.
+ */
+export const ticketPrices = pgTable(
+  "ticket_prices",
+  {
+    id: serial("id").primaryKey(),
+    activityId: integer("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    priceCents: integer("price_cents").notNull().default(0),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("ticket_prices_activity_idx").on(table.activityId)],
 );
 
 /* ------------------------------------------------------------------ */
@@ -245,6 +270,12 @@ export const subscriptions = pgTable(
       .references(() => activities.id, { onDelete: "cascade" }),
     /** Billet : date de l'événement. La supprimer ne supprime pas le billet (payé) : il faut alors le rembourser. */
     sessionId: integer("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    /**
+     * Billet : prix retenu à l'achat et nom du tarif choisi (copiés, pour rester exacts si le tarif est modifié
+     * ou supprimé ensuite). Vide sur les anciens billets : le prix est alors celui de l'activité.
+     */
+    amountCents: integer("amount_cents"),
+    priceLabel: varchar("price_label", { length: 120 }),
     status: varchar("status", { length: 16 }).notNull().default("pending"),
     paymentStatus: varchar("payment_status", { length: 16 }).notNull().default("pending"),
     paymentReference: varchar("payment_reference", { length: 120 }),
@@ -414,6 +445,7 @@ export type Category = typeof categories.$inferSelect;
 export type Activity = typeof activities.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type Plan = typeof plans.$inferSelect;
+export type TicketPrice = typeof ticketPrices.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;

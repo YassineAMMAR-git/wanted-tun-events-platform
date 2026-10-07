@@ -74,7 +74,7 @@ export default async function PaymentPage({
 
   const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
-  const price = formatPrice(ticket ? activity.priceCents : plan!.priceCents, locale);
+  const price = formatPrice(ticket ? (subscription.amountCents ?? activity.priceCents) : plan!.priceCents, locale);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -103,7 +103,7 @@ export default async function PaymentPage({
           <div>
             <p className="text-xs tracking-wider text-zinc-500 uppercase">{ticket ? t("ticket") : t("selectedPlan")}</p>
             <h2 className="mt-1 text-xl font-bold text-zinc-900">{ticket ? activity.name : plan!.name}</h2>
-            <p className="text-sm text-zinc-600">{ticket ? (session?.title ?? t("ticketOne")) : activity.name}</p>
+            <p className="text-sm text-zinc-600">{ticket ? (subscription.priceLabel ?? session?.title ?? t("ticketOne")) : activity.name}</p>
           </div>
           <div className="text-end">
             <p className="text-xs tracking-wider text-zinc-500 uppercase">{t("price")}</p>
