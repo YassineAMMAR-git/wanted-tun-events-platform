@@ -75,6 +75,11 @@ export function centsToEurosInput(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+/** Durée (stockée en minutes) affichée en heures dans les formulaires d'administration : 120 → 2, 90 → 1.5. */
+export function minutesToHoursInput(minutes: number): string {
+  return String(Math.round((minutes / 60) * 100) / 100);
+}
+
 const durationUnits: Record<Locale, { hour: string; minute: string }> = {
   fr: { hour: "h", minute: "min" },
   en: { hour: "h", minute: "min" },

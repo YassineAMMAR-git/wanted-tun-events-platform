@@ -23,6 +23,7 @@ import {
   isPast,
   sessionDisplayStatus,
   toDateTimeLocalValue,
+  minutesToHoursInput,
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -200,10 +201,11 @@ export default async function AdminActivityDetail({
             </label>
             <input
               id="durationMinutes"
-              name="durationMinutes"
+              name="durationHours"
               type="number"
-              min={15}
-              defaultValue={activity.durationMinutes}
+              min={0.25}
+              step="any"
+              defaultValue={minutesToHoursInput(activity.durationMinutes)}
               className="input"
             />
           </div>
@@ -326,10 +328,11 @@ export default async function AdminActivityDetail({
               </label>
               <input
                 id="duration"
-                name="durationMinutes"
+                name="durationHours"
                 type="number"
-                min={15}
-                defaultValue={duplicated?.durationMinutes ?? activity.durationMinutes}
+                min={0.25}
+                step="any"
+                defaultValue={minutesToHoursInput(duplicated?.durationMinutes ?? activity.durationMinutes)}
                 className="input"
               />
             </div>
@@ -395,7 +398,14 @@ export default async function AdminActivityDetail({
                   </div>
                   <div>
                     <label className="label">{t("durationShort")}</label>
-                    <input name="durationMinutes" type="number" min={15} defaultValue={session.durationMinutes} className="input" />
+                    <input
+                      name="durationHours"
+                      type="number"
+                      min={0.25}
+                      step="any"
+                      defaultValue={minutesToHoursInput(session.durationMinutes)}
+                      className="input"
+                    />
                   </div>
                   <div>
                     <label className="label">{t("location")}</label>

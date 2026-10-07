@@ -238,7 +238,7 @@ export default async function AdminActivitiesPage({
               <label className="label" htmlFor="durationMinutes">
                 {t("duration")}
               </label>
-              <input id="durationMinutes" name="durationMinutes" type="number" min={15} defaultValue={90} className="input" />
+              <input id="durationMinutes" name="durationHours" type="number" min={0.25} step="any" defaultValue={1.5} className="input" />
             </div>
             <div>
               <label className="label" htmlFor="price">

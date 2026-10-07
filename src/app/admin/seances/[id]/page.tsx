@@ -19,6 +19,7 @@ import {
   formatDuration,
   toAttendanceStatus,
   toDateTimeLocalValue,
+  minutesToHoursInput,
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -129,7 +130,14 @@ export default async function AdminSessionDetail({
           </div>
           <div>
             <label className="label">{tActivity("durationShort")}</label>
-            <input name="durationMinutes" type="number" min={15} defaultValue={session.durationMinutes} className="input" />
+            <input
+              name="durationHours"
+              type="number"
+              min={0.25}
+              step="any"
+              defaultValue={minutesToHoursInput(session.durationMinutes)}
+              className="input"
+            />
           </div>
           <div>
             <label className="label">{tActivity("status")}</label>

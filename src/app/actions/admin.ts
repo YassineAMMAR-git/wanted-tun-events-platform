@@ -38,6 +38,8 @@ const num = (data: FormData, key: string) => {
   const value = Number(String(data.get(key) ?? "").replace(",", "."));
   return Number.isFinite(value) ? value : 0;
 };
+/** Durée saisie en heures dans l'administration (2 ; 1,5…), enregistrée en minutes. 90 minutes par défaut. */
+const durationMinutes = (data: FormData) => Math.round(num(data, "durationHours") * 60) || 90;
 const bool = (data: FormData, key: string) => data.get(key) === "on" || data.get(key) === "true";
 
 /**
@@ -291,7 +293,7 @@ function activityValues(formData: FormData) {
     address: str(formData, "address") || null,
     city: str(formData, "city") || null,
     scheduleText: str(formData, "scheduleText") || null,
-    durationMinutes: Math.round(num(formData, "durationMinutes")) || 90,
+    durationMinutes: durationMinutes(formData),
     priceCents: Math.round(num(formData, "price") * 100),
     capacity: Math.round(num(formData, "capacity")) || 30,
     // Photo envoyée (/media/…) ou ancienne adresse http(s) ; toute autre valeur est ignorée.
@@ -420,7 +422,7 @@ export async function createSessionAction(formData: FormData): Promise<void> {
       activityId,
       title: str(formData, "title") || null,
       startsAt,
-      durationMinutes: Math.round(num(formData, "durationMinutes")) || 90,
+      durationMinutes: durationMinutes(formData),
       location: str(formData, "location") || null,
       notes: str(formData, "notes") || null,
       translations: readTranslations(formData, SESSION_TRANSLATABLE),
@@ -445,7 +447,7 @@ export async function updateSessionAction(formData: FormData): Promise<void> {
     .set({
       title: str(formData, "title") || null,
       startsAt,
-      durationMinutes: Math.round(num(formData, "durationMinutes")) || 90,
+      durationMinutes: durationMinutes(formData),
       location: str(formData, "location") || null,
       notes: str(formData, "notes") || null,
       translations: readTranslations(formData, SESSION_TRANSLATABLE),
