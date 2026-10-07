@@ -385,12 +385,33 @@ const fr = {
   },
 
   auth: {
+    forgot: {
+      eyebrow: "Récupération de compte",
+      title: "Mot de passe oublié",
+      intro: "Saisissez l’adresse e-mail de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.",
+      submit: "Recevoir le lien",
+      submitting: "Envoi…",
+      backToLogin: "Retour à la connexion",
+    },
+    reset: {
+      title: "Nouveau mot de passe",
+      intro: "Choisissez un nouveau mot de passe pour votre compte.",
+      newPassword: "Nouveau mot de passe",
+      confirm: "Confirmer le mot de passe",
+      submit: "Enregistrer le mot de passe",
+      submitting: "Enregistrement…",
+      invalid: "Ce lien n’est pas valide ou a déjà été utilisé.",
+      expired: "Ce lien a expiré.",
+      requestNew: "Demander un nouveau lien",
+      done: "Votre mot de passe a été modifié. Connectez-vous avec le nouveau.",
+    },
     passwordHint: "{min} caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.",
     email: "Adresse e-mail",
     password: "Mot de passe",
     phonePlaceholder: "+33 6 12 34 56 78",
     cityPlaceholder: "Paris",
     login: {
+      forgot: "Mot de passe oublié ? Cliquez ici",
       eyebrow: "Espace client",
       title: "Connexion",
       intro: "Accédez à vos abonnements, vos séances et votre avancement.",
@@ -443,6 +464,9 @@ const fr = {
 
   /** Messages renvoyés par les actions serveur (formulaires). */
   forms: {
+    resetSent: "Si un compte correspond à cette adresse, un e-mail vient d’être envoyé avec un lien pour choisir un nouveau mot de passe. Pensez à vérifier vos courriers indésirables.",
+    resetInvalid: "Ce lien n’est pas valide ou a déjà été utilisé. Demandez-en un nouveau.",
+    resetExpired: "Ce lien a expiré. Demandez-en un nouveau.",
     fixErrors: "Merci de corriger les champs signalés.",
     invalidCredentials: "E-mail ou mot de passe incorrect.",
     tooManyAttempts: "Trop de tentatives de connexion. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
@@ -1119,6 +1143,22 @@ const fr = {
   },
 
   emails: {
+    passwordReset: {
+      subject: "Réinitialisez votre mot de passe WANTED TUN EVENTS",
+      preheader: "Un lien pour choisir un nouveau mot de passe.",
+      title: "Mot de passe oublié ?",
+      intro: "Vous avez demandé à réinitialiser le mot de passe de votre compte WANTED TUN EVENTS. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.",
+      button: "Choisir un nouveau mot de passe",
+      validity: "Ce lien est valable {minutes} minutes et ne peut être utilisé qu’une seule fois.",
+      fallback: "Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :",
+      notYou: "Vous n’êtes pas à l’origine de cette demande ? Ignorez cet e-mail : votre mot de passe reste inchangé.",
+      log: "E-mail de réinitialisation du mot de passe envoyé (lien masqué dans le journal).",
+    },
+    passwordChanged: {
+      subject: "Votre mot de passe WANTED TUN EVENTS a été modifié",
+      text: "Le mot de passe de votre compte vient d’être modifié. Tous vos appareils ont été déconnectés : reconnectez-vous avec le nouveau mot de passe.",
+      notYou: "Ce n’est pas vous ? Réinitialisez immédiatement votre mot de passe ici :",
+    },
     ticketConfirmed: {
       subject: "Inscription confirmée — {activity}",
       confirmed: "Votre inscription à « {activity} » est confirmée. Merci !",

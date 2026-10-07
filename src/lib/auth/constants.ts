@@ -15,5 +15,10 @@ export const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 /** Délai minimum entre deux envois d'e-mail de vérification pour un même compte. */
 export const EMAIL_VERIFICATION_RESEND_DELAY_MS = 60 * 1000;
 
+/** Durée de validité d'un lien de réinitialisation du mot de passe. */
+export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+/** Délai minimum entre deux envois de lien de réinitialisation pour un même compte. */
+export const PASSWORD_RESET_RESEND_DELAY_MS = 60 * 1000;
+
 /** Pages nécessitant une connexion (vérification optimiste dans le proxy). */
 export const PROTECTED_PATH_PREFIXES = ["/admin", "/espace-personnel", "/abonnement/"] as const;

@@ -85,3 +85,45 @@ export function accountAlreadyExistsEmail(params: { firstName: string; loginUrl:
 
   return { subject: t("emails.accountExists.subject"), text, html };
 }
+
+/** E-mail « mot de passe oublié » : bouton vers la page de choix d'un nouveau mot de passe. */
+export function passwordResetEmail(params: {
+  firstName: string;
+  resetUrl: string;
+  validMinutes: number;
+  locale: Locale;
+}): RenderedEmail {
+  const { firstName, resetUrl, validMinutes, locale } = params;
+  const t = translatorFor(locale);
+
+  const text = [
+    t("emails.hello", { name: firstName }),
+    "",
+    t("emails.passwordReset.intro"),
+    "",
+    resetUrl,
+    "",
+    t("emails.passwordReset.validity", { minutes: validMinutes }),
+    "",
+    t("emails.passwordReset.notYou"),
+    "",
+    t("emails.team"),
+  ].join("\n");
+
+  const html = renderEmailLayout({
+    locale,
+    preheader: t("emails.passwordReset.preheader"),
+    title: t("emails.passwordReset.title"),
+    bodyHtml: `
+      <p style="margin:0 0 16px">${escapeHtml(t("emails.hello", { name: firstName }))}</p>
+      <p style="margin:0 0 16px">${escapeHtml(t("emails.passwordReset.intro"))}</p>`,
+    cta: { label: t("emails.passwordReset.button"), url: resetUrl },
+    afterCtaHtml: `
+      <p style="${panel}">⏱️ ${escapeHtml(t("emails.passwordReset.validity", { minutes: validMinutes }))}</p>
+      <p style="margin:0 0 6px">${escapeHtml(t("emails.passwordReset.fallback"))}</p>
+      <p dir="ltr" style="margin:0 0 16px;word-break:break-all;text-align:left"><a href="${escapeHtml(resetUrl)}" style="color:#b8862f">${escapeHtml(resetUrl)}</a></p>`,
+    footerNote: t("emails.passwordReset.notYou"),
+  });
+
+  return { subject: t("emails.passwordReset.subject"), text, html };
+}

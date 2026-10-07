@@ -16,3 +16,4 @@ export {
   sendAccountAlreadyExistsEmail,
   verifyEmailToken,
 } from "@/lib/auth/email-verification";
+export { sendPasswordResetEmail, checkPasswordResetToken, resetPasswordWithToken } from "@/lib/auth/password-reset";

@@ -98,6 +98,26 @@ export const emailVerificationTokens = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* Jetons de réinitialisation du mot de passe (usage unique, 1 heure)  */
+/* ------------------------------------------------------------------ */
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("password_reset_tokens_hash_unique").on(table.tokenHash),
+    index("password_reset_tokens_user_idx").on(table.userId),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* Catégories d'activités                                              */
 /* ------------------------------------------------------------------ */
 export const categories = pgTable(

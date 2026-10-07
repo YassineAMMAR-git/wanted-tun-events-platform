@@ -16,10 +16,10 @@ type VerificationResult = keyof typeof VERIFICATION_TONES;
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erreur?: string; next?: string; verification?: string }>;
+  searchParams: Promise<{ erreur?: string; next?: string; verification?: string; motdepasse?: string }>;
 }) {
   await ensureSeeded();
-  const { erreur, next, verification } = await searchParams;
+  const { erreur, next, verification, motdepasse } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect(safeRedirectPath(next, user.role === "admin" ? "/admin" : "/espace-personnel"));
 
@@ -35,6 +35,12 @@ export default async function LoginPage({
         <h1 className="mt-1.5 text-2xl font-black text-zinc-900">{t("login.title")}</h1>
         <p className="mt-2 text-sm text-zinc-600">{t("login.intro")}</p>
       </div>
+
+      {motdepasse === "modifie" ? (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          ✅ {t("reset.done")}
+        </div>
+      ) : null}
 
       {result ? (
         <div

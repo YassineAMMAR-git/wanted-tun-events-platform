@@ -86,6 +86,21 @@ export const loginSchema = z.object({
 export const RESEND_VERIFICATION_FIELDS = ["email"] as const;
 export const resendVerificationSchema = z.object({ email: emailSchema });
 
+export const FORGOT_PASSWORD_FIELDS = ["email"] as const;
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+
+export const RESET_PASSWORD_FIELDS = ["token", "password", "confirm"] as const;
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1).max(128),
+    password: newPasswordSchema,
+    confirm: z.string(),
+  })
+  .refine((data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "validation.passwordMismatch",
+  });
+
 export const REGISTER_FIELDS = ["firstName", "lastName", "email", "phone", "city", "password", "confirm"] as const;
 export const registerSchema = z
   .object({

@@ -383,12 +383,33 @@ const en: Messages = {
   },
 
   auth: {
+    forgot: {
+      eyebrow: "Account recovery",
+      title: "Forgot password",
+      intro: "Enter the e-mail address of your account: we will send you a link to choose a new password.",
+      submit: "Send me the link",
+      submitting: "Sending…",
+      backToLogin: "Back to log in",
+    },
+    reset: {
+      title: "New password",
+      intro: "Choose a new password for your account.",
+      newPassword: "New password",
+      confirm: "Confirm password",
+      submit: "Save password",
+      submitting: "Saving…",
+      invalid: "This link is not valid or has already been used.",
+      expired: "This link has expired.",
+      requestNew: "Request a new link",
+      done: "Your password has been changed. Log in with the new one.",
+    },
     passwordHint: "At least {min} characters, with an uppercase letter, a lowercase letter, a digit and a special character.",
     email: "Email address",
     password: "Password",
     phonePlaceholder: "+33 6 12 34 56 78",
     cityPlaceholder: "Paris",
     login: {
+      forgot: "Forgot your password? Click here",
       eyebrow: "Client area",
       title: "Log in",
       intro: "Access your memberships, sessions and progress.",
@@ -439,6 +460,9 @@ const en: Messages = {
   },
 
   forms: {
+    resetSent: "If an account matches this address, an e-mail has just been sent with a link to choose a new password. Remember to check your spam folder.",
+    resetInvalid: "This link is not valid or has already been used. Request a new one.",
+    resetExpired: "This link has expired. Request a new one.",
     fixErrors: "Please correct the highlighted fields.",
     invalidCredentials: "Incorrect email or password.",
     tooManyAttempts: "Too many login attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
@@ -1112,6 +1136,22 @@ const en: Messages = {
   },
 
   emails: {
+    passwordReset: {
+      subject: "Reset your WANTED TUN EVENTS password",
+      preheader: "A link to choose a new password.",
+      title: "Forgot your password?",
+      intro: "You asked to reset the password of your WANTED TUN EVENTS account. Click the button below to choose a new one.",
+      button: "Choose a new password",
+      validity: "This link is valid for {minutes} minutes and can only be used once.",
+      fallback: "Button not working? Copy this link into your browser:",
+      notYou: "Didn’t request this? Ignore this e-mail: your password stays unchanged.",
+      log: "Password reset e-mail sent (link hidden in the log).",
+    },
+    passwordChanged: {
+      subject: "Your WANTED TUN EVENTS password has been changed",
+      text: "The password of your account has just been changed. All your devices have been logged out: log in again with the new password.",
+      notYou: "Wasn’t you? Reset your password immediately here:",
+    },
     ticketConfirmed: {
       subject: "Registration confirmed — {activity}",
       confirmed: "Your registration for “{activity}” is confirmed. Thank you!",

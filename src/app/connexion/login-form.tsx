@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { loginAction, type LoginState } from "@/app/actions/auth";
 import { FieldError, FormMessage, fieldA11y } from "@/components/form-feedback";
@@ -52,6 +53,11 @@ export function LoginForm({ next }: { next?: string }) {
             {...fieldA11y("password", errors.password)}
           />
           <FieldError id="password-error" errors={errors.password} />
+          <p className="mt-1.5 text-end text-xs">
+            <Link href="/mot-de-passe-oublie" className="font-semibold text-gold-dark hover:underline">
+              {t("login.forgot")}
+            </Link>
+          </p>
         </div>
         <button className="btn btn-primary w-full" type="submit" disabled={pending}>
           {pending ? t("login.submitting") : t("login.submit")}

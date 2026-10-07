@@ -12,14 +12,20 @@ import {
   destroySession,
   getCurrentUser,
   hashPassword,
+  resetPasswordWithToken,
   revokeUserSessions,
   sendAccountAlreadyExistsEmail,
+  sendPasswordResetEmail,
   sendVerificationEmail,
   verifyPassword,
 } from "@/lib/auth";
 import { LOGIN_LOCK_MS, LOGIN_MAX_ATTEMPTS } from "@/lib/auth/constants";
 import { ensureSeeded } from "@/lib/seed";
 import {
+  FORGOT_PASSWORD_FIELDS,
+  RESET_PASSWORD_FIELDS,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   LOGIN_FIELDS,
   PROFILE_FIELDS,
   REGISTER_FIELDS,
@@ -169,6 +175,49 @@ export async function resendVerificationAction(_previous: FormState<ResendField>
     status: "success",
     message: "forms.resendSent",
   };
+}
+
+/* ---------------------------- mot de passe oublié --------------------------- */
+
+type ForgotField = (typeof FORGOT_PASSWORD_FIELDS)[number];
+
+/**
+ * Demande d'un lien de réinitialisation. La réponse est la même que l'adresse soit inscrite ou non,
+ * pour ne pas révéler quelles adresses ont un compte.
+ */
+export async function requestPasswordResetAction(
+  _previous: FormState<ForgotField>,
+  formData: FormData,
+): Promise<FormState<ForgotField>> {
+  const raw = readFields(formData, FORGOT_PASSWORD_FIELDS);
+  const parsed = forgotPasswordSchema.safeParse(raw);
+  if (!parsed.success) return validationErrorState(parsed.error, raw);
+
+  try {
+    const user = (await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1))[0];
+    if (user) await sendPasswordResetEmail(user);
+  } catch (error) {
+    // L'échec reste côté serveur : le message affiché ne doit pas dépendre de l'existence du compte.
+    console.error("[auth] envoi du lien de réinitialisation impossible", error);
+  }
+
+  return { status: "success", message: "forms.resetSent" };
+}
+
+type ResetField = (typeof RESET_PASSWORD_FIELDS)[number];
+export type ResetPasswordState = FormState<ResetField>;
+
+/** Enregistre le nouveau mot de passe choisi depuis le lien reçu par e-mail, puis renvoie vers la connexion. */
+export async function resetPasswordAction(_previous: ResetPasswordState, formData: FormData): Promise<ResetPasswordState> {
+  const raw = readFields(formData, RESET_PASSWORD_FIELDS);
+  const parsed = resetPasswordSchema.safeParse(raw);
+  if (!parsed.success) return validationErrorState(parsed.error, raw, ["token", "password", "confirm"]);
+
+  const result = await resetPasswordWithToken(parsed.data.token, parsed.data.password);
+  if (result !== "valid") {
+    return { status: "error", message: result === "expired" ? "forms.resetExpired" : "forms.resetInvalid" };
+  }
+  redirect("/connexion?motdepasse=modifie");
 }
 
 /* --------------------------------- profil ---------------------------------- */
