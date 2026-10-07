@@ -312,17 +312,47 @@ function externalLink(value: string): string | null {
 const ticketUrlRejected = (formData: FormData, values: { ticketUrl: string | null }) =>
   Boolean(str(formData, "ticketUrl")) && !values.ticketUrl;
 
-/** Tarifs saisis à la création (lignes « tierName » / « tierPrice ») ; les lignes sans nom sont ignorées. */
+/**
+ * Tarifs saisis dans le formulaire de l'activité (lignes tierId / tierName / tierPrice, dans l'ordre affiché).
+ * Les lignes sans nom sont ignorées.
+ */
 function tierRows(formData: FormData) {
+  const ids = formData.getAll("tierId").map((value) => Number(value) || null);
   const names = formData.getAll("tierName").map((value) => String(value).trim().slice(0, 120));
   const prices = formData.getAll("tierPrice").map((value) => Number(String(value).replace(",", ".")));
   return names
     .map((name, index) => ({
+      id: ids[index] ?? null,
       name,
       priceCents: Math.max(Math.round((Number.isFinite(prices[index]) ? prices[index]! : 0) * 100), 0),
       position: index + 1,
     }))
     .filter((tier) => tier.name);
+}
+
+/**
+ * Aligne les tarifs de l'activité sur le formulaire : mise à jour des lignes conservées (leur identifiant ne change
+ * pas, un client en train de réserver n'est pas gêné), ajout des nouvelles, suppression de celles qui ont été retirées.
+ */
+async function syncTicketPrices(activityId: number, formData: FormData): Promise<void> {
+  // Formulaire sans bloc « tarifs » (activité à séances) : on ne touche à rien.
+  if (!formData.has("tiersPresent")) return;
+  const rows = tierRows(formData);
+  const existing = await db.select({ id: ticketPrices.id }).from(ticketPrices).where(eq(ticketPrices.activityId, activityId));
+  const known = new Set(existing.map((row) => row.id));
+  const kept = new Set<number>();
+
+  for (const { id, ...values } of rows) {
+    if (id && known.has(id)) {
+      kept.add(id);
+      await db.update(ticketPrices).set(values).where(eq(ticketPrices.id, id));
+    } else {
+      await db.insert(ticketPrices).values({ ...values, activityId });
+    }
+  }
+  for (const { id } of existing) {
+    if (!kept.has(id)) await db.delete(ticketPrices).where(eq(ticketPrices.id, id));
+  }
 }
 
 export async function createActivityAction(formData: FormData): Promise<void> {
@@ -350,8 +380,7 @@ export async function createActivityAction(formData: FormData): Promise<void> {
       status: "scheduled",
     });
   }
-  const tiers = tierRows(formData);
-  if (tiers.length > 0) await db.insert(ticketPrices).values(tiers.map((tier) => ({ ...tier, activityId })));
+  await syncTicketPrices(activityId, formData);
   redirect(withMessage(`/admin/activites/${activityId}`, "ok", "activityCreated"));
 }
 
@@ -365,6 +394,7 @@ export async function updateActivityAction(formData: FormData): Promise<void> {
     .update(activities)
     .set({ ...values, status: str(formData, "status") === "hidden" ? "hidden" : "active" })
     .where(eq(activities.id, id));
+  await syncTicketPrices(id, formData);
   revalidatePath("/admin/activites");
   redirect(withMessage(`/admin/activites/${id}`, "ok", "activityUpdated"));
 }
@@ -374,45 +404,6 @@ export async function deleteActivityAction(formData: FormData): Promise<void> {
   const id = num(formData, "id");
   await db.delete(activities).where(eq(activities.id, id));
   redirect(withMessage("/admin/activites", "ok", "activityDeleted"));
-}
-
-/* -------------------------- tarifs d'un événement ------------------------ */
-
-function ticketPriceValues(formData: FormData) {
-  return {
-    name: str(formData, "name").slice(0, 120),
-    priceCents: Math.max(Math.round(num(formData, "price") * 100), 0),
-    position: Math.round(num(formData, "position")),
-  };
-}
-
-export async function createTicketPriceAction(formData: FormData): Promise<void> {
-  await requireAdmin();
-  const activityId = num(formData, "activityId");
-  const back = `/admin/activites/${activityId}`;
-  const values = ticketPriceValues(formData);
-  if (!activityId || !values.name) redirect(withMessage(back, "erreur", "ticketPriceNameRequired"));
-  await db.insert(ticketPrices).values({ ...values, activityId });
-  revalidatePath(back);
-  redirect(withMessage(back, "ok", "ticketPriceSaved"));
-}
-
-export async function updateTicketPriceAction(formData: FormData): Promise<void> {
-  await requireAdmin();
-  const back = `/admin/activites/${num(formData, "activityId")}`;
-  const values = ticketPriceValues(formData);
-  if (!values.name) redirect(withMessage(back, "erreur", "ticketPriceNameRequired"));
-  await db.update(ticketPrices).set(values).where(eq(ticketPrices.id, num(formData, "id")));
-  revalidatePath(back);
-  redirect(withMessage(back, "ok", "ticketPriceSaved"));
-}
-
-export async function deleteTicketPriceAction(formData: FormData): Promise<void> {
-  await requireAdmin();
-  const back = `/admin/activites/${num(formData, "activityId")}`;
-  await db.delete(ticketPrices).where(eq(ticketPrices.id, num(formData, "id")));
-  revalidatePath(back);
-  redirect(withMessage(back, "ok", "ticketPriceDeleted"));
 }
 
 /* -------------------------------- séances -------------------------------- */

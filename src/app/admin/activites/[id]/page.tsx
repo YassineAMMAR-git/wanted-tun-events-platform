@@ -8,15 +8,12 @@ import { ticketsSold } from "@/lib/subscriptions";
 import {
   createPlanAction,
   createSessionAction,
-  createTicketPriceAction,
   deleteActivityAction,
   deleteSessionAction,
-  deleteTicketPriceAction,
   setSessionStatusAction,
   updateActivityAction,
   updatePlanAction,
   updateSessionAction,
-  updateTicketPriceAction,
 } from "@/app/actions/admin";
 import {
   SESSION_STATUS_STYLES,
@@ -32,6 +29,7 @@ import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
 import { ImageUploadField } from "@/components/image-upload-field";
+import { TicketPriceFields } from "@/components/ticket-price-fields";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { isRecurring } from "@/lib/memberships";
 
@@ -212,6 +210,12 @@ export default async function AdminActivityDetail({
               className="input"
             />
           </div>
+          {/* Tarifs : uniquement pour un événement unique (une activité à séances a ses abonnements). */}
+          {memberships ? null : (
+            <div className="sm:col-span-2">
+              <TicketPriceFields initial={priceList} />
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="capacity">
               {memberships ? t("capacity") : t("event.capacity")}
@@ -250,95 +254,6 @@ export default async function AdminActivityDetail({
           </button>
         </form>
       </Card>
-
-      {/* -------------------------------- tarifs -------------------------------- */}
-      {memberships ? null : (
-        <section>
-          <SectionTitle eyebrow={t("tiersEyebrow")} title={t("tiersTitle")} subtitle={t("tiersSubtitle")} />
-          {activity.ticketUrl ? (
-            <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
-              ℹ️ {t("tiersExternalNotice")}
-            </p>
-          ) : null}
-          <div className="space-y-2">
-            {priceList.map((price) => (
-              <div key={price.id} className="card flex flex-col gap-2 p-3 sm:flex-row sm:items-end">
-                <form action={updateTicketPriceAction} className="grid flex-1 gap-2 sm:grid-cols-[2fr_1fr_0.6fr_auto] sm:items-end">
-                  <input type="hidden" name="id" value={price.id} />
-                  <input type="hidden" name="activityId" value={activity.id} />
-                  <div>
-                    <label className="label">{t("tierNameLabel")}</label>
-                    <input name="name" required maxLength={120} defaultValue={price.name} className="input" />
-                  </div>
-                  <div>
-                    <label className="label">{t("tierPriceLabel")}</label>
-                    <input
-                      name="price"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      defaultValue={centsToEurosInput(price.priceCents)}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">{t("tierPositionLabel")}</label>
-                    <input name="position" type="number" min={0} defaultValue={price.position} className="input" />
-                  </div>
-                  <button className="btn btn-primary btn-sm" type="submit">
-                    {tCommon("save")}
-                  </button>
-                </form>
-                <form action={deleteTicketPriceAction}>
-                  <input type="hidden" name="id" value={price.id} />
-                  <input type="hidden" name="activityId" value={activity.id} />
-                  <button className="btn btn-danger btn-sm" type="submit">
-                    {tCommon("delete")}
-                  </button>
-                </form>
-              </div>
-            ))}
-            {priceList.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t("noTiers", { price: formatPrice(activity.priceCents, locale) })}</p>
-            ) : null}
-          </div>
-
-          <Card className="mt-4">
-            <h3 className="text-base font-bold text-zinc-900">{t("addTier")}</h3>
-            <form action={createTicketPriceAction} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_0.6fr_auto] sm:items-end">
-              <input type="hidden" name="activityId" value={activity.id} />
-              <div>
-                <label className="label" htmlFor="tierName">
-                  {t("tierNameLabel")}
-                </label>
-                <input id="tierName" name="name" required maxLength={120} className="input" placeholder={t("tierNamePlaceholder")} />
-              </div>
-              <div>
-                <label className="label" htmlFor="tierPrice">
-                  {t("tierPriceLabel")}
-                </label>
-                <input id="tierPrice" name="price" type="number" step="0.01" min={0} defaultValue={0} className="input" />
-              </div>
-              <div>
-                <label className="label" htmlFor="tierPosition">
-                  {t("tierPositionLabel")}
-                </label>
-                <input
-                  id="tierPosition"
-                  name="position"
-                  type="number"
-                  min={0}
-                  defaultValue={priceList.length + 1}
-                  className="input"
-                />
-              </div>
-              <button className="btn btn-primary" type="submit">
-                {t("addTierSubmit")}
-              </button>
-            </form>
-          </Card>
-        </section>
-      )}
 
       {/* ------------------------------- séances ------------------------------- */}
       <section>

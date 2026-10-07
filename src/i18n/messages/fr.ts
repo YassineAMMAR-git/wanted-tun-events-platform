@@ -497,6 +497,15 @@ const fr = {
   },
 
   admin: {
+    tiers: {
+      add: "Ajouter un tarif",
+      name: "Nom du tarif {row}",
+      namePlaceholder: "Ex. Chaises, Gradin…",
+      price: "Prix du billet (€)",
+      remove: "Retirer",
+      hint: "Plusieurs prix pour cet événement ? Ajoutez un tarif par catégorie de place (Chaises 40 €, Gradin 20 €…). Sans tarif, le billet est au prix ci-dessus.",
+      hintWithTiers: "Le client choisit parmi ces tarifs ; le prix du billet ci-dessus n’est alors plus utilisé. Ils restent affichés même si la réservation se fait sur une billetterie externe. Enregistrez pour appliquer.",
+    },
     imageUpload: {
       choose: "Choisir une photo",
       change: "Changer la photo",
@@ -605,12 +614,6 @@ const fr = {
     activities: {
       ticketUrl: "Lien de billetterie externe (facultatif)",
       ticketUrlHint: "Si l’événement se réserve sur un autre site de billetterie, collez son lien ici : le bouton de réservation y enverra le client. Laissez vide pour un paiement sur notre site.",
-      tiers: "Tarifs (facultatif)",
-      tiersHint: "Plusieurs prix pour un événement unique (ex. Chaises 40 €, Gradin 20 €). Laissez vide s’il n’y a qu’un seul prix : c’est alors le prix ci-dessus. D’autres tarifs s’ajoutent ensuite depuis la fiche.",
-      tierNamePlaceholder: "Nom du tarif (ex. Chaises)",
-      tierPricePlaceholder: "Prix (€)",
-      tierName: "Nom du tarif {row}",
-      tierPrice: "Prix du tarif {row}",
       kind: "Type d’événement",
       kindSingle: "Événement unique (concert, soirée…) — une date, inscription par billet",
       kindRecurring: "Activité à séances (cours, club…) — paiement à la séance ou par abonnement",
@@ -659,17 +662,6 @@ const fr = {
     activityDetail: {
       ticketUrl: "Lien de billetterie externe (facultatif)",
       ticketUrlHint: "Si renseigné, la réservation se fait sur ce site : le bouton y envoie le client et rien n’est vendu sur notre site. Laissez vide pour un paiement sur notre site.",
-      tiersEyebrow: "Billetterie",
-      tiersTitle: "Tarifs",
-      tiersSubtitle: "Plusieurs prix pour cet événement (ex. Chaises 40 €, Gradin 20 €). Dès qu’un tarif existe, le client en choisit un et le « prix du billet » ci-dessus n’est plus utilisé.",
-      tiersExternalNotice: "Cet événement se réserve sur une billetterie externe : les tarifs sont affichés à titre d’information, le paiement se fait sur l’autre site.",
-      tierNameLabel: "Nom du tarif",
-      tierPriceLabel: "Prix (€) — 0 = gratuit",
-      tierPositionLabel: "Ordre",
-      tierNamePlaceholder: "Ex. Chaises",
-      noTiers: "Aucun tarif : le billet est au prix unique de {price}.",
-      addTier: "Ajouter un tarif",
-      addTierSubmit: "Ajouter",
       kind: "Type d’événement",
       kindSingle: "Événement unique (concert, soirée…) — une date, inscription par billet",
       kindRecurring: "Activité à séances (cours, club…) — paiement à la séance ou par abonnement",
@@ -1066,9 +1058,6 @@ const fr = {
     },
     flash: {
       ticketUrlInvalid: "Le lien de billetterie n’est pas une adresse valide (ex. https://www.billetterie.com/mon-evenement).",
-      ticketPriceNameRequired: "Le nom du tarif est obligatoire.",
-      ticketPriceSaved: "Tarif enregistré.",
-      ticketPriceDeleted: "Tarif supprimé.",
       slideTitleRequired: "Le titre de la diapositive est obligatoire.",
       slideImageInvalid: "Ajoutez une photo à la diapositive.",
       slideLinkInvalid: "Le lien du bouton doit être une adresse http(s) ou un chemin commençant par « / ».",

@@ -493,6 +493,15 @@ const en: Messages = {
   },
 
   admin: {
+    tiers: {
+      add: "Add a price",
+      name: "Name of price {row}",
+      namePlaceholder: "E.g. Chairs, Stands…",
+      price: "Ticket price (€)",
+      remove: "Remove",
+      hint: "Several prices for this event? Add one price per seat category (Chairs €40, Stands €20…). Without any, the ticket is at the price above.",
+      hintWithTiers: "The client chooses among these prices; the ticket price above is then no longer used. They stay displayed even when booking takes place on an external ticketing site. Save to apply.",
+    },
     imageUpload: {
       choose: "Choose a photo",
       change: "Change photo",
@@ -601,12 +610,6 @@ const en: Messages = {
     activities: {
       ticketUrl: "External ticketing link (optional)",
       ticketUrlHint: "If the event is booked on another ticketing site, paste its link here: the booking button will send the client there. Leave empty for payment on our site.",
-      tiers: "Prices (optional)",
-      tiersHint: "Several prices for a one-off event (e.g. Chairs €40, Stands €20). Leave empty if there is a single price: it is then the price above. More prices can be added from the activity page.",
-      tierNamePlaceholder: "Price name (e.g. Chairs)",
-      tierPricePlaceholder: "Price (€)",
-      tierName: "Name of price {row}",
-      tierPrice: "Amount of price {row}",
       kind: "Event type",
       kindSingle: "One-off event (concert, evening…) — one date, registration by ticket",
       kindRecurring: "Session-based activity (class, club…) — pay per session or by membership",
@@ -655,17 +658,6 @@ const en: Messages = {
     activityDetail: {
       ticketUrl: "External ticketing link (optional)",
       ticketUrlHint: "If set, booking takes place on that site: the button sends the client there and nothing is sold on our site. Leave empty for payment on our site.",
-      tiersEyebrow: "Ticketing",
-      tiersTitle: "Prices",
-      tiersSubtitle: "Several prices for this event (e.g. Chairs €40, Stands €20). As soon as a price exists, the client picks one and the “ticket price” above is no longer used.",
-      tiersExternalNotice: "This event is booked on an external ticketing site: prices are shown for information, payment takes place on the other site.",
-      tierNameLabel: "Price name",
-      tierPriceLabel: "Price (€) — 0 = free",
-      tierPositionLabel: "Order",
-      tierNamePlaceholder: "E.g. Chairs",
-      noTiers: "No price list: the ticket has a single price of {price}.",
-      addTier: "Add a price",
-      addTierSubmit: "Add",
       kind: "Event type",
       kindSingle: "One-off event (concert, evening…) — one date, registration by ticket",
       kindRecurring: "Session-based activity (class, club…) — pay per session or by membership",
@@ -1059,9 +1051,6 @@ const en: Messages = {
     },
     flash: {
       ticketUrlInvalid: "The ticketing link is not a valid address (e.g. https://www.ticketing.com/my-event).",
-      ticketPriceNameRequired: "The price name is required.",
-      ticketPriceSaved: "Price saved.",
-      ticketPriceDeleted: "Price deleted.",
       slideTitleRequired: "The slide title is required.",
       slideImageInvalid: "Add a photo to the slide.",
       slideLinkInvalid: "The button link must be an http(s) address or a path starting with “/”.",
