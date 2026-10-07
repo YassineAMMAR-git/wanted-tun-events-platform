@@ -425,18 +425,29 @@ export async function listAdminClients(filters: AdminClientFilters) {
   if (filters.abo === "actif") {
     conditions.push(sql`exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership' and s.status = 'active')`);
   }
+  if (filters.abo === "billet") {
+    conditions.push(
+      sql`exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.kind = 'ticket' and s.payment_status = 'paid')`,
+    );
+  }
+  // « Aucun achat » : ni abonnement, ni billet payé.
   if (filters.abo === "aucun") {
-    conditions.push(sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')`);
+    conditions.push(
+      sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id} and (s.kind = 'membership' or s.payment_status = 'paid'))`,
+    );
   }
 
   const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership')::int`;
   const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'membership' and s.status = 'active')::int`;
+  // Billets payés : billets d'événement et séances achetées à l'unité.
+  const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = ${users.id} and s.kind = 'ticket' and s.payment_status = 'paid')::int`;
   const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = ${users.id})::int`;
 
   const order = {
     ancien: [asc(users.createdAt)],
     nom: [asc(users.lastName), asc(users.firstName)],
     abonnements: [desc(subscriptionCount), desc(users.createdAt)],
+    billets: [desc(ticketCount), desc(users.createdAt)],
     seances: [desc(attendanceCount), desc(users.createdAt)],
   }[filters.tri ?? ""] ?? [desc(users.createdAt)];
 
@@ -445,6 +456,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
       user: users,
       subscriptions: subscriptionCount,
       active: activeCount,
+      tickets: ticketCount,
       attendances: attendanceCount,
     })
     .from(users)

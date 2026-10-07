@@ -84,6 +84,7 @@ export default async function AdminClientsPage({
           placeholder={tCommon("all")}
           options={[
             { value: "actif", label: t("subActive") },
+            { value: "billet", label: t("subTicket") },
             { value: "aucun", label: t("subNone") },
           ]}
         />
@@ -96,6 +97,7 @@ export default async function AdminClientsPage({
             { value: "ancien", label: t("sortOldest") },
             { value: "nom", label: t("sortName") },
             { value: "abonnements", label: t("sortSubscriptions") },
+            { value: "billets", label: t("sortTickets") },
             { value: "seances", label: t("sortSessions") },
           ]}
         />
@@ -116,6 +118,7 @@ export default async function AdminClientsPage({
               <th>{t("colContact")}</th>
               <th>{t("colRole")}</th>
               <th>{t("colSubs")}</th>
+              <th>{t("colTickets")}</th>
               <th>{t("colSessions")}</th>
               <th>{t("colJoined")}</th>
               <th></th>
@@ -147,6 +150,7 @@ export default async function AdminClientsPage({
                   <span className="text-zinc-800">{row.subscriptions}</span>
                   <span className="ms-1 text-xs text-emerald-700">{t("activeCount", { count: row.active })}</span>
                 </td>
+                <td className="text-zinc-800">{row.tickets}</td>
                 <td className="text-zinc-700">{row.attendances}</td>
                 <td className="whitespace-nowrap text-zinc-600">{formatDate(row.user.createdAt, locale)}</td>
                 <td>

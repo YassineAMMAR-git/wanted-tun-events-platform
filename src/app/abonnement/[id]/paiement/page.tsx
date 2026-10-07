@@ -69,8 +69,10 @@ export default async function PaymentPage({
   // Paiement Mollie : relu chez Mollie à chaque affichage (notamment au retour du client), ce qui active la commande si elle est payée.
   const online = await onlinePaymentsEnabled();
   const link = online && subscription.paymentStatus !== "paid" && !ticketClosed ? await latestPaymentLink(subscription.id) : null;
-  // Retour de Mollie sans paiement abouti (annulé, refusé, expiré, ou page quittée).
-  const notCompleted = Boolean(retour) && link?.status !== "paid" && link?.status !== "processing";
+  // Retour de Mollie : « ouvert » peut vouloir dire que la confirmation n'est pas encore arrivée (on vérifie
+  // quelques secondes) ; annulé, refusé ou expiré signifie que le paiement n'a pas abouti.
+  const verifying = Boolean(retour) && link?.status === "open";
+  const notCompleted = Boolean(retour) && (link?.status === "canceled" || link?.status === "expired");
 
   const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
@@ -190,7 +192,12 @@ export default async function PaymentPage({
                 <button className="btn btn-primary w-full" type="submit">
                   🔒 {notCompleted ? t("onlineRetry", { price }) : t("onlinePay", { price })}
                 </button>
-                <p className="mt-2 text-center text-xs text-zinc-600">{t("onlineHint")}</p>
+                <p className="mt-2 text-center text-xs text-zinc-600">{verifying ? t("onlineVerifying") : t("onlineHint")}</p>
+                {verifying ? (
+                  <div className="mt-2">
+                    <PaymentWatcher label={t("onlineWatching")} maxDurationMs={60 * 1000} />
+                  </div>
+                ) : null}
               </form>
             )}
           </div>

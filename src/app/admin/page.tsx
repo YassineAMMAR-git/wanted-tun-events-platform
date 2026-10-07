@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
-import { ACTIVITY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, sessions, subscriptions, users } from "@/db/schema";
+import { ACTIVITY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, plans, sessions, subscriptions, users } from "@/db/schema";
 import { getAdminStats } from "@/lib/queries";
 import { runRemindersAction } from "@/app/actions/admin";
 import { formatDate, formatTime, toSubscriptionStatus } from "@/lib/format";
@@ -50,10 +50,17 @@ export default async function AdminDashboard({
       .orderBy(desc(users.createdAt))
       .limit(6),
     db
-      .select({ subscription: subscriptions, activity: activities, userName: users.firstName, userLast: users.lastName })
+      .select({
+        subscription: subscriptions,
+        activity: activities,
+        planName: plans.name,
+        userName: users.firstName,
+        userLast: users.lastName,
+      })
       .from(subscriptions)
       .innerJoin(users, eq(users.id, subscriptions.userId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
+      .leftJoin(plans, eq(plans.id, subscriptions.planId))
       .orderBy(desc(subscriptions.createdAt))
       .limit(6),
   ]);
@@ -187,8 +194,16 @@ export default async function AdminDashboard({
                     {row.userName} {row.userLast} — {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
                   </p>
                   <p className="text-xs text-zinc-500">
+                    <span className="font-semibold text-zinc-700">
+                      {row.subscription.kind === "ticket"
+                        ? t("purchaseTicket", { label: row.subscription.priceLabel ?? "" })
+                        : t("purchaseMembership", { name: row.planName ?? "" })}
+                    </span>
+                    {" · "}
                     {t("subStatus", {
-                      status: tStatus(`subscription.${toSubscriptionStatus(row.subscription.status)}`),
+                      status: tStatus(
+                        `${row.subscription.kind === "ticket" ? "ticket" : "subscription"}.${toSubscriptionStatus(row.subscription.status)}`,
+                      ),
                       payment: tStatus(`payment.${toPaymentStatus(row.subscription.paymentStatus)}`),
                     })}
                   </p>

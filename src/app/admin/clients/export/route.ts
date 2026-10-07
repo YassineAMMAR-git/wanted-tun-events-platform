@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     { header: "Langue", key: "locale", width: 10 },
     { header: "Abonnements", key: "subscriptions", width: 13 },
     { header: "Dont actifs", key: "active", width: 12 },
+    { header: "Billets payés", key: "tickets", width: 13 },
     { header: "Séances suivies", key: "attendances", width: 15 },
     { header: "Inscrit le", key: "createdAt", width: 18 },
     { header: "Notes", key: "notes", width: 40 },
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
   header.alignment = { vertical: "middle" };
   header.height = 22;
 
-  for (const { user, subscriptions, active, attendances } of rows) {
+  for (const { user, subscriptions, active, tickets, attendances } of rows) {
     sheet.addRow({
       lastName: user.lastName,
       firstName: user.firstName,
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
       locale: user.locale,
       subscriptions,
       active,
+      tickets,
       attendances,
       createdAt: user.createdAt,
       notes: user.notes ?? "",
@@ -72,7 +74,7 @@ export async function GET(request: Request) {
   }
 
   sheet.getColumn("createdAt").numFmt = "dd/mm/yyyy hh:mm";
-  for (const key of ["subscriptions", "active", "attendances"]) {
+  for (const key of ["subscriptions", "active", "tickets", "attendances"]) {
     sheet.getColumn(key).alignment = { horizontal: "center" };
   }
   // Filtres Excel sur l'en-tête : le fichier reste exploitable tel quel.

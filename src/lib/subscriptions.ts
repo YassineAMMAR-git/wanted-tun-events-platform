@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { and, asc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -132,6 +133,20 @@ export async function ticketsSold(sessionIds: number[]): Promise<Map<number, num
   return new Map(rows.map((row) => [row.sessionId!, row.count]));
 }
 
+/**
+ * E-mail de confirmation envoyé une fois la réponse partie : le client voit sa commande activée tout de suite,
+ * sans attendre le service d'e-mail (une à deux secondes). L'envoi reste journalisé comme les autres.
+ */
+function sendLater(message: Parameters<typeof logAndSend>[0]): void {
+  const send = () => logAndSend(message).catch((error) => console.error("[mail] envoi différé impossible", error));
+  try {
+    after(send);
+  } catch {
+    // Hors d'une requête (script) : envoi immédiat.
+    void send();
+  }
+}
+
 /** Active un abonnement ou un billet après paiement et crée les présences correspondantes. */
 export async function activateSubscription(subscriptionId: number): Promise<void> {
   const subscription = (
@@ -171,7 +186,7 @@ export async function activateSubscription(subscriptionId: number): Promise<void
   if (subscription.kind === "ticket") {
     const place =
       info.session?.location || [info.activity.address, info.activity.city].filter(Boolean).join(", ") || null;
-    await logAndSend({
+    sendLater({
       type: "ticket_confirmed",
       userId: subscription.userId,
       sessionId: info.session?.id ?? null,
@@ -196,7 +211,7 @@ export async function activateSubscription(subscriptionId: number): Promise<void
     return;
   }
 
-  await logAndSend({
+  sendLater({
     type: "subscription_activated",
     userId: subscription.userId,
     subscriptionId: subscription.id,
