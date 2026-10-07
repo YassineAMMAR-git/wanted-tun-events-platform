@@ -439,6 +439,12 @@ export async function getClientSpent(userId: number): Promise<number> {
   return result.rows[0]?.spent ?? 0;
 }
 
+/**
+ * Commande abandonnée : annulée sans jamais avoir été payée (alias SQL : s = subscriptions).
+ * Elle reste visible sur la fiche du client, mais ne compte dans aucun total.
+ */
+export const NOT_ABANDONED = "not (s.status = 'cancelled' and s.payment_status <> 'paid')";
+
 /* -------------------------------------------------------------------------- */
 /* Administration : listes filtrées                                           */
 /* -------------------------------------------------------------------------- */
@@ -492,7 +498,7 @@ export async function listAdminClients(filters: AdminClientFilters) {
   // « Aucun achat » : ni abonnement, ni billet payé.
   if (filters.abo === "aucun") {
     conditions.push(
-      sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id} and (s.kind = 'membership' or s.payment_status = 'paid'))`,
+      sql`not exists (select 1 from subscriptions s where s.user_id = ${users.id} and (s.kind = 'membership' or s.payment_status = 'paid') and ${sql.raw(NOT_ABANDONED)})`,
     );
   }
 
@@ -501,7 +507,8 @@ export async function listAdminClients(filters: AdminClientFilters) {
    * écrit les colonnes de la sélection sans nom de table ("id"), et PostgreSQL le lirait alors, à l'intérieur de la
    * sous-requête, comme l'identifiant de l'abonnement lui-même — les compteurs vaudraient presque toujours 0.
    */
-  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership')::int`;
+  // Une commande annulée sans avoir été payée (choisie par erreur) n'est pas un abonnement : elle n'est pas comptée.
+  const subscriptionCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership' and ${sql.raw(NOT_ABANDONED)})::int`;
   const activeCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership' and s.status = 'active')::int`;
   // Billets payés : billets d'événement et séances achetées à l'unité.
   const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'ticket' and s.payment_status = 'paid')::int`;

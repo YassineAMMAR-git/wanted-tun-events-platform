@@ -114,7 +114,9 @@ export default async function AdminClientDetail({
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t("statSpent")} value={formatPrice(spentCents, locale)} hint={t("statSpentHint", { count: subs.length })} />
+        <Stat label={t("statSpent")} value={formatPrice(spentCents, locale)} hint={t("statSpentHint", {
+            count: subs.filter((row) => row.subscription.status !== "cancelled" || row.subscription.paymentStatus === "paid").length,
+          })} />
         <Stat label={t("statSessions")} value={history.length} hint={t("statSessionsHint", { count: past })} />
         <Stat label={t("statConfirmed")} value={confirmed} />
         <Stat label={t("statDeclined")} value={declined} />

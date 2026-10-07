@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ne, or, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, plans, sessions, subscriptions, users } from "@/db/schema";
-import { getAdminStats, getRevenueStats } from "@/lib/queries";
+import { NOT_ABANDONED, getAdminStats, getRevenueStats } from "@/lib/queries";
 import { runRemindersAction } from "@/app/actions/admin";
 import { formatDate, formatPrice, formatTime, toSubscriptionStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
@@ -46,7 +46,7 @@ export default async function AdminDashboard({
       .limit(8),
     db
       // "users"."id" en toutes lettres : voir la remarque dans listAdminClients.
-      .select({ user: users, subs: sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership')::int` })
+      .select({ user: users, subs: sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'membership' and ${sql.raw(NOT_ABANDONED)})::int` })
       .from(users)
       .where(eq(users.role, "client"))
       .orderBy(desc(users.createdAt))
@@ -63,6 +63,8 @@ export default async function AdminDashboard({
       .innerJoin(users, eq(users.id, subscriptions.userId))
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .leftJoin(plans, eq(plans.id, subscriptions.planId))
+      // Les commandes annulées sans avoir été payées ne sont pas des achats.
+      .where(or(ne(subscriptions.status, "cancelled"), eq(subscriptions.paymentStatus, "paid")))
       .orderBy(desc(subscriptions.createdAt))
       .limit(6),
   ]);
