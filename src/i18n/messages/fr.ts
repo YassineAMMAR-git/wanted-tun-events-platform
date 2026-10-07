@@ -693,6 +693,11 @@ const fr = {
       create: "Créer l’activité",
     },
     activityDetail: {
+      duplicateSession: "Dupliquer cette séance",
+      duplicateLast: "Dupliquer la dernière séance créée",
+      duplicating: "Nouvelle séance, copiée de celle du {date}",
+      duplicateHint: "Les champs reprennent la séance copiée ; la date est proposée une semaine plus tard. Modifiez ce qui doit l’être, puis ajoutez la séance.",
+      duplicateCancel: "Repartir d’un formulaire vide",
       ticketUrl: "Lien de billetterie externe (facultatif)",
       ticketUrlHint: "Si renseigné, la réservation se fait sur ce site : le bouton y envoie le client et rien n’est vendu sur notre site. Laissez vide pour un paiement sur notre site.",
       kind: "Type d’événement",

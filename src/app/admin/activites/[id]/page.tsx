@@ -40,10 +40,10 @@ export default async function AdminActivityDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; erreur?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; dupliquer?: string }>;
 }) {
   const { id } = await params;
-  const { ok, erreur } = await searchParams;
+  const { ok, erreur, dupliquer } = await searchParams;
   const activityId = Number(id);
   if (!Number.isFinite(activityId)) notFound();
 
@@ -68,6 +68,17 @@ export default async function AdminActivityDetail({
       .where(eq(ticketPrices.activityId, activityId))
       .orderBy(asc(ticketPrices.position), asc(ticketPrices.id)),
   ]);
+
+  // « Dupliquer cette séance » : le formulaire d'ajout est prérempli avec la séance choisie, une semaine plus tard.
+  const duplicated = dupliquer ? sessionList.find((session) => session.id === Number(dupliquer)) : undefined;
+  const duplicatedStart = duplicated
+    ? toDateTimeLocalValue(new Date(duplicated.startsAt.getTime() + 7 * 24 * 60 * 60 * 1000))
+    : "";
+  // Dernière séance créée (et non la plus tardive) : c'est elle que l'on vient d'ajouter.
+  const lastCreated = sessionList.reduce<(typeof sessionList)[number] | undefined>(
+    (latest, session) => (!latest || session.id > latest.id ? session : latest),
+    undefined,
+  );
 
   const upcoming = sessionList.filter((s) => !isPast(s.startsAt) && s.status === "scheduled").length;
   const backTo = `/admin/activites/${activity.id}`;
@@ -260,12 +271,36 @@ export default async function AdminActivityDetail({
         <SectionTitle eyebrow={d("sessionsEyebrow")} title={d("sessionsTitle")} subtitle={d("sessionsSubtitle")} />
 
         {memberships || sessionList.length === 0 ? (
-        <Card className="mb-5">
-          <form action={createSessionAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className={`mb-5 ${duplicated ? "border-amber-300" : ""}`}>
+          <div id="nouvelle-seance" className="mb-3 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-zinc-900">
+              {duplicated
+                ? t("duplicating", { date: formatDateTime(duplicated.startsAt, locale) })
+                : d("addSession")}
+            </p>
+            {duplicated ? (
+              <Link href={backTo} className="btn btn-ghost btn-sm">
+                {t("duplicateCancel")}
+              </Link>
+            ) : memberships && lastCreated ? (
+              <Link href={`${backTo}?dupliquer=${lastCreated.id}#nouvelle-seance`} className="btn btn-ghost btn-sm">
+                📄 {t("duplicateLast")}
+              </Link>
+            ) : null}
+          </div>
+          {duplicated ? <p className="mb-3 text-xs text-zinc-600">{t("duplicateHint")}</p> : null}
+          {/* La clé force le formulaire à repartir des nouvelles valeurs quand on change de séance à dupliquer. */}
+          <form
+            key={duplicated?.id ?? "new"}
+            action={createSessionAction}
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
             <input type="hidden" name="activityId" value={activity.id} />
             <div className="sm:col-span-2 lg:col-span-3">
               <TranslationFields
                 gridClassName="grid gap-3 sm:grid-cols-2"
+                values={duplicated ? { title: duplicated.title, notes: duplicated.notes } : undefined}
+                translations={duplicated?.translations}
                 fields={[
                   { name: "title", label: t("sessionTitle"), maxLength: 180, placeholder: t("sessionTitlePlaceholder") },
                   { name: "notes", label: t("notes"), maxLength: 2000 },
@@ -276,7 +311,14 @@ export default async function AdminActivityDetail({
               <label className="label" htmlFor="startsAt">
                 {d("startsAt")}
               </label>
-              <input id="startsAt" name="startsAt" type="datetime-local" required className="input" />
+              <input
+                id="startsAt"
+                name="startsAt"
+                type="datetime-local"
+                required
+                defaultValue={duplicatedStart}
+                className="input"
+              />
             </div>
             <div>
               <label className="label" htmlFor="duration">
@@ -287,7 +329,7 @@ export default async function AdminActivityDetail({
                 name="durationMinutes"
                 type="number"
                 min={15}
-                defaultValue={activity.durationMinutes}
+                defaultValue={duplicated?.durationMinutes ?? activity.durationMinutes}
                 className="input"
               />
             </div>
@@ -295,7 +337,13 @@ export default async function AdminActivityDetail({
               <label className="label" htmlFor="location">
                 {t("location")}
               </label>
-              <input id="location" name="location" maxLength={240} defaultValue={activity.address ?? ""} className="input" />
+              <input
+                id="location"
+                name="location"
+                maxLength={240}
+                defaultValue={duplicated ? (duplicated.location ?? "") : (activity.address ?? "")}
+                className="input"
+              />
             </div>
             <div className="lg:col-span-3">
               <button className="btn btn-primary" type="submit">
@@ -373,6 +421,11 @@ export default async function AdminActivityDetail({
                   <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm">
                     {t("participants", { scope: past ? t("scopeHistory") : t("scopeUpcoming") })}
                   </Link>
+                  {memberships ? (
+                    <Link href={`${backTo}?dupliquer=${session.id}#nouvelle-seance`} className="btn btn-ghost btn-sm">
+                      📄 {t("duplicateSession")}
+                    </Link>
+                  ) : null}
                   {session.status === "scheduled" ? (
                     <>
                       <form action={setSessionStatusAction}>

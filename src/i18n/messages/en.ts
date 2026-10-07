@@ -689,6 +689,11 @@ const en: Messages = {
       create: "Create activity",
     },
     activityDetail: {
+      duplicateSession: "Duplicate this session",
+      duplicateLast: "Duplicate the last session created",
+      duplicating: "New session, copied from the one on {date}",
+      duplicateHint: "The fields are taken from the copied session; the date is suggested one week later. Change what needs changing, then add the session.",
+      duplicateCancel: "Start from an empty form",
       ticketUrl: "External ticketing link (optional)",
       ticketUrlHint: "If set, booking takes place on that site: the button sends the client there and nothing is sold on our site. Leave empty for payment on our site.",
       kind: "Event type",
