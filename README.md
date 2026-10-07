@@ -1,128 +1,78 @@
 # WANTED TUN EVENTS
 
-Plateforme web de gestion des **cours, ateliers, événements et abonnements** (Next.js App Router + PostgreSQL / Drizzle ORM).
+Plateforme web de billetterie et de gestion d'activités : événements uniques (concerts, soirées…), activités à séances (cours, clubs…), abonnements, paiement en ligne et rappels automatiques.
 
-## Comptes de démonstration
-
-> ⚠️ **Développement uniquement.** Ces comptes ne sont **jamais** créés en production : le seed
-> n'y installe que l'administrateur défini par `ADMIN_EMAIL` / `ADMIN_PASSWORD` (voir
-> « Variables d'environnement »). Ne réutilisez pas ces mots de passe sur un site en ligne.
-
-| Rôle | E-mail | Mot de passe |
-| --- | --- | --- |
-| Administrateur | `admin@wantedtun.tn` | `***` |
-| Client | `client@wantedtun.tn` | `***` |
-| Client (paiement en attente) | `youssef@wantedtun.tn` | `***` |
+Next.js (App Router) · PostgreSQL / Drizzle ORM · Mollie (paiement) · Resend (e-mails) · français, anglais, arabe.
 
 ## Fonctionnalités
 
-### Espace client
-- Création de compte avec **confirmation par e-mail** (le compte reste inactif tant que l'adresse n'est pas confirmée), connexion, modification des informations personnelles.
-- Liste des activités, filtres par catégorie, recherche.
-- Choix d'une offre d'abonnement (club de chant) ou d'un billet (événements) → **récapitulatif du prix** → **paiement sur la page sécurisée Mollie** → activation automatique au paiement confirmé (webhook Mollie). Sans `MOLLIE_API_KEY`, paiement manuel par lien externe et validation par l'administration.
-- Suivi visuel des séances : 🟢 séance à venir (allumée) / ⚪ séance réalisée (éteinte).
-- Barre de progression, nombre de séances restantes, statut de chaque séance.
-- Confirmation / signalement d'absence en un clic (espace personnel **ou** lien reçu par e-mail).
+### Côté client
+- Création de compte avec confirmation par e-mail, connexion, profil.
+- Liste des activités : événements ouverts et à venir en premier, événements passés en historique.
+- **Événement unique** : achat d'un billet, avec choix du tarif s'il y en a plusieurs (ex. Chaises, Gradin).
+- **Activité à séances** : paiement à la séance ou par abonnement.
+- Paiement sur la page sécurisée Mollie, activation automatique dès le paiement confirmé.
+- Réservation sur une billetterie externe quand l'événement en a une.
+- Espace personnel : billets, abonnements, séances à venir et passées, confirmation de présence.
 
-### Interface administrateur (`/admin`)
-- **Tableau de bord** : clients, séances, abonnements actifs, paiements en attente, confirmations 🟢🟠🔴.
-- **Clients** : création, modification, suppression, fiche complète (abonnements + historique de participation), marquage d'un paiement, activation, prolongation de +30 jours.
-- **Activités** : CRUD complet, catégorie, adresse, horaires, durée, tarif, capacité, statut.
-- **Séances** : ajout, modification, report, annulation (avec e-mail automatique aux participants), suppression.
-- **Abonnements** : CRUD des offres, prix, séances incluses, durée de validité, **lien de paiement externe**, activation/désactivation.
-- **Séances > Participants** : suivi 🟢 présence confirmée · 🟠 en attente · 🔴 absence signalée, ajout/retrait manuel d'un participant.
-- **Notifications** : règles de déclencheur (modifiables, activables/désactivables) + journal d'envoi des e-mails.
+### Administration (`/admin`)
+- Tableau de bord, clients (fiche, export Excel), catégories, carrousel d'accueil.
+- Activités : type (événement unique ou activité à séances), dates, prix et tarifs, capacité, photo, lien de billetterie externe.
+- Séances : planification, report, annulation avec e-mail aux participants, suivi des présences.
+- Abonnements : formules des activités à séances.
+- Paiements : état de la connexion Mollie et derniers paiements.
+- Notifications : règles de rappel et journal des e-mails envoyés.
 
-### Notifications automatiques
-- **Rappel J-2** : e-mail envoyé 48 h avant chaque séance (date, heure, lieu, activité) avec deux boutons
-  *Je confirme ma participation* / *Je ne pourrai pas participer*.
-- Déclencheur : `GET /api/cron/reminders` (à appeler par un cron horaire). Protégé par l'en-tête
-  `x-cron-secret: $CRON_SECRET` si la variable est définie. Idempotent : une séance ne reçoit qu'une vague de rappels.
-- Expiration automatique des abonnements arrivés à échéance.
-- Autres déclencheurs prêts : création de compte, activation d'abonnement, annulation/report de séance, fin d'abonnement (désactivé par défaut).
+### Automatismes
+Une tâche quotidienne (`/api/cron/reminders`) envoie les rappels avant chaque séance, fait expirer les abonnements arrivés à échéance, rattrape les paiements dont la confirmation aurait été manquée et supprime les photos inutilisées.
 
-### Comptes et sécurité
-- **Sessions** : jeton aléatoire de 256 bits dans un cookie `HttpOnly` / `SameSite=Lax` (`Secure` en production) ; seule son empreinte SHA-256 est stockée (`user_sessions`). Déconnexion et révocation côté serveur.
-- **Rôles** : `client` (session de 30 jours) et `admin` (session de 12 heures). Vérification dans chaque page et action (`requireUser` / `requireAdmin`), plus une redirection anticipée dans `src/proxy.ts`.
-- **Mots de passe** : scrypt (N=2^15, r=8, p=3) ; politique CNIL (8 caractères, majuscule, minuscule, chiffre, caractère spécial). Les anciens hachages sont mis à niveau à la connexion.
-- **Anti force brute** : compte bloqué 15 minutes après 5 échecs ; message identique que l'e-mail existe ou non.
-- **Vérification e-mail** : lien à usage unique valable 24 h (`email_verification_tokens`, empreinte uniquement), renvoi limité à un e-mail par minute.
-- **Contrôle des saisies** : schémas `zod` côté serveur (`src/lib/validation`) + attributs HTML côté navigateur ; erreurs affichées sous chaque champ.
-- Changer de mot de passe, d'e-mail ou de rôle déconnecte les autres appareils.
+## Installation
 
-### Langues (français, anglais, arabe)
-- **Français par défaut.** Le bouton 🌐 FR / EN / AR de l'en-tête change la langue (cookie `NEXT_LOCALE`, mêmes URL dans toutes les langues). Pour un utilisateur connecté, la langue choisie devient aussi celle de ses e-mails (`users.locale`).
-- **Arabe** : page affichée de droite à gauche (`dir="rtl"`), y compris dans les e-mails.
-- **Textes de l'interface** : `src/i18n/messages/fr.ts` (référence), `en.ts`, `ar.ts`. TypeScript signale toute clé manquante ou en trop dans une langue.
-- **Contenu** (catégories, activités, offres, séances) : français dans les colonnes habituelles, anglais et arabe dans la colonne JSON `translations`. Dans l'administration, chaque champ traduisible a des onglets Français / English / العربية ; un champ laissé vide affiche le texte français.
-- Dates, heures, durées et prix sont formatés selon la langue (`src/lib/format.ts`), toujours en heure de Paris et en euros.
-- `npm run content:translate` ajoute les traductions du contenu de démonstration à une base existante.
+```bash
+npm install
+cp .env.example .env      # puis renseigner les valeurs
+npx drizzle-kit push      # crée ou met à jour les tables
+npm run dev
+```
+
+Sur une base vide, un catalogue de démonstration est créé au premier chargement. Les comptes de démonstration ne sont créés qu'en développement, jamais en production.
 
 ## Variables d'environnement
-
-Copier `.env.example` vers `.env` puis renseigner les valeurs. Le fichier `.env` est lu par Next.js et par `drizzle.config.ts`.
 
 | Variable | Rôle |
 | --- | --- |
 | `DATABASE_URL` | Connexion PostgreSQL (obligatoire) |
-| `APP_URL` | URL publique utilisée dans les liens des e-mails (confirmation de compte, rappels) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Premier administrateur, créé au premier démarrage sur une base vide. **Obligatoires en production** : sans eux aucun compte n'est créé (le catalogue l'est) et un message le signale dans les journaux. Facultatifs en développement. |
-| `RESEND_API_KEY` | Clé API Resend : envoi réel des e-mails. Vide en développement : e-mails **simulés** (contenu affiché dans le terminal). Vide en production : envois en échec. Test : `npm run email:test -- vous@exemple.fr` |
-| `MAIL_FROM` | Expéditeur des e-mails (domaine vérifié dans Resend) |
-| `MAIL_REPLY_TO` | Adresse de réponse (facultatif) |
-| `CRON_SECRET` | Secret du endpoint de rappels |
+| `APP_URL` | Adresse publique du site : liens des e-mails, retour après paiement, webhook Mollie |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Premier administrateur, créé au premier démarrage sur une base vide. Obligatoires en production |
+| `MOLLIE_API_KEY` | Clé d'API Mollie (`test_…` ou `live_…`). Vide : paiement manuel validé par l'administration |
+| `RESEND_API_KEY` | Envoi des e-mails. Vide en développement : e-mails simulés dans le terminal |
+| `MAIL_FROM` / `MAIL_REPLY_TO` | Expéditeur et adresse de réponse des e-mails |
+| `CRON_SECRET` | Secret de la tâche quotidienne. Obligatoire en production : sans lui la tâche est refusée |
 
-## Base de données
-
-`src/db/schema.ts` : `users`, `user_sessions`, `email_verification_tokens`, `categories`, `activities`, `sessions`, `plans`, `subscriptions`, `attendances`, `notifications`, `notification_rules`.
-
-```bash
-npx drizzle-kit push   # applique le schéma
-npm run build && npm start
-```
-
-Les données de démonstration (8 catégories dont 3 « à venir », 5 activités, 7 offres, 22 séances, 3 comptes) sont insérées automatiquement au premier chargement si la base est vide.
+Ne jamais commiter le fichier `.env` : il est ignoré par git.
 
 ## Déploiement (Vercel + Neon)
 
-1. **Base** : créer un projet Neon, copier la chaîne de connexion (avec `?sslmode=require`).
-2. **Schéma** : depuis le poste de développement, `DATABASE_URL="<url Neon>" npx drizzle-kit push`.
-   Il n'y a pas de fichiers de migration : le schéma est appliqué par `push`.
-3. **Variables** sur Vercel (*Settings → Environment Variables*) : `DATABASE_URL`, `APP_URL`,
-   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CRON_SECRET`, puis `RESEND_API_KEY` / `MAIL_FROM`.
-4. **Premier chargement** : le catalogue de démonstration et le compte administrateur sont créés
-   automatiquement. Sans `ADMIN_EMAIL` / `ADMIN_PASSWORD`, aucun compte n'est créé et le journal
-   Vercel le signale.
-5. **Rappels** : `vercel.json` déclare un cron quotidien sur `/api/cron/reminders`. Vercel y ajoute
-   de lui-même l'en-tête `Authorization: Bearer $CRON_SECRET` dès que la variable existe.
-   Le plan gratuit est limité à un passage par jour : chaque séance reçoit donc sa vague de rappels
-   entre 24 h et 48 h avant. Pour une granularité horaire, appeler l'URL depuis un service de cron
-   externe (cron-job.org par exemple) avec l'en-tête `x-cron-secret`.
+1. **Base** : créer un projet Neon et récupérer sa chaîne de connexion.
+2. **Schéma** : `DATABASE_URL="<url Neon>" npx drizzle-kit push`. Il n'y a pas de fichiers de migration : cette commande est à relancer à chaque changement de `src/db/schema.ts`, avant de déployer le code.
+3. **Variables** : les renseigner dans Vercel (*Settings → Environment Variables*), puis redéployer.
+4. **Tâche quotidienne** : déclarée dans `vercel.json`. Vercel l'appelle avec `CRON_SECRET`.
+5. **Paiement** : aucun webhook à déclarer chez Mollie, son adresse est transmise avec chaque paiement.
 
-### Sauvegarder son travail
+### Mettre en ligne une modification
 
 ```bash
-npm run save                  # vérifie (types + eslint), commit, pousse → déploiement Vercel
-npm run save -- "mon message" # avec un message de commit choisi
+npm run save -- "message du commit"
 ```
 
-Le script refuse de pousser si le typecheck ou eslint échoue, et s'arrête si un fichier sensible
-(`.env`, clés `.pem`) s'apprête à être publié. Dans VS Code : **Terminal → Run Task → Sauvegarder
-sur GitHub** (ou `Ctrl+Shift+B`).
+Le script vérifie les types et le lint, refuse de publier un fichier sensible, commite puis pousse. Chaque push sur `main` déclenche un déploiement Vercel.
 
-## Catégories gérées
+## Organisation du code
 
-1. Concerts et spectacles 🎤
-2. Club de chant 🎶
-3. Campings ⛺
-4. Soirées ramadanesques 🌙
-5. Coran 📖
-6. Cercles de parole 💬 *(à venir)*
-7. Ateliers psychologiques 🧠 *(à venir)*
-8. Activités sportives en groupe 🏃 *(à venir)*
-
-## Évolutions prévues (architecture prête)
-
-Paiement intégré, application mobile, SMS / WhatsApp, listes d'attente, réservation, facturation,
-statistiques, gestion des intervenants, QR code de pointage, avis clients : le modèle de données et le
-moteur de notification sont conçus pour les accueillir sans refonte.
+| Dossier | Contenu |
+| --- | --- |
+| `src/app` | Pages publiques, espace personnel, administration, routes d'API |
+| `src/app/actions` | Actions serveur (inscription, achat, administration) |
+| `src/db/schema.ts` | Modèle de données |
+| `src/lib` | Logique métier : authentification, paiements, abonnements, rappels, e-mails |
+| `src/i18n/messages` | Textes de l'interface (`fr.ts` sert de référence, `en.ts`, `ar.ts`) |
