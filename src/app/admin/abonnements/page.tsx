@@ -21,7 +21,8 @@ import {
   togglePlanAction,
   updatePlanAction,
 } from "@/app/actions/admin";
-import { SUBSCRIPTION_STATUS, formatDate, formatPrice, toSubscriptionStatus } from "@/lib/format";
+import { SUBSCRIPTION_STATUS, formatPrice, toSubscriptionStatus } from "@/lib/format";
+import { PACK_SESSIONS_USED } from "@/lib/subscriptions";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -120,7 +121,7 @@ export default async function AdminPlansPage({
   const [subscribers, clients] = await Promise.all([
     shownActivity
       ? db
-          .select({ subscription: subscriptions, user: users, plan: plans })
+          .select({ subscription: subscriptions, user: users, plan: plans, used: PACK_SESSIONS_USED })
           .from(subscriptions)
           .innerJoin(users, eq(users.id, subscriptions.userId))
           .innerJoin(plans, eq(plans.id, subscriptions.planId))
@@ -196,14 +197,14 @@ export default async function AdminPlansPage({
                   <tr>
                     <th>{t("colClient")}</th>
                     <th>{t("colPlan")}</th>
-                    <th>{t("colValidity")}</th>
+                    <th>{t("colRemaining")}</th>
                     <th>{t("colStatus")}</th>
                     <th>{t("colChange")}</th>
                     <th>{t("colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {subscribers.map(({ subscription, user, plan }) => {
+                  {subscribers.map(({ subscription, user, plan, used }) => {
                     const status = toSubscriptionStatus(subscription.status);
                     // Changement possible uniquement vers la formule d'une autre activité, au même prix.
                     const alternatives = allPlans.filter(
@@ -223,11 +224,8 @@ export default async function AdminPlansPage({
                           {localize(plan, locale, PLAN_TRANSLATABLE).name}
                           <span className="block text-xs text-zinc-500">{formatPrice(plan.priceCents, locale)}</span>
                         </td>
-                        <td className="whitespace-nowrap text-zinc-600">
-                          {tCommon("dateRange", {
-                            start: formatDate(subscription.startsAt, locale),
-                            end: formatDate(subscription.endsAt, locale),
-                          })}
+                        <td className="whitespace-nowrap text-zinc-700" dir="ltr">
+                          {Math.max(subscription.sessionsIncluded - used, 0)} / {subscription.sessionsIncluded}
                         </td>
                         <td>
                           <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`subscription.${status}`)}</span>

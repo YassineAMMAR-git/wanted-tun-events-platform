@@ -8,7 +8,7 @@ import { activities, attendances, plans, sessions, subscriptions, ticketPrices }
 import { getCurrentUser } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
 import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
-import { activateSubscription, placesTaken, respondToAttendance } from "@/lib/subscriptions";
+import { activateSubscription, membershipEndsAt, placesTaken, respondToAttendance } from "@/lib/subscriptions";
 
 /**
  * Étape du parcours client : choix de l'offre → création d'un abonnement en
@@ -38,7 +38,6 @@ export async function subscribeAction(formData: FormData): Promise<void> {
   }
 
   const startsAt = new Date();
-  const endsAt = new Date(startsAt.getTime() + plan.validityDays * 24 * 60 * 60 * 1000);
 
   const inserted = await db
     .insert(subscriptions)
@@ -50,7 +49,7 @@ export async function subscribeAction(formData: FormData): Promise<void> {
       status: "pending",
       paymentStatus: "pending",
       startsAt,
-      endsAt,
+      endsAt: membershipEndsAt(startsAt),
       sessionsIncluded: plan.sessionsIncluded,
       sessionsUsed: 0,
     })

@@ -22,7 +22,7 @@ import {
 import type { Locale } from "@/i18n/config";
 import { localize } from "@/lib/i18n/content";
 import { isFinished, isRecurring } from "@/lib/memberships";
-import { closeConfirmations, placesTaken } from "@/lib/subscriptions";
+import { PACK_SESSIONS_USED, closeConfirmations, placesTaken } from "@/lib/subscriptions";
 import { ensureReminderRules } from "@/lib/reminders";
 
 /*
@@ -304,7 +304,8 @@ export async function getMySubscriptions(userId: number, locale: Locale) {
       session: sessions,
       activity: activities,
       category: categories,
-      attendedCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.starts_at < now())::int`,
+      // Séances décomptées du pack : celles qui ont eu lieu, que le client soit venu ou non.
+      attendedCount: PACK_SESSIONS_USED,
       upcomingCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.starts_at >= now())::int`,
     })
     .from(subscriptions)

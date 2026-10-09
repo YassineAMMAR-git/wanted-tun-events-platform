@@ -131,11 +131,8 @@ export default async function PaymentPage({
               ]
             : [
                 [t("sessionsIncluded"), String(plan!.sessionsIncluded)],
-                [t("validity"), tCommon("days", { count: plan!.validityDays })],
                 [t("address"), plan!.address ?? activity.address ?? tCommon("none")],
                 [t("schedule"), plan!.scheduleText ?? activity.scheduleText ?? tCommon("none")],
-                [t("start"), formatDate(subscription.startsAt, locale)],
-                [t("end"), formatDate(subscription.endsAt, locale)],
               ]
           ).map(([label, value]) => (
             <div key={label} className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">

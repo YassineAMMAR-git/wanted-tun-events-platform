@@ -56,7 +56,7 @@ export default async function DashboardPage({
       row.subscription.status === "pending",
   );
   const remaining = activeSubscriptions.reduce(
-    (total, row) => total + Math.max(row.plan.sessionsIncluded - row.attendedCount, 0),
+    (total, row) => total + Math.max(row.subscription.sessionsIncluded - row.attendedCount, 0),
     0,
   );
 
@@ -217,8 +217,10 @@ export default async function DashboardPage({
           <div className="grid gap-5 lg:grid-cols-2">
             {memberships.map((row) => {
               const status = toSubscriptionStatus(row.subscription.status);
-              const used = Math.max(row.attendedCount, row.subscription.sessionsUsed);
-              const remainingForPlan = Math.max(row.plan.sessionsIncluded - used, 0);
+              // Le pack est celui de l'abonnement (une séance offerte l'agrandit) ; chaque séance qui a eu lieu est décomptée.
+              const included = row.subscription.sessionsIncluded;
+              const used = Math.min(row.attendedCount, included);
+              const remainingForPlan = included - used;
               return (
                 <Card key={row.subscription.id} className="card-hover">
                   <div className="flex items-start justify-between gap-3">
@@ -247,26 +249,21 @@ export default async function DashboardPage({
                       <dd className="text-zinc-800">{row.activity.scheduleText}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500 uppercase">{t("validity")}</dt>
-                      <dd className="text-zinc-800">
-                        {tCommon("dateRange", {
-                          start: formatDate(row.subscription.startsAt, locale),
-                          end: formatDate(row.subscription.endsAt, locale),
-                        })}
-                      </dd>
+                      <dt className="text-xs text-zinc-500 uppercase">{t("upcomingInPack")}</dt>
+                      <dd className="text-zinc-800">{tCommon("sessions", { count: row.upcomingCount })}</dd>
                     </div>
                     <div>
                       <dt className="text-xs text-zinc-500 uppercase">{t("remaining")}</dt>
                       <dd className="font-semibold text-gold-dark">
                         {row.subscription.status === "active"
-                          ? `${remainingForPlan} / ${row.plan.sessionsIncluded}`
+                          ? `${remainingForPlan} / ${included}`
                           : tCommon("none")}
                       </dd>
                     </div>
                   </dl>
 
                   <div className="mt-4">
-                    <Progress value={Math.min(used, row.plan.sessionsIncluded)} max={row.plan.sessionsIncluded} />
+                    <Progress value={used} max={included} />
                   </div>
 
                   <div className="mt-4 flex gap-2">

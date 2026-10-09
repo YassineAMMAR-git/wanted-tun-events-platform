@@ -3,7 +3,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
@@ -27,9 +27,11 @@ import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema }
 import { firstIssueMessage, readFields } from "@/lib/validation/form";
 import {
   activateSubscription,
-  attachSubscribersToSession,
+  fillMembershipSessions,
   grantAttendances,
+  membershipEndsAt,
   newAttendanceState,
+  packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
 import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
@@ -421,21 +423,19 @@ export async function createSessionAction(formData: FormData): Promise<void> {
   const startsAt = parseParisDateTime(str(formData, "startsAt"));
   if (!activityId || !startsAt) redirect(withMessage(`/admin/activites/${activityId}`, "erreur", "dateRequired"));
 
-  const inserted = await db
-    .insert(sessions)
-    .values({
-      activityId,
-      title: str(formData, "title") || null,
-      startsAt,
-      durationMinutes: durationMinutes(formData),
-      location: str(formData, "location") || null,
-      notes: str(formData, "notes") || null,
-      translations: readTranslations(formData, SESSION_TRANSLATABLE),
-      status: "scheduled",
-    })
-    .returning({ id: sessions.id });
+  await db.insert(sessions).values({
+    activityId,
+    title: str(formData, "title") || null,
+    startsAt,
+    durationMinutes: durationMinutes(formData),
+    location: str(formData, "location") || null,
+    notes: str(formData, "notes") || null,
+    translations: readTranslations(formData, SESSION_TRANSLATABLE),
+    status: "scheduled",
+  });
 
-  await attachSubscribersToSession(inserted[0]!.id, activityId);
+  // Les abonnés à qui il reste des séances dans leur pack y sont inscrits.
+  await fillMembershipSessions(activityId);
   revalidatePath("/admin/seances");
   redirect(withMessage(`/admin/activites/${activityId}`, "ok", "sessionAdded"));
 }
@@ -459,6 +459,8 @@ export async function updateSessionAction(formData: FormData): Promise<void> {
       status: str(formData, "status") || "scheduled",
     })
     .where(eq(sessions.id, id));
+  // Séance annulée ou reportée d'ici : elle n'est plus décomptée, les abonnés sont inscrits à la suivante.
+  if (activityId) await fillMembershipSessions(activityId);
   revalidatePath("/admin/seances");
   redirect(withMessage(backTo, "ok", "sessionUpdated"));
 }
@@ -520,6 +522,9 @@ export async function setSessionStatusAction(formData: FormData): Promise<void> 
     }
   }
 
+  // Une séance annulée ou reportée n'est pas décomptée des packs : les abonnés sont inscrits à la suivante.
+  if (row) await fillMembershipSessions(row.session.activityId);
+
   revalidatePath(redirectTo);
   redirect(withMessage(redirectTo, "ok", "sessionStatusUpdated"));
 }
@@ -529,6 +534,7 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
   const id = num(formData, "id");
   const activityId = num(formData, "activityId");
   await db.delete(sessions).where(eq(sessions.id, id));
+  if (activityId) await fillMembershipSessions(activityId);
   redirect(withMessage(activityId ? `/admin/activites/${activityId}` : "/admin/seances", "ok", "sessionDeleted"));
 }
 
@@ -552,10 +558,11 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   const sessionId = num(formData, "sessionId");
   const userId = num(formData, "userId");
   const session = (await db.select({ startsAt: sessions.startsAt }).from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
-  // Rattachement à l'abonnement actif du client pour cette activité, s'il en a un (jamais au billet d'une autre date).
-  const subscription = (
+  // Rattachement à l'abonnement actif du client pour cette activité, s'il en a un (jamais au billet d'une autre date) :
+  // la séance est alors prise sur son pack, s'il lui en reste à attribuer ; sinon elle lui est offerte en plus.
+  const membership = (
     await db
-      .select({ id: subscriptions.id })
+      .select({ id: subscriptions.id, sessionsIncluded: subscriptions.sessionsIncluded })
       .from(subscriptions)
       .innerJoin(sessions, eq(sessions.activityId, subscriptions.activityId))
       .where(
@@ -564,11 +571,12 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
           eq(subscriptions.userId, userId),
           eq(subscriptions.kind, "membership"),
           eq(subscriptions.status, "active"),
-          gte(subscriptions.endsAt, new Date()),
         ),
       )
       .limit(1)
   )[0];
+  const subscription =
+    membership && (await packSlotsLeft(membership.id, membership.sessionsIncluded)) > 0 ? membership : null;
 
   await db
     .insert(attendances)
@@ -600,7 +608,6 @@ function planValues(formData: FormData) {
     description: str(formData, "description") || null,
     priceCents: Math.round(num(formData, "price") * 100),
     sessionsIncluded: Math.round(num(formData, "sessionsIncluded")) || 1,
-    validityDays: Math.round(num(formData, "validityDays")) || 30,
     address: str(formData, "address") || null,
     scheduleText: str(formData, "scheduleText") || null,
     extraInfo: str(formData, "extraInfo") || null,
@@ -687,13 +694,13 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
       .returning();
     if (updated) await grantAttendances(updated);
   } else if (action === "extend") {
-    const row = (await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1))[0];
-    if (row) {
-      await db
-        .update(subscriptions)
-        .set({ endsAt: new Date(row.endsAt.getTime() + 30 * 24 * 60 * 60 * 1000), status: "active" })
-        .where(eq(subscriptions.id, id));
-    }
+    // Une séance offerte : le pack s'agrandit d'une séance, et l'abonnement repart s'il était terminé.
+    const [updated] = await db
+      .update(subscriptions)
+      .set({ sessionsIncluded: sql`${subscriptions.sessionsIncluded} + 1`, status: "active" })
+      .where(and(eq(subscriptions.id, id), eq(subscriptions.kind, "membership")))
+      .returning();
+    if (updated) await grantAttendances(updated);
   }
 
   const requested = str(formData, "redirectTo");
@@ -775,7 +782,7 @@ export async function addPlanSubscriberAction(formData: FormData): Promise<void>
       paymentStatus: "pending",
       paymentReference: ADMIN_PAYMENT_REFERENCE,
       startsAt,
-      endsAt: new Date(startsAt.getTime() + plan[0].validityDays * 24 * 60 * 60 * 1000),
+      endsAt: membershipEndsAt(startsAt),
       sessionsIncluded: plan[0].sessionsIncluded,
       sessionsUsed: 0,
     })
@@ -847,14 +854,13 @@ export async function changeSubscriptionPlanAction(formData: FormData): Promise<
     redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
   }
 
-  // Les conditions de la nouvelle formule s'appliquent, à compter de la date d'achat d'origine.
+  // Le pack prend la taille de la nouvelle formule ; les séances déjà décomptées le restent.
   const [updated] = await db
     .update(subscriptions)
     .set({
       planId: target.id,
       activityId: target.activityId,
       sessionsIncluded: target.sessionsIncluded,
-      endsAt: new Date(current.subscription.startsAt.getTime() + target.validityDays * 24 * 60 * 60 * 1000),
     })
     .where(and(eq(subscriptions.id, id), eq(subscriptions.planId, current.plan.id)))
     .returning();

@@ -14,7 +14,7 @@ import {
 import { randomToken } from "@/lib/auth";
 import { CONFIRMATION_CLOSE_HOURS, isConfirmationClosed } from "@/lib/attendance";
 import { appUrl, logAndSend } from "@/lib/mailer";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { translatorFor } from "@/i18n/translator";
 
@@ -50,16 +50,51 @@ export async function closeConfirmations(): Promise<number> {
   return closed.length;
 }
 
+/*
+ * Un abonnement est un pack de séances : il ne dépend d'aucune durée en jours.
+ *  - À l'achat, le client est inscrit aux prochaines séances de l'activité encore ouvertes à la confirmation
+ *    de présence, dans la limite des séances de son pack ; s'il n'y en a pas assez, il est inscrit aux
+ *    suivantes dès qu'elles sont programmées.
+ *  - Chaque séance du pack qui a lieu est décomptée, que le client soit venu ou non.
+ *  - Une séance annulée ou reportée n'est pas décomptée : elle est remplacée par la suivante.
+ *  - Le pack est terminé (abonnement « expiré ») quand toutes ses séances ont eu lieu.
+ */
+
 /**
- * Crée (si besoin) les lignes de présence d'un client pour les séances à venir
- * d'une activité, dans la limite du nombre de séances incluses.
+ * Séances déjà décomptées d'un abonnement : celles de son pack qui ont eu lieu (présent ou absent).
+ * La table est nommée en toutes lettres : la requête qui l'utilise doit porter sur « subscriptions », sans alias.
+ */
+export const PACK_SESSIONS_USED = sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = subscriptions.id and s.status = 'scheduled' and s.starts_at <= now())::int`;
+
+/**
+ * La colonne ends_at est obligatoire en base, mais elle ne limite plus un abonnement (seuls les billets
+ * expirent à une date) : elle reçoit une date lointaine, qui n'est ni affichée ni utilisée.
+ */
+export const membershipEndsAt = (startsAt: Date) => new Date(startsAt.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+/** Séances du pack qui ne sont pas encore attribuées (les séances annulées ou reportées ne comptent pas). */
+export async function packSlotsLeft(subscriptionId: number, sessionsIncluded: number): Promise<number> {
+  const [{ held }] = await db
+    .select({ held: sql<number>`count(*)::int` })
+    .from(attendances)
+    .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+    .where(and(eq(attendances.subscriptionId, subscriptionId), eq(sessions.status, "scheduled")));
+  return Math.max(sessionsIncluded - held, 0);
+}
+
+/**
+ * Inscrit un abonné aux prochaines séances de l'activité encore ouvertes à la confirmation de présence,
+ * tant qu'il reste des séances à attribuer dans son pack.
  */
 export async function ensureAttendances(params: {
   userId: number;
   activityId: number;
   subscriptionId: number;
-  limit: number;
+  sessionsIncluded: number;
 }): Promise<number> {
+  const slots = await packSlotsLeft(params.subscriptionId, params.sessionsIncluded);
+  if (slots === 0) return 0;
+
   const upcoming = await db
     .select({ id: sessions.id, startsAt: sessions.startsAt })
     .from(sessions)
@@ -67,11 +102,10 @@ export async function ensureAttendances(params: {
       and(
         eq(sessions.activityId, params.activityId),
         eq(sessions.status, "scheduled"),
-        gt(sessions.startsAt, new Date()),
+        gt(sessions.startsAt, new Date(Date.now() + CONFIRMATION_CLOSE_HOURS * 60 * 60 * 1000)),
       ),
     )
-    .orderBy(asc(sessions.startsAt))
-    .limit(Math.max(params.limit, 0));
+    .orderBy(asc(sessions.startsAt));
 
   if (upcoming.length === 0) return 0;
 
@@ -88,7 +122,8 @@ export async function ensureAttendances(params: {
       ),
     );
   const known = new Set(existing.map((row) => row.sessionId));
-  const missing = upcoming.filter((session) => !known.has(session.id));
+  // Une séance où le client est déjà inscrit autrement (billet, ajout manuel) n'est pas prise sur le pack.
+  const missing = upcoming.filter((session) => !known.has(session.id)).slice(0, slots);
   if (missing.length === 0) return 0;
 
   await db
@@ -109,7 +144,7 @@ export async function ensureAttendances(params: {
 
 /**
  * Présences auxquelles donne droit une souscription payée :
- * les prochaines séances pour un abonnement, la seule date achetée pour un billet.
+ * les prochaines séances ouvertes pour un abonnement, la seule date achetée pour un billet.
  */
 export async function grantAttendances(subscription: Subscription): Promise<void> {
   if (subscription.kind === "ticket") {
@@ -134,7 +169,7 @@ export async function grantAttendances(subscription: Subscription): Promise<void
     userId: subscription.userId,
     activityId: subscription.activityId,
     subscriptionId: subscription.id,
-    limit: subscription.sessionsIncluded,
+    sessionsIncluded: subscription.sessionsIncluded,
   });
 }
 
@@ -268,7 +303,7 @@ export async function activateSubscription(subscriptionId: number): Promise<void
       "",
       t("emails.subscriptionActivated.active", { activity: activityName }),
       t("emails.subscriptionActivated.sessions", { count: subscription.sessionsIncluded }),
-      t("emails.subscriptionActivated.validUntil", { date: formatDate(subscription.endsAt, locale) }),
+      t("emails.subscriptionActivated.rule"),
       "",
       t("emails.subscriptionActivated.follow"),
       `${appUrl()}/espace-personnel`,
@@ -278,38 +313,39 @@ export async function activateSubscription(subscriptionId: number): Promise<void
   });
 }
 
-/** Ajoute les participants abonnés lorsqu'une nouvelle séance est créée (les billets restent liés à leur date). */
-export async function attachSubscribersToSession(sessionId: number, activityId: number): Promise<void> {
+/**
+ * Complète les packs des abonnés d'une activité : à appeler quand ses séances changent (séance ajoutée,
+ * annulée, reportée ou supprimée). Les abonnés à qui il reste des séances à attribuer sont inscrits aux
+ * prochaines séances ouvertes, les plus anciens abonnements d'abord. Les billets restent liés à leur date.
+ */
+export async function fillMembershipSessions(activityId: number): Promise<void> {
   const actives = await db
-    .select({
-      id: subscriptions.id,
-      userId: subscriptions.userId,
-      sessionsIncluded: subscriptions.sessionsIncluded,
-    })
+    .select()
     .from(subscriptions)
     .where(
       and(
         eq(subscriptions.activityId, activityId),
         eq(subscriptions.kind, "membership"),
         eq(subscriptions.status, "active"),
-        gt(subscriptions.endsAt, new Date()),
       ),
-    );
-
-  if (actives.length === 0) return;
-
-  await db
-    .insert(attendances)
-    .values(
-      actives.map((subscription) => ({
-        sessionId,
-        userId: subscription.userId,
-        subscriptionId: subscription.id,
-        status: "pending" as const,
-        token: randomToken(),
-      })),
     )
-    .onConflictDoNothing();
+    .orderBy(asc(subscriptions.createdAt));
+  for (const subscription of actives) await grantAttendances(subscription);
+}
+
+/** Termine les abonnements dont toutes les séances ont eu lieu, et les billets dont la date est passée. */
+export async function expireSubscriptions(): Promise<number> {
+  const expired = await db
+    .update(subscriptions)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(subscriptions.status, "active"),
+        sql`case when ${subscriptions.kind} = 'ticket' then ${subscriptions.endsAt} <= now() else ${PACK_SESSIONS_USED} >= ${subscriptions.sessionsIncluded} end`,
+      ),
+    )
+    .returning({ id: subscriptions.id });
+  return expired.length;
 }
 
 export type RespondResult = "ok" | "closed" | "invalid";

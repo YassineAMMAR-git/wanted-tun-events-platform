@@ -320,7 +320,6 @@ export default async function ActivityDetailPage({
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm text-zinc-700">
                     <li>📍 {plan.address ?? address}</li>
                     <li>🕒 {plan.scheduleText ?? activity.scheduleText}</li>
-                    <li>{t("validity", { days: tCommon("days", { count: plan.validityDays }) })}</li>
                     <li>{t("included", { count: plan.sessionsIncluded })}</li>
                   </ul>
                   {plan.extraInfo ? (

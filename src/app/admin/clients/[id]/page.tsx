@@ -33,6 +33,7 @@ import {
 } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { getClientSpent } from "@/lib/queries";
+import { PACK_SESSIONS_USED } from "@/lib/subscriptions";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/validation/constants";
 import { localeNames, locales } from "@/i18n/config";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -77,7 +78,7 @@ export default async function AdminClientDetail({
 
   const [subs, history, spentCents] = await Promise.all([
     db
-      .select({ subscription: subscriptions, plan: plans, session: sessions, activity: activities })
+      .select({ subscription: subscriptions, plan: plans, session: sessions, activity: activities, used: PACK_SESSIONS_USED })
       .from(subscriptions)
       .leftJoin(plans, eq(plans.id, subscriptions.planId))
       .leftJoin(sessions, eq(sessions.id, subscriptions.sessionId))
@@ -264,14 +265,10 @@ export default async function AdminClientDetail({
                           }`}
                     </td>
                     <td className="whitespace-nowrap">{formatPrice(row.plan?.priceCents ?? row.subscription.amountCents ?? row.activity.priceCents, locale)}</td>
-                    <td className="whitespace-nowrap text-zinc-600">
-                      {tCommon("dateRange", {
-                        start: formatDate(row.subscription.startsAt, locale),
-                        end: formatDate(row.subscription.endsAt, locale),
-                      })}
-                    </td>
+                    <td className="whitespace-nowrap text-zinc-600">{formatDate(row.subscription.startsAt, locale)}</td>
                     <td className="text-zinc-700" dir="ltr">
-                      {row.subscription.sessionsUsed} / {row.subscription.sessionsIncluded}
+                      {/* Séances du pack qui ont eu lieu, que le client soit venu ou non. */}
+                      {row.used} / {row.subscription.sessionsIncluded}
                     </td>
                     <td>
                       <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`subscription.${status}`)}</span>

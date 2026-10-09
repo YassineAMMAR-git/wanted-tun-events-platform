@@ -8,14 +8,13 @@ import {
   notificationRules,
   notifications,
   sessions,
-  subscriptions,
   users,
 } from "@/db/schema";
 import { CONFIRMATION_CLOSE_HOURS, confirmationDeadline } from "@/lib/attendance";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { formatDate, formatDateTime, formatTime, formatDuration } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
-import { closeConfirmations } from "@/lib/subscriptions";
+import { closeConfirmations, expireSubscriptions } from "@/lib/subscriptions";
 import { translatorFor } from "@/i18n/translator";
 
 export type ReminderJobResult = {
@@ -57,7 +56,7 @@ export async function ensureReminderRules(): Promise<void> {
 
 /**
  * Tâche quotidienne :
- *  1. expire les abonnements arrivés à échéance ;
+ *  1. termine les abonnements dont toutes les séances ont eu lieu, et les billets dont la date est passée ;
  *  2. clôture les présences des séances qui commencent dans moins de 48 h (non confirmé = absent) ;
  *  3. envoie les rappels de confirmation (J-5, J-4, J-3) aux participants qui n'ont pas encore confirmé.
  *
@@ -66,11 +65,7 @@ export async function ensureReminderRules(): Promise<void> {
 export async function runReminderJob(): Promise<ReminderJobResult> {
   const now = new Date();
 
-  const expired = await db
-    .update(subscriptions)
-    .set({ status: "expired" })
-    .where(and(eq(subscriptions.status, "active"), lte(subscriptions.endsAt, now)))
-    .returning({ id: subscriptions.id });
+  const subscriptionsExpired = await expireSubscriptions();
 
   const attendancesClosed = await closeConfirmations();
 
@@ -85,7 +80,7 @@ export async function runReminderJob(): Promise<ReminderJobResult> {
 
   const result = (remindersSent: number, sessionsProcessed: number[]): ReminderJobResult => ({
     remindersSent,
-    subscriptionsExpired: expired.length,
+    subscriptionsExpired,
     attendancesClosed,
     sessionsProcessed,
     dryRun: false,

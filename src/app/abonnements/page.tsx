@@ -67,10 +67,6 @@ export default async function PlansPage({
               <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
               <dl className="mt-4 flex-1 space-y-1.5 text-sm text-zinc-700">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">{t("validity")}</dt>
-                  <dd>{tCommon("days", { count: plan.validityDays })}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">{t("schedule")}</dt>
                   <dd className="text-end">{plan.scheduleText ?? activity.scheduleText}</dd>
                 </div>
