@@ -3,7 +3,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
@@ -700,6 +700,158 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
   const redirectTo = requested.startsWith("/admin/") ? requested : "/admin/clients";
   revalidatePath(redirectTo);
   redirect(withMessage(redirectTo, "ok", "subscriptionUpdated"));
+}
+
+/* ------------------------- abonnés d'une formule ------------------------- */
+
+/** Référence de paiement d'un abonnement ajouté par l'administration (aucun paiement en ligne). */
+const ADMIN_PAYMENT_REFERENCE = "administration";
+
+/** Libère les séances à venir réservées par un abonnement (retrait du client ou changement de formule). */
+async function releaseUpcomingAttendances(subscriptionId: number): Promise<void> {
+  await db
+    .delete(attendances)
+    .where(
+      and(
+        eq(attendances.subscriptionId, subscriptionId),
+        sql`${attendances.sessionId} in (select s.id from sessions s where s.starts_at > now())`,
+      ),
+    );
+}
+
+/** Le client a-t-il déjà cette formule (en attente de paiement ou active) ? */
+async function hasOpenMembership(userId: number, planId: number): Promise<boolean> {
+  const rows = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.planId, planId),
+        inArray(subscriptions.status, ["pending", "active"]),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** L'administration inscrit un client à une formule : abonnement actif tout de suite, sans paiement en ligne. */
+export async function addPlanSubscriberAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const back = "/admin/abonnements";
+  const planId = num(formData, "planId");
+  const userId = num(formData, "userId");
+
+  const [plan, client] = await Promise.all([
+    db.select().from(plans).where(eq(plans.id, planId)).limit(1),
+    db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1),
+  ]);
+  if (!client[0]) redirect(withMessage(back, "erreur", "clientNotFound"));
+  if (!plan[0] || !(await activityOffersMemberships(plan[0].activityId))) {
+    redirect(withMessage(back, "erreur", "planRecurringOnly"));
+  }
+  if (await hasOpenMembership(userId, planId)) redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
+
+  const startsAt = new Date();
+  const inserted = await db
+    .insert(subscriptions)
+    .values({
+      userId,
+      kind: "membership",
+      planId,
+      activityId: plan[0].activityId,
+      status: "pending",
+      paymentStatus: "pending",
+      paymentReference: ADMIN_PAYMENT_REFERENCE,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + plan[0].validityDays * 24 * 60 * 60 * 1000),
+      sessionsIncluded: plan[0].sessionsIncluded,
+      sessionsUsed: 0,
+    })
+    .returning({ id: subscriptions.id });
+  // Activation : présences aux prochaines séances et e-mail de confirmation au client.
+  await activateSubscription(inserted[0]!.id);
+
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "subscriberAdded"));
+}
+
+/**
+ * Retire un client d'une formule : l'abonnement est annulé (jamais effacé, pour garder la trace du paiement)
+ * et ses séances à venir sont libérées.
+ */
+export async function removePlanSubscriberAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const back = "/admin/abonnements";
+  const id = num(formData, "id");
+  const row = (await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1))[0];
+  if (!row || row.kind !== "membership") redirect(withMessage(back, "erreur", "subscriberNotFound"));
+
+  // Un paiement réellement encaissé reste compté ; un ajout de l'administration ou une commande impayée, non.
+  const keepPaid = row.paymentStatus === "paid" && row.paymentReference !== ADMIN_PAYMENT_REFERENCE;
+  await db
+    .update(subscriptions)
+    .set({ status: "cancelled", paymentStatus: keepPaid ? "paid" : "cancelled" })
+    .where(eq(subscriptions.id, id));
+  await releaseUpcomingAttendances(id);
+
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "subscriberRemoved"));
+}
+
+/**
+ * Corrige une erreur d'achat : l'abonnement passe sur la formule d'une autre activité, au même prix uniquement
+ * (aucun complément ni remboursement à gérer). Les séances à venir de l'ancienne activité sont libérées et
+ * celles de la nouvelle attribuées.
+ */
+export async function changeSubscriptionPlanAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const back = "/admin/abonnements";
+  const id = num(formData, "id");
+  const targetPlanId = num(formData, "planId");
+
+  const current = (
+    await db
+      .select({ subscription: subscriptions, plan: plans })
+      .from(subscriptions)
+      .innerJoin(plans, eq(plans.id, subscriptions.planId))
+      .where(eq(subscriptions.id, id))
+      .limit(1)
+  )[0];
+  if (!current || current.subscription.kind !== "membership" || current.subscription.status === "cancelled") {
+    redirect(withMessage(back, "erreur", "subscriberNotFound"));
+  }
+  const target = (await db.select().from(plans).where(eq(plans.id, targetPlanId)).limit(1))[0];
+  if (
+    !target ||
+    target.activityId === current.plan.activityId ||
+    target.priceCents !== current.plan.priceCents ||
+    !(await activityOffersMemberships(target.activityId))
+  ) {
+    redirect(withMessage(back, "erreur", "planChangeNotAllowed"));
+  }
+  if (await hasOpenMembership(current.subscription.userId, target.id)) {
+    redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
+  }
+
+  // Les conditions de la nouvelle formule s'appliquent, à compter de la date d'achat d'origine.
+  const [updated] = await db
+    .update(subscriptions)
+    .set({
+      planId: target.id,
+      activityId: target.activityId,
+      sessionsIncluded: target.sessionsIncluded,
+      endsAt: new Date(current.subscription.startsAt.getTime() + target.validityDays * 24 * 60 * 60 * 1000),
+    })
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.planId, current.plan.id)))
+    .returning();
+  if (updated) {
+    await releaseUpcomingAttendances(id);
+    if (updated.status === "active") await grantAttendances(updated);
+  }
+
+  revalidatePath(back);
+  redirect(withMessage(back, "ok", "planChanged"));
 }
 
 /* ---------------------------- notifications ----------------------------- */

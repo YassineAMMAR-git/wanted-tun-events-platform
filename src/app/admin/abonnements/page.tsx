@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -10,9 +10,18 @@ import {
   categories,
   plans,
   subscriptions,
+  users,
 } from "@/db/schema";
-import { createPlanAction, deletePlanAction, togglePlanAction, updatePlanAction } from "@/app/actions/admin";
-import { formatPrice } from "@/lib/format";
+import {
+  addPlanSubscriberAction,
+  changeSubscriptionPlanAction,
+  createPlanAction,
+  deletePlanAction,
+  removePlanSubscriberAction,
+  togglePlanAction,
+  updatePlanAction,
+} from "@/app/actions/admin";
+import { SUBSCRIPTION_STATUS, formatDate, formatPrice, toSubscriptionStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -20,6 +29,10 @@ import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 
 export const dynamic = "force-dynamic";
+
+const PAYMENT_STATUSES = ["pending", "declared", "paid", "cancelled"] as const;
+const toPaymentStatus = (value: string) =>
+  (PAYMENT_STATUSES as readonly string[]).includes(value) ? (value as (typeof PAYMENT_STATUSES)[number]) : "pending";
 
 export default async function AdminPlansPage({
   searchParams,
@@ -85,6 +98,39 @@ export default async function AdminPlansPage({
       .where(or(ne(activities.kind, "recurring"), isNull(activities.kind)))
       .orderBy(asc(categories.position), asc(activities.name), asc(plans.priceCents)),
   ]);
+
+  // Tableau des abonnés : clients de chaque formule affichée (hors abonnements annulés).
+  const planIds = rows.map((row) => row.plan.id);
+  const [subscribers, clients, allPlans] = await Promise.all([
+    planIds.length === 0
+      ? []
+      : db
+          .select({ subscription: subscriptions, user: users })
+          .from(subscriptions)
+          .innerJoin(users, eq(users.id, subscriptions.userId))
+          .where(
+            and(
+              eq(subscriptions.kind, "membership"),
+              inArray(subscriptions.planId, planIds),
+              ne(subscriptions.status, "cancelled"),
+            ),
+          )
+          .orderBy(asc(users.lastName), asc(users.firstName)),
+    db.select().from(users).where(ne(users.role, "admin")).orderBy(asc(users.lastName)),
+    // Toutes les formules, y compris celles masquées par les filtres : cibles possibles d'un changement.
+    db
+      .select({ plan: plans, activity: activities })
+      .from(plans)
+      .innerJoin(activities, eq(activities.id, plans.activityId))
+      .where(eq(activities.kind, "recurring"))
+      .orderBy(asc(activities.name), asc(plans.name)),
+  ]);
+  const subscribersByPlan = new Map<number, typeof subscribers>();
+  for (const row of subscribers) {
+    const list = subscribersByPlan.get(row.subscription.planId!) ?? [];
+    list.push(row);
+    subscribersByPlan.set(row.subscription.planId!, list);
+  }
 
   return (
     <div className="space-y-6">
@@ -196,6 +242,136 @@ export default async function AdminPlansPage({
           );
         })}
       </div>
+
+      <section id="abonnes" className="scroll-mt-20">
+        <SectionTitle eyebrow={t("subscribersEyebrow")} title={t("subscribersTitle")} subtitle={t("subscribersSubtitle")} />
+        <div className="card scroll-x">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>{t("colClient")}</th>
+                <th>{t("colValidity")}</th>
+                <th>{t("colStatus")}</th>
+                <th>{t("colPayment")}</th>
+                <th>{t("colChange")}</th>
+                <th>{t("colActions")}</th>
+              </tr>
+            </thead>
+            {rows.map((row) => {
+              const members = subscribersByPlan.get(row.plan.id) ?? [];
+              // Un abonné « en cours » (en attente ou actif) ne peut pas être inscrit une seconde fois à la formule.
+              const enrolled = new Set(
+                members.filter((m) => m.subscription.status !== "expired").map((m) => m.user.id),
+              );
+              // Changement possible uniquement vers la formule d'une autre activité, au même prix.
+              const alternatives = allPlans.filter(
+                (other) => other.plan.activityId !== row.plan.activityId && other.plan.priceCents === row.plan.priceCents,
+              );
+              return (
+                <tbody key={row.plan.id}>
+                  <tr className="bg-zinc-50">
+                    <td colSpan={6}>
+                      <span className="font-bold text-zinc-900">{localize(row.plan, locale, PLAN_TRANSLATABLE).name}</span>
+                      <span className="text-zinc-600">
+                        {" "}
+                        · {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name} ·{" "}
+                        {formatPrice(row.plan.priceCents, locale)} · {t("subscriberCount", { count: members.length })}
+                      </span>
+                    </td>
+                  </tr>
+                  {members.map(({ subscription, user }) => {
+                    const status = toSubscriptionStatus(subscription.status);
+                    return (
+                      <tr key={subscription.id}>
+                        <td>
+                          <Link href={`/admin/clients/${user.id}`} className="font-semibold text-zinc-900 hover:text-gold-dark">
+                            {user.firstName} {user.lastName}
+                          </Link>
+                          <span className="block text-xs text-zinc-500" dir="ltr">
+                            {user.email}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap text-zinc-600">
+                          {tCommon("dateRange", {
+                            start: formatDate(subscription.startsAt, locale),
+                            end: formatDate(subscription.endsAt, locale),
+                          })}
+                        </td>
+                        <td>
+                          <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`subscription.${status}`)}</span>
+                        </td>
+                        <td className="text-zinc-600">
+                          {tStatus(`payment.${toPaymentStatus(subscription.paymentStatus)}`)}
+                        </td>
+                        <td>
+                          {alternatives.length > 0 ? (
+                            <form action={changeSubscriptionPlanAction} className="flex items-center gap-2">
+                              <input type="hidden" name="id" value={subscription.id} />
+                              <select name="planId" required defaultValue="" className="select" aria-label={t("colChange")}>
+                                <option value="" disabled>
+                                  {t("changeChoose")}
+                                </option>
+                                {alternatives.map((other) => (
+                                  <option key={other.plan.id} value={other.plan.id}>
+                                    {localize(other.activity, locale, ACTIVITY_TRANSLATABLE).name} —{" "}
+                                    {localize(other.plan, locale, PLAN_TRANSLATABLE).name}
+                                  </option>
+                                ))}
+                              </select>
+                              <button className="btn btn-ghost btn-sm" type="submit">
+                                {t("change")}
+                              </button>
+                            </form>
+                          ) : (
+                            <span className="text-xs text-zinc-500">{t("noAlternative")}</span>
+                          )}
+                        </td>
+                        <td>
+                          <form action={removePlanSubscriberAction}>
+                            <input type="hidden" name="id" value={subscription.id} />
+                            <button className="btn btn-danger btn-sm" type="submit">
+                              {t("removeSubscriber")}
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={6}>
+                      <form action={addPlanSubscriberAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input type="hidden" name="planId" value={row.plan.id} />
+                        <select name="userId" required defaultValue="" className="select sm:max-w-md" aria-label={t("addSubscriber")}>
+                          <option value="" disabled>
+                            {t("addSubscriber")}
+                          </option>
+                          {clients.map((client) => (
+                            <option key={client.id} value={client.id} disabled={enrolled.has(client.id)}>
+                              {client.firstName} {client.lastName} — {client.email}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="btn btn-primary btn-sm" type="submit">
+                          {tCommon("add")}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                </tbody>
+              );
+            })}
+            {rows.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={6} className="text-center text-zinc-500">
+                    {t("noPlans")}
+                  </td>
+                </tr>
+              </tbody>
+            ) : null}
+          </table>
+        </div>
+      </section>
 
       {legacy.length > 0 ? (
         <section id="anciennes-offres">
