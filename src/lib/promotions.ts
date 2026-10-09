@@ -124,9 +124,9 @@ export async function planOffers(
   return offers;
 }
 
-export type PromoPlanOption = { id: number; activityId: number; label: string };
+export type PromoPlanOption = { id: number; activityId: number; activityName: string; planName: string };
 
-/** Formules proposées à l'administration comme condition d'une promotion (« Activité — Formule »). */
+/** Formules proposées à l'administration comme condition d'une promotion, triées par activité. */
 export async function promoPlanOptions(locale: Locale): Promise<PromoPlanOption[]> {
   const rows = await db
     .select({ plan: plans, activity: activities })
@@ -137,7 +137,8 @@ export async function promoPlanOptions(locale: Locale): Promise<PromoPlanOption[
   return rows.map((row) => ({
     id: row.plan.id,
     activityId: row.plan.activityId,
-    label: `${localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name} — ${localize(row.plan, locale, PLAN_TRANSLATABLE).name}`,
+    activityName: localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
+    planName: localize(row.plan, locale, PLAN_TRANSLATABLE).name ?? "",
   }));
 }
 

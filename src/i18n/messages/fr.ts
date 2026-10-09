@@ -812,7 +812,8 @@ const fr = {
       promoEnabled: "Cette offre peut être en promotion pour les clients d’une autre formule",
       promoPercent: "Réduction (%)",
       promoPlans: "Formules que le client doit posséder",
-      promoPlansHint: "Une ou plusieurs formules d’autres activités (Ctrl ou ⌘ + clic pour en choisir plusieurs). Il suffit que le client en ait payé une pour avoir la réduction, appliquée automatiquement.",
+      promoPlansHint: "Cochez une ou plusieurs formules d’autres activités. Il suffit que le client en ait payé une pour avoir la réduction, appliquée automatiquement.",
+      promoNoPlans: "Aucune formule dans une autre activité pour le moment.",
     },
     sessions: {
       searchPlaceholder: "Titre, lieu ou activité",

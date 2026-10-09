@@ -807,7 +807,8 @@ const en: Messages = {
       promoEnabled: "This plan can be discounted for clients of another plan",
       promoPercent: "Discount (%)",
       promoPlans: "Plans the client must own",
-      promoPlansHint: "One or more plans of other activities (Ctrl or ⌘ + click to pick several). Having paid for one of them is enough to get the discount, applied automatically.",
+      promoPlansHint: "Tick one or more plans of other activities. Having paid for one of them is enough to get the discount, applied automatically.",
+      promoNoPlans: "No plan in another activity yet.",
     },
     sessions: {
       searchPlaceholder: "Title, place or activity",

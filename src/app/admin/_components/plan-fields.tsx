@@ -20,7 +20,15 @@ type Props = {
 /** Champs d'une offre d'abonnement, communs à la page Offres et à la fiche activité. */
 export function PlanFields({ plan, defaults, promotion, promoPlans, activityId }: Props) {
   const t = useTranslations("admin.planForm");
-  const promoOptions = promoPlans.filter((option) => option.activityId !== activityId && option.id !== plan?.id);
+  // Formules des autres activités, regroupées par activité (la liste arrive déjà triée).
+  const promoGroups: { activityId: number; activityName: string; options: PromoPlanOption[] }[] = [];
+  for (const option of promoPlans) {
+    if (option.activityId === activityId || option.id === plan?.id) continue;
+    const group = promoGroups.at(-1);
+    if (group?.activityId === option.activityId) group.options.push(option);
+    else promoGroups.push({ activityId: option.activityId, activityName: option.activityName, options: [option] });
+  }
+  const required = new Set(promotion?.requiredPlanIds ?? []);
 
   return (
     <>
@@ -98,20 +106,37 @@ export function PlanFields({ plan, defaults, promotion, promoPlans, activityId }
             />
           </div>
           <div>
-            <label className="label">{t("promoPlans")}</label>
-            <select
-              name="promoPlanIds"
-              multiple
-              size={Math.min(Math.max(promoOptions.length, 2), 6)}
-              defaultValue={(promotion?.requiredPlanIds ?? []).map(String)}
-              className="select h-auto"
-            >
-              {promoOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <p className="label">{t("promoPlans")}</p>
+            {promoGroups.length === 0 ? (
+              <p className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-500">{t("promoNoPlans")}</p>
+            ) : (
+              <div className="max-h-56 divide-y divide-zinc-100 overflow-y-auto rounded-xl border border-zinc-200 bg-white">
+                {promoGroups.map((group) => (
+                  <div key={group.activityId} className="px-3 py-2">
+                    <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">{group.activityName}</p>
+                    <div className="mt-1 grid gap-x-4 sm:grid-cols-2">
+                      {group.options.map((option) => (
+                        <label
+                          key={option.id}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1.5 text-sm text-zinc-800 hover:bg-amber-50"
+                        >
+                          <input
+                            type="checkbox"
+                            name="promoPlanIds"
+                            value={option.id}
+                            defaultChecked={required.has(option.id)}
+                            className="h-4 w-4 shrink-0 accent-amber-600"
+                          />
+                          <span className="min-w-0 truncate" title={option.planName}>
+                            {option.planName}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <p className="mt-1 text-xs text-zinc-500">{t("promoPlansHint")}</p>
           </div>
         </div>
