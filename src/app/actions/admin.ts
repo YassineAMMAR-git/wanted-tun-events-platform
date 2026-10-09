@@ -729,8 +729,8 @@ function subscribersBackPath(formData: FormData): string {
   return query.size > 0 ? `/admin/abonnements?${query}` : "/admin/abonnements";
 }
 
-/** Le client a-t-il déjà cette formule (en attente de paiement ou active) ? */
-async function hasOpenMembership(userId: number, planId: number): Promise<boolean> {
+/** Le client a-t-il déjà cette formule, payée et en cours ? Une commande jamais payée ne compte pas. */
+async function hasPaidMembership(userId: number, planId: number): Promise<boolean> {
   const rows = await db
     .select({ id: subscriptions.id })
     .from(subscriptions)
@@ -739,6 +739,7 @@ async function hasOpenMembership(userId: number, planId: number): Promise<boolea
         eq(subscriptions.userId, userId),
         eq(subscriptions.planId, planId),
         inArray(subscriptions.status, ["pending", "active"]),
+        eq(subscriptions.paymentStatus, "paid"),
       ),
     )
     .limit(1);
@@ -760,7 +761,7 @@ export async function addPlanSubscriberAction(formData: FormData): Promise<void>
   if (!plan[0] || !(await activityOffersMemberships(plan[0].activityId))) {
     redirect(withMessage(back, "erreur", "planRecurringOnly"));
   }
-  if (await hasOpenMembership(userId, planId)) redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
+  if (await hasPaidMembership(userId, planId)) redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
 
   const startsAt = new Date();
   const inserted = await db
@@ -831,6 +832,8 @@ export async function changeSubscriptionPlanAction(formData: FormData): Promise<
   if (!current || current.subscription.kind !== "membership" || current.subscription.status === "cancelled") {
     redirect(withMessage(back, "erreur", "subscriberNotFound"));
   }
+  // Seul un abonnement payé se déplace : une commande impayée n'est pas une inscription.
+  if (current.subscription.paymentStatus !== "paid") redirect(withMessage(back, "erreur", "planChangeUnpaid"));
   const target = (await db.select().from(plans).where(eq(plans.id, targetPlanId)).limit(1))[0];
   if (
     !target ||
@@ -840,7 +843,7 @@ export async function changeSubscriptionPlanAction(formData: FormData): Promise<
   ) {
     redirect(withMessage(back, "erreur", "planChangeNotAllowed"));
   }
-  if (await hasOpenMembership(current.subscription.userId, target.id)) {
+  if (await hasPaidMembership(current.subscription.userId, target.id)) {
     redirect(withMessage(back, "erreur", "subscriberAlreadyOnPlan"));
   }
 

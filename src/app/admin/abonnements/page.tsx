@@ -31,10 +31,6 @@ import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 
 export const dynamic = "force-dynamic";
 
-const PAYMENT_STATUSES = ["pending", "declared", "paid", "cancelled"] as const;
-const toPaymentStatus = (value: string) =>
-  (PAYMENT_STATUSES as readonly string[]).includes(value) ? (value as (typeof PAYMENT_STATUSES)[number]) : "pending";
-
 export default async function AdminPlansPage({
   searchParams,
 }: {
@@ -110,6 +106,7 @@ export default async function AdminPlansPage({
   ]);
 
   // Tableau des inscrits : une seule activité à la fois (la première par défaut), toutes ses formules ou une seule.
+  // Est inscrit le client qui a payé : une commande en attente de paiement n'y figure pas.
   const allPlans = await db
     .select({ plan: plans, activity: activities })
     .from(plans)
@@ -132,6 +129,7 @@ export default async function AdminPlansPage({
               eq(subscriptions.kind, "membership"),
               eq(subscriptions.activityId, shownActivity.id),
               shownPlan ? eq(subscriptions.planId, shownPlan.id) : undefined,
+              eq(subscriptions.paymentStatus, "paid"),
               ne(subscriptions.status, "cancelled"),
             ),
           )
@@ -200,7 +198,6 @@ export default async function AdminPlansPage({
                     <th>{t("colPlan")}</th>
                     <th>{t("colValidity")}</th>
                     <th>{t("colStatus")}</th>
-                    <th>{t("colPayment")}</th>
                     <th>{t("colChange")}</th>
                     <th>{t("colActions")}</th>
                   </tr>
@@ -234,9 +231,6 @@ export default async function AdminPlansPage({
                         </td>
                         <td>
                           <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`subscription.${status}`)}</span>
-                        </td>
-                        <td className="text-zinc-600">
-                          {tStatus(`payment.${toPaymentStatus(subscription.paymentStatus)}`)}
                         </td>
                         <td>
                           {alternatives.length > 0 ? (
@@ -276,7 +270,7 @@ export default async function AdminPlansPage({
                   })}
                   {subscribers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center text-zinc-500">
+                      <td colSpan={6} className="text-center text-zinc-500">
                         {t("noSubscribers")}
                       </td>
                     </tr>
