@@ -82,19 +82,21 @@ export async function packSlotsLeft(subscriptionId: number, sessionsIncluded: nu
   return Math.max(sessionsIncluded - held, 0);
 }
 
+type PackParams = { userId: number; activityId: number; subscriptionId: number; sessionsIncluded: number };
+
 /**
- * Inscrit un abonné aux prochaines séances de l'activité encore ouvertes à la confirmation de présence
- * et non complètes, tant qu'il reste des séances à attribuer dans son pack. Une séance complète est sautée :
- * le pack porte sur les suivantes.
+ * Séances qu'un abonnement recevrait maintenant : les prochaines séances de l'activité encore ouvertes à la
+ * confirmation de présence et non complètes, dans la limite des séances à attribuer dans le pack. Une séance
+ * complète est sautée : le pack porte sur les suivantes.
+ *  - fullBefore : séances complètes sautées avant la première séance du pack ;
+ *  - unassigned : séances du pack qui n'ont pas encore de date (pas assez de séances ouvertes).
+ * Sert à l'inscription comme à l'aperçu montré au client avant le paiement : les deux disent la même chose.
  */
-export async function ensureAttendances(params: {
-  userId: number;
-  activityId: number;
-  subscriptionId: number;
-  sessionsIncluded: number;
-}): Promise<number> {
+export async function planPackSessions(
+  params: PackParams,
+): Promise<{ sessions: { id: number; startsAt: Date }[]; fullBefore: number; unassigned: number }> {
   const slots = await packSlotsLeft(params.subscriptionId, params.sessionsIncluded);
-  if (slots === 0) return 0;
+  if (slots === 0) return { sessions: [], fullBefore: 0, unassigned: 0 };
 
   const upcoming = await db
     .select({ id: sessions.id, startsAt: sessions.startsAt })
@@ -108,7 +110,7 @@ export async function ensureAttendances(params: {
     )
     .orderBy(asc(sessions.startsAt));
 
-  if (upcoming.length === 0) return 0;
+  if (upcoming.length === 0) return { sessions: [], fullBefore: 0, unassigned: slots };
 
   const existing = await db
     .select({ sessionId: attendances.sessionId })
@@ -128,10 +130,21 @@ export async function ensureAttendances(params: {
     placesTaken(upcoming.map((session) => session.id)),
   ]);
   const capacity = activity[0]?.capacity ?? 0;
-  // Une séance où le client est déjà inscrit autrement (billet, ajout manuel) n'est pas prise sur le pack.
-  const missing = upcoming
-    .filter((session) => !known.has(session.id) && (taken.get(session.id) ?? 0) < capacity)
-    .slice(0, slots);
+  const chosen: { id: number; startsAt: Date }[] = [];
+  let fullBefore = 0;
+  for (const session of upcoming) {
+    if (chosen.length === slots) break;
+    // Une séance où le client est déjà inscrit autrement (billet, ajout manuel) n'est pas prise sur le pack.
+    if (known.has(session.id)) continue;
+    if ((taken.get(session.id) ?? 0) < capacity) chosen.push(session);
+    else if (chosen.length === 0) fullBefore += 1;
+  }
+  return { sessions: chosen, fullBefore, unassigned: slots - chosen.length };
+}
+
+/** Inscrit un abonné aux séances que son pack lui attribue (voir planPackSessions). */
+export async function ensureAttendances(params: PackParams): Promise<number> {
+  const { sessions: missing } = await planPackSessions(params);
   if (missing.length === 0) return 0;
 
   await db

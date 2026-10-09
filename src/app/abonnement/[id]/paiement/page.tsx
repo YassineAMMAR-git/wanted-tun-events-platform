@@ -20,6 +20,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
 import { PaymentWatcher } from "@/components/payment-watcher";
 import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
+import { planPackSessions } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,17 @@ export default async function PaymentPage({
   const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
   const price = formatPrice(ticket ? (subscription.amountCents ?? activity.priceCents) : plan!.priceCents, locale);
+
+  // Avant le paiement d'un abonnement : les séances auxquelles le client sera inscrit s'il paie maintenant.
+  const pack =
+    !ticket && !alreadyPaid && !cancelled
+      ? await planPackSessions({
+          userId: user.id,
+          activityId: subscription.activityId,
+          subscriptionId: subscription.id,
+          sessionsIncluded: subscription.sessionsIncluded,
+        })
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -144,6 +156,43 @@ export default async function PaymentPage({
 
         {plan?.extraInfo ? (
           <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
+        ) : null}
+
+        {pack ? (
+          <section className="mt-5">
+            <h3 className="text-sm font-bold text-zinc-900">{t("packTitle")}</h3>
+            {pack.sessions.length > 0 ? (
+              <>
+                <p className="mt-1 text-sm text-zinc-600">{t("packIntro", { count: pack.sessions.length })}</p>
+                {pack.fullBefore > 0 ? (
+                  <p role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-gold-dark">
+                    {t("packFullBefore", { count: pack.fullBefore, date: formatDate(pack.sessions[0]!.startsAt, locale) })}
+                  </p>
+                ) : null}
+                <ol className="mt-3 space-y-2">
+                  {pack.sessions.map((item, index) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800"
+                    >
+                      <span className="text-xs font-semibold text-zinc-500" dir="ltr">
+                        {index + 1}
+                      </span>
+                      {tCommon("dateAtTime", { date: formatDate(item.startsAt, locale), time: formatTime(item.startsAt, locale) })}
+                    </li>
+                  ))}
+                </ol>
+                {pack.unassigned > 0 ? (
+                  <p className="mt-3 text-sm text-zinc-600">{t("packUnassigned", { count: pack.unassigned })}</p>
+                ) : null}
+              </>
+            ) : (
+              <p role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-gold-dark">
+                {pack.fullBefore > 0 ? t("packNoneFull") : t("packNone")}
+              </p>
+            )}
+            <p className="mt-3 text-xs text-zinc-500">{t("packNote")}</p>
+          </section>
         ) : null}
 
         {online || alreadyPaid || ticketClosed || cancelled ? null : (
