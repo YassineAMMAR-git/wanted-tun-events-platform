@@ -960,6 +960,7 @@ const en: Messages = {
         account_exists_notice: "Sign-up with an existing email",
         subscription_activated: "Membership activated",
         session_cancelled: "Session cancelled / postponed",
+        session_updated: "Session updated",
         subscription_ending: "Membership ending",
       },
     },
@@ -1282,6 +1283,15 @@ const en: Messages = {
       sessions: "Sessions included: {count}",
       rule: "You are automatically registered for the next sessions open for confirmation. Every session in your pack is counted, even if you are absent.",
       follow: "Find your sessions and progress in your personal space:",
+    },
+    sessionUpdated: {
+      subject: "Session updated — {activity}",
+      intro: "The session “{title}” you are registered for has been updated ({changes}).",
+      separator: ", ",
+      changes: { rescheduled: "session rescheduled", when: "date or time", duration: "duration", place: "location", title: "title", notes: "information" },
+      previousDate: "Previous date: {date}.",
+      current: "Here are the up-to-date details:",
+      follow: "Find your sessions in your personal space:",
     },
     sessionChanged: {
       subjectCancelled: "Session cancelled — {activity}",

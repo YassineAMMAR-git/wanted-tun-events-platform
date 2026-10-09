@@ -965,6 +965,7 @@ const ar: Messages = {
         account_exists_notice: "تسجيل ببريد موجود",
         subscription_activated: "تفعيل اشتراك",
         session_cancelled: "حصة ملغاة / مؤجلة",
+        session_updated: "حصة معدَّلة",
         subscription_ending: "نهاية اشتراك",
       },
     },
@@ -1284,6 +1285,15 @@ const ar: Messages = {
       sessions: "عدد الحصص المشمولة: {count}",
       rule: "تُسجَّل تلقائيًا في الحصص القادمة المفتوحة للتأكيد. تُحتسب كل حصة من باقتك حتى في حال غيابك.",
       follow: "تابع حصصك وتقدّمك في مساحتك الشخصية:",
+    },
+    sessionUpdated: {
+      subject: "تعديل على الحصة — {activity}",
+      intro: "تم تعديل الحصة «{title}» التي سجّلت فيها ({changes}).",
+      separator: "، ",
+      changes: { rescheduled: "إعادة برمجة الحصة", when: "التاريخ أو الساعة", duration: "المدة", place: "المكان", title: "العنوان", notes: "المعلومات" },
+      previousDate: "التاريخ السابق: {date}.",
+      current: "إليك المعلومات المحدَّثة:",
+      follow: "تجد حصصك في فضائك الشخصي:",
     },
     sessionChanged: {
       subjectCancelled: "حصة ملغاة — {activity}",

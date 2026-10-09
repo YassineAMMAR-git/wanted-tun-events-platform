@@ -21,6 +21,8 @@ import {
   subscriptions,
   ticketPrices,
   users,
+  type Activity,
+  type SessionRow,
 } from "@/db/schema";
 import { hashPassword, randomToken, requireAdmin, revokeUserSessions, sendVerificationEmail } from "@/lib/auth";
 import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema } from "@/lib/validation/account";
@@ -34,9 +36,17 @@ import {
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
-import { formatDateTime, parseParisDateTime, safeLink, slugify } from "@/lib/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatTime,
+  parseParisDateTime,
+  safeLink,
+  slugify,
+} from "@/lib/format";
 import { localize, readTranslations } from "@/lib/i18n/content";
-import { logAndSend } from "@/lib/mailer";
+import { appUrl, logAndSend } from "@/lib/mailer";
 import { isRecurring, toActivityKind } from "@/lib/memberships";
 import { translatorFor } from "@/i18n/translator";
 
@@ -447,7 +457,8 @@ export async function updateSessionAction(formData: FormData): Promise<void> {
   const startsAt = parseParisDateTime(str(formData, "startsAt"));
   const backTo = str(formData, "redirectTo") === "session" ? `/admin/seances/${id}` : activityId ? `/admin/activites/${activityId}` : "/admin/seances";
   if (!startsAt) redirect(withMessage(backTo, "erreur", "dateInvalid"));
-  await db
+  const before = await loadSessionWithActivity(id);
+  const [updated] = await db
     .update(sessions)
     .set({
       title: str(formData, "title") || null,
@@ -458,11 +469,124 @@ export async function updateSessionAction(formData: FormData): Promise<void> {
       translations: readTranslations(formData, SESSION_TRANSLATABLE),
       status: str(formData, "status") || "scheduled",
     })
-    .where(eq(sessions.id, id));
+    .where(eq(sessions.id, id))
+    .returning();
+  // Date, lieu, durée, intitulé, informations ou statut modifiés : les inscrits sont prévenus par e-mail.
+  if (before && updated) await notifySessionChange(before.session, updated, before.activity);
   // Séance annulée ou reportée d'ici : elle n'est plus décomptée, les abonnés sont inscrits à la suivante.
   if (activityId) await fillMembershipSessions(activityId);
   revalidatePath("/admin/seances");
   redirect(withMessage(backTo, "ok", "sessionUpdated"));
+}
+
+async function loadSessionWithActivity(id: number) {
+  return (
+    await db
+      .select({ session: sessions, activity: activities })
+      .from(sessions)
+      .innerJoin(activities, eq(activities.id, sessions.activityId))
+      .where(eq(sessions.id, id))
+      .limit(1)
+  )[0];
+}
+
+/** Ce qui a changé dans une séance et qui intéresse un inscrit (dans l'ordre affiché dans l'e-mail). */
+function sessionChanges(before: SessionRow, after: SessionRow) {
+  const changes: ("rescheduled" | "when" | "duration" | "place" | "title" | "notes")[] = [];
+  if (before.status !== "scheduled") changes.push("rescheduled");
+  if (before.startsAt.getTime() !== after.startsAt.getTime()) changes.push("when");
+  if (before.durationMinutes !== after.durationMinutes) changes.push("duration");
+  if ((before.location ?? "") !== (after.location ?? "")) changes.push("place");
+  if ((before.title ?? "") !== (after.title ?? "")) changes.push("title");
+  if ((before.notes ?? "") !== (after.notes ?? "")) changes.push("notes");
+  return changes;
+}
+
+/**
+ * Prévient par e-mail tous les inscrits d'une séance qui vient d'être modifiée par l'administration :
+ *  - séance annulée ou reportée ;
+ *  - séance maintenue dont la date, l'heure, la durée, le lieu, l'intitulé ou les informations ont changé
+ *    (ou séance reprogrammée après une annulation ou un report).
+ * Rien n'est envoyé si rien d'utile n'a changé, ni pour une séance déjà passée.
+ * Chaque inscrit reçoit l'e-mail dans sa langue, avec le contenu traduit s'il existe.
+ */
+async function notifySessionChange(before: SessionRow, after: SessionRow, activityRow: Activity): Promise<void> {
+  const stopped = after.status === "cancelled" || after.status === "postponed";
+  const changes = stopped ? [] : sessionChanges(before, after);
+  if (stopped ? before.status === after.status : after.status !== "scheduled" || changes.length === 0) return;
+  const now = Date.now();
+  if (before.startsAt.getTime() <= now && after.startsAt.getTime() <= now) return;
+
+  const participants = await db
+    .select({ email: users.email, firstName: users.firstName, userId: users.id, locale: users.locale })
+    .from(attendances)
+    .innerJoin(users, eq(users.id, attendances.userId))
+    .where(eq(attendances.sessionId, after.id));
+
+  for (const participant of participants) {
+    const { locale } = participant;
+    const t = translatorFor(locale);
+    const activity = localize(activityRow, locale, ACTIVITY_TRANSLATABLE);
+    const session = localize(after, locale, SESSION_TRANSLATABLE);
+    const title = session.title ?? activity.name;
+    const common = { userId: participant.userId, sessionId: after.id, recipient: participant.email, locale };
+
+    if (stopped) {
+      const values = { title, date: formatDateTime(before.startsAt, locale) };
+      await logAndSend({
+        ...common,
+        type: "session_cancelled",
+        subject:
+          after.status === "cancelled"
+            ? t("emails.sessionChanged.subjectCancelled", { activity: activity.name })
+            : t("emails.sessionChanged.subjectPostponed", { activity: activity.name }),
+        body: [
+          t("emails.hello", { name: participant.firstName }),
+          "",
+          after.status === "cancelled"
+            ? t("emails.sessionChanged.cancelled", values)
+            : t("emails.sessionChanged.postponed", values),
+          session.notes ? t("emails.sessionChanged.info", { notes: session.notes }) : "",
+          "",
+          t("emails.team"),
+        ].join("\n"),
+      });
+      continue;
+    }
+
+    const place = session.location || [activity.address, activity.city].filter(Boolean).join(", ");
+    await logAndSend({
+      ...common,
+      type: "session_updated",
+      subject: t("emails.sessionUpdated.subject", { activity: activity.name }),
+      body: [
+        t("emails.hello", { name: participant.firstName }),
+        "",
+        t("emails.sessionUpdated.intro", {
+          title,
+          changes: changes.map((change) => t(`emails.sessionUpdated.changes.${change}`)).join(t("emails.sessionUpdated.separator")),
+        }),
+        ...(changes.includes("when")
+          ? [t("emails.sessionUpdated.previousDate", { date: formatDateTime(before.startsAt, locale) })]
+          : []),
+        "",
+        t("emails.sessionUpdated.current"),
+        t("emails.reminder.activity", { value: activity.name }),
+        t("emails.reminder.date", { value: formatDate(after.startsAt, locale) }),
+        t("emails.reminder.time", {
+          time: formatTime(after.startsAt, locale),
+          duration: formatDuration(after.durationMinutes, locale),
+        }),
+        t("emails.reminder.place", { value: place || t("emails.reminder.placeTbc") }),
+        ...(session.notes ? [t("emails.sessionChanged.info", { notes: session.notes })] : []),
+        "",
+        t("emails.sessionUpdated.follow"),
+        `${appUrl()}/espace-personnel`,
+        "",
+        t("emails.team"),
+      ].join("\n"),
+    });
+  }
 }
 
 export async function setSessionStatusAction(formData: FormData): Promise<void> {
@@ -472,55 +596,10 @@ export async function setSessionStatusAction(formData: FormData): Promise<void> 
   const requested = str(formData, "redirectTo");
   const redirectTo = requested.startsWith("/admin/") ? requested : "/admin/seances";
 
-  const row = (
-    await db
-      .select({ session: sessions, activity: activities })
-      .from(sessions)
-      .innerJoin(activities, eq(activities.id, sessions.activityId))
-      .where(eq(sessions.id, id))
-      .limit(1)
-  )[0];
-
-  await db.update(sessions).set({ status }).where(eq(sessions.id, id));
-
-  if (row && (status === "cancelled" || status === "postponed")) {
-    const participants = await db
-      .select({ email: users.email, firstName: users.firstName, userId: users.id, locale: users.locale })
-      .from(attendances)
-      .innerJoin(users, eq(users.id, attendances.userId))
-      .where(eq(attendances.sessionId, id));
-
-    for (const participant of participants) {
-      // Chaque participant reçoit l'e-mail dans sa langue, avec le contenu traduit s'il existe.
-      const { locale } = participant;
-      const t = translatorFor(locale);
-      const activity = localize(row.activity, locale, ACTIVITY_TRANSLATABLE);
-      const session = localize(row.session, locale, SESSION_TRANSLATABLE);
-      const values = { title: session.title ?? activity.name, date: formatDateTime(row.session.startsAt, locale) };
-
-      await logAndSend({
-        type: "session_cancelled",
-        userId: participant.userId,
-        sessionId: id,
-        recipient: participant.email,
-        locale,
-        subject:
-          status === "cancelled"
-            ? t("emails.sessionChanged.subjectCancelled", { activity: activity.name })
-            : t("emails.sessionChanged.subjectPostponed", { activity: activity.name }),
-        body: [
-          t("emails.hello", { name: participant.firstName }),
-          "",
-          status === "cancelled"
-            ? t("emails.sessionChanged.cancelled", values)
-            : t("emails.sessionChanged.postponed", values),
-          session.notes ? t("emails.sessionChanged.info", { notes: session.notes }) : "",
-          "",
-          t("emails.team"),
-        ].join("\n"),
-      });
-    }
-  }
+  const row = await loadSessionWithActivity(id);
+  const [updated] = await db.update(sessions).set({ status }).where(eq(sessions.id, id)).returning();
+  // Annulation, report ou reprogrammation : les inscrits sont prévenus par e-mail.
+  if (row && updated) await notifySessionChange(row.session, updated, row.activity);
 
   // Une séance annulée ou reportée n'est pas décomptée des packs : les abonnés sont inscrits à la suivante.
   if (row) await fillMembershipSessions(row.session.activityId);

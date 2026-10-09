@@ -965,6 +965,7 @@ const fr = {
         account_exists_notice: "Inscription avec un e-mail existant",
         subscription_activated: "Abonnement activé",
         session_cancelled: "Séance annulée / reportée",
+        session_updated: "Séance modifiée",
         subscription_ending: "Fin d’abonnement",
       },
     },
@@ -1290,6 +1291,15 @@ const fr = {
       sessions: "Nombre de séances incluses : {count}",
       rule: "Vous êtes inscrit automatiquement aux prochaines séances ouvertes à la confirmation. Chaque séance de votre pack est décomptée, même en cas d’absence.",
       follow: "Retrouvez vos séances et votre avancement dans votre espace personnel :",
+    },
+    sessionUpdated: {
+      subject: "Séance modifiée — {activity}",
+      intro: "La séance « {title} » à laquelle vous êtes inscrit a été modifiée ({changes}).",
+      separator: ", ",
+      changes: { rescheduled: "séance reprogrammée", when: "date ou heure", duration: "durée", place: "lieu", title: "intitulé", notes: "informations" },
+      previousDate: "Ancienne date : {date}.",
+      current: "Voici les informations à jour :",
+      follow: "Retrouvez vos séances dans votre espace personnel :",
     },
     sessionChanged: {
       subjectCancelled: "Séance annulée — {activity}",
