@@ -172,10 +172,10 @@ export function safeLink(value: string | null | undefined): string | null {
 export const SESSION_STATUSES = ["scheduled", "cancelled", "postponed", "done"] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export const SESSION_STATUS_STYLES: Record<SessionStatus, string> = {
-  scheduled: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  cancelled: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  postponed: "bg-amber-500/15 text-amber-200 border-amber-500/30",
-  done: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
+  scheduled: "border-emerald-300 bg-emerald-50 text-emerald-800",
+  cancelled: "border-rose-300 bg-rose-50 text-rose-800",
+  postponed: "border-amber-300 bg-amber-50 text-amber-900",
+  done: "border-zinc-300 bg-zinc-100 text-zinc-700",
 };
 export const toSessionStatus = (value: string): SessionStatus =>
   (SESSION_STATUSES as readonly string[]).includes(value) ? (value as SessionStatus) : "scheduled";
@@ -196,9 +196,9 @@ export function sessionDisplayStatus(
 export const ATTENDANCE_STATUSES = ["confirmed", "pending", "declined"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 export const ATTENDANCE_STATUS: Record<AttendanceStatus, { dot: string; className: string }> = {
-  confirmed: { dot: "🟢", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
-  pending: { dot: "🟠", className: "bg-amber-500/15 text-amber-200 border-amber-500/30" },
-  declined: { dot: "🔴", className: "bg-rose-500/15 text-rose-300 border-rose-500/30" },
+  confirmed: { dot: "🟢", className: "border-emerald-300 bg-emerald-50 text-emerald-800" },
+  pending: { dot: "🟠", className: "border-amber-300 bg-amber-50 text-amber-900" },
+  declined: { dot: "🔴", className: "border-rose-300 bg-rose-50 text-rose-800" },
 };
 export const toAttendanceStatus = (value: string): AttendanceStatus =>
   (ATTENDANCE_STATUSES as readonly string[]).includes(value) ? (value as AttendanceStatus) : "pending";
@@ -206,10 +206,10 @@ export const toAttendanceStatus = (value: string): AttendanceStatus =>
 export const SUBSCRIPTION_STATUSES = ["pending", "active", "expired", "cancelled"] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 export const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, string> = {
-  pending: "bg-amber-500/15 text-amber-200 border-amber-500/30",
-  active: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  expired: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
-  cancelled: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  pending: "border-amber-300 bg-amber-50 text-amber-900",
+  active: "border-emerald-300 bg-emerald-50 text-emerald-800",
+  expired: "border-zinc-300 bg-zinc-100 text-zinc-700",
+  cancelled: "border-rose-300 bg-rose-50 text-rose-800",
 };
 export const toSubscriptionStatus = (value: string): SubscriptionStatus =>
   (SUBSCRIPTION_STATUSES as readonly string[]).includes(value) ? (value as SubscriptionStatus) : "pending";
