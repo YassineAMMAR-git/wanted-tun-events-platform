@@ -18,6 +18,7 @@ import {
   createPlanAction,
   deletePlanAction,
   removePlanSubscriberAction,
+  setSubscriptionStatusAction,
   togglePlanAction,
   updatePlanAction,
 } from "@/app/actions/admin";
@@ -140,6 +141,10 @@ export default async function AdminPlansPage({
   ]);
 
   // Les actions du tableau des inscrits reviennent sur l'activité et la formule affichées.
+  const subscribersQuery = new URLSearchParams();
+  if (shownActivity) subscribersQuery.set("inscritsActivite", String(shownActivity.id));
+  if (shownPlan) subscribersQuery.set("inscritsFormule", String(shownPlan.id));
+  const subscribersPath = subscribersQuery.size > 0 ? `/admin/abonnements?${subscribersQuery}` : "/admin/abonnements";
   const subscriberContext = (
     <>
       {shownActivity ? <input type="hidden" name="inscritsActivite" value={shownActivity.id} /> : null}
@@ -255,13 +260,24 @@ export default async function AdminPlansPage({
                           )}
                         </td>
                         <td>
-                          <form action={removePlanSubscriberAction}>
-                            <input type="hidden" name="id" value={subscription.id} />
-                            {subscriberContext}
-                            <button className="btn btn-danger btn-sm" type="submit">
-                              {t("removeSubscriber")}
-                            </button>
-                          </form>
+                          <div className="flex flex-wrap gap-2">
+                            {/* Absence excusée : une séance est rendue au client, son pack s'agrandit d'une séance. */}
+                            <form action={setSubscriptionStatusAction}>
+                              <input type="hidden" name="id" value={subscription.id} />
+                              <input type="hidden" name="action" value="extend" />
+                              <input type="hidden" name="redirectTo" value={subscribersPath} />
+                              <button className="btn btn-ghost btn-sm whitespace-nowrap" type="submit" title={t("addSessionHint")}>
+                                {t("addSession")}
+                              </button>
+                            </form>
+                            <form action={removePlanSubscriberAction}>
+                              <input type="hidden" name="id" value={subscription.id} />
+                              {subscriberContext}
+                              <button className="btn btn-danger btn-sm" type="submit">
+                                {t("removeSubscriber")}
+                              </button>
+                            </form>
+                          </div>
                         </td>
                       </tr>
                     );

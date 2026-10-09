@@ -901,6 +901,8 @@ const ar: Messages = {
       change: "تغيير",
       noAlternative: "لا توجد صيغة بالسعر نفسه في نشاط آخر",
       removeSubscriber: "إزالة",
+      addSession: "+ حصة واحدة",
+      addSessionHint: "يضيف حصة إلى رصيد العميل (غياب بعذر، لفتة تجارية…)",
       addSubscriber: "اختر عميلًا…",
     },
     notifications: {
@@ -1187,6 +1189,7 @@ const ar: Messages = {
       planUpdated: "تم تحديث العرض.",
       planDeleted: "تم حذف العرض.",
       subscriptionUpdated: "تم تحديث الاشتراك.",
+      packSessionAdded: "أُضيفت حصة إلى رصيد العميل.",
       ruleUpdated: "تم تحديث القاعدة.",
       remindersRun: "نُفّذت تذكيرات التأكيد وأُغلق تأكيد الحضور.",
       planRecurringOnly: "الاشتراكات مخصّصة للأنشطة ذات الحصص.",

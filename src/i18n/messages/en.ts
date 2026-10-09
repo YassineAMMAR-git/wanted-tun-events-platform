@@ -896,6 +896,8 @@ const en: Messages = {
       change: "Change",
       noAlternative: "No plan at the same price in another activity",
       removeSubscriber: "Remove",
+      addSession: "+ 1 session",
+      addSessionHint: "Adds one session to the client’s balance (excused absence, goodwill gesture…)",
       addSubscriber: "Choose a client…",
     },
     notifications: {
@@ -1183,6 +1185,7 @@ const en: Messages = {
       planUpdated: "Plan updated.",
       planDeleted: "Plan deleted.",
       subscriptionUpdated: "Membership updated.",
+      packSessionAdded: "One session was added to the client’s balance.",
       ruleUpdated: "Rule updated.",
       remindersRun: "Confirmation reminders run and attendance closed.",
       planRecurringOnly: "Memberships are reserved for session-based activities.",

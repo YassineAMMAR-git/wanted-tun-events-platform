@@ -706,7 +706,7 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
   const requested = str(formData, "redirectTo");
   const redirectTo = requested.startsWith("/admin/") ? requested : "/admin/clients";
   revalidatePath(redirectTo);
-  redirect(withMessage(redirectTo, "ok", "subscriptionUpdated"));
+  redirect(withMessage(redirectTo, "ok", action === "extend" ? "packSessionAdded" : "subscriptionUpdated"));
 }
 
 /* ------------------------- abonnés d'une formule ------------------------- */

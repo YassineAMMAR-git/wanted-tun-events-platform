@@ -901,6 +901,8 @@ const fr = {
       change: "Changer",
       noAlternative: "Aucune formule au même prix dans une autre activité",
       removeSubscriber: "Retirer",
+      addSession: "+ 1 séance",
+      addSessionHint: "Ajoute une séance au solde du client (absence excusée, geste commercial…)",
       addSubscriber: "Choisir un client…",
     },
     notifications: {
@@ -1190,6 +1192,7 @@ const fr = {
       planUpdated: "Offre mise à jour.",
       planDeleted: "Offre supprimée.",
       subscriptionUpdated: "Abonnement mis à jour.",
+      packSessionAdded: "Une séance a été ajoutée au solde du client.",
       ruleUpdated: "Règle mise à jour.",
       remindersRun: "Rappels de confirmation exécutés et présences clôturées.",
       planRecurringOnly: "Les abonnements sont réservés aux activités à séances.",
