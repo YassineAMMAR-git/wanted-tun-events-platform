@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import type { Plan } from "@/db/schema";
+import type { PromoPlanOption, Promotion } from "@/lib/promotions";
 import { centsToEurosInput } from "@/lib/format";
 import { TranslationFields } from "@/components/translation-fields";
 
@@ -8,11 +9,18 @@ type Props = {
   plan?: Plan;
   /** Valeurs proposées à la création (adresse et horaires de l'activité). */
   defaults?: { address?: string | null; scheduleText?: string | null };
+  /** Promotion déjà réglée sur cette offre. */
+  promotion?: Promotion;
+  /** Formules qui peuvent donner droit à la promotion. */
+  promoPlans: PromoPlanOption[];
+  /** Activité de l'offre, si elle est connue : ses propres formules ne sont pas proposées. */
+  activityId?: number;
 };
 
 /** Champs d'une offre d'abonnement, communs à la page Offres et à la fiche activité. */
-export function PlanFields({ plan, defaults }: Props) {
+export function PlanFields({ plan, defaults, promotion, promoPlans, activityId }: Props) {
   const t = useTranslations("admin.planForm");
+  const promoOptions = promoPlans.filter((option) => option.activityId !== activityId && option.id !== plan?.id);
 
   return (
     <>
@@ -70,6 +78,44 @@ export function PlanFields({ plan, defaults }: Props) {
         <label className="label">{t("address")}</label>
         <input name="address" maxLength={240} defaultValue={plan?.address ?? defaults?.address ?? ""} className="input" />
       </div>
+      <fieldset className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 sm:col-span-2 lg:col-span-4">
+        <legend className="px-1 text-sm font-semibold text-gold-dark">🏷️ {t("promoTitle")}</legend>
+        <label className="flex items-center gap-2 text-sm text-zinc-800">
+          <input type="checkbox" name="promoEnabled" defaultChecked={Boolean(promotion)} className="h-4 w-4" />
+          {t("promoEnabled")}
+        </label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[10rem_1fr]">
+          <div>
+            <label className="label">{t("promoPercent")}</label>
+            <input
+              name="promoPercent"
+              type="number"
+              min={1}
+              max={99}
+              step={1}
+              defaultValue={promotion?.percent ?? 20}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="label">{t("promoPlans")}</label>
+            <select
+              name="promoPlanIds"
+              multiple
+              size={Math.min(Math.max(promoOptions.length, 2), 6)}
+              defaultValue={(promotion?.requiredPlanIds ?? []).map(String)}
+              className="select h-auto"
+            >
+              {promoOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">{t("promoPlansHint")}</p>
+          </div>
+        </div>
+      </fieldset>
     </>
   );
 }

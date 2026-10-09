@@ -23,6 +23,7 @@ import {
   updatePlanAction,
 } from "@/app/actions/admin";
 import { SUBSCRIPTION_STATUS, formatPrice, toSubscriptionStatus } from "@/lib/format";
+import { loadPromotions, promoPlanOptions } from "@/lib/promotions";
 import { PACK_SESSIONS_USED } from "@/lib/subscriptions";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
@@ -119,7 +120,7 @@ export default async function AdminPlansPage({
   const activityPlans = allPlans.filter((row) => row.plan.activityId === shownActivity?.id).map((row) => row.plan);
   // Une formule d'une autre activité (activité changée entre-temps) est ignorée.
   const shownPlan = activityPlans.find((plan) => String(plan.id) === inscritsFormule);
-  const [subscribers, clients] = await Promise.all([
+  const [subscribers, clients, promoPlans, promotions] = await Promise.all([
     shownActivity
       ? db
           .select({ subscription: subscriptions, user: users, plan: plans, used: PACK_SESSIONS_USED })
@@ -138,6 +139,8 @@ export default async function AdminPlansPage({
           .orderBy(asc(users.lastName), asc(users.firstName))
       : [],
     db.select().from(users).where(ne(users.role, "admin")).orderBy(asc(users.lastName)),
+    promoPlanOptions(locale),
+    loadPromotions(),
   ]);
 
   // Les actions du tableau des inscrits reviennent sur l'activité et la formule affichées.
@@ -445,7 +448,12 @@ export default async function AdminPlansPage({
               <form action={updatePlanAction} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="hidden" name="id" value={row.plan.id} />
                 <input type="hidden" name="redirectTo" value="/admin/abonnements" />
-                <PlanFields plan={row.plan} />
+                <PlanFields
+                  plan={row.plan}
+                  promotion={promotions.get(row.plan.id)}
+                  promoPlans={promoPlans}
+                  activityId={row.plan.activityId}
+                />
                 <div className="sm:col-span-2 lg:col-span-4">
                   <button className="btn btn-primary btn-sm" type="submit">
                     {tCommon("save")}
@@ -520,7 +528,7 @@ export default async function AdminPlansPage({
                 ))}
               </select>
             </div>
-            <PlanFields />
+            <PlanFields promoPlans={promoPlans} />
             <div className="sm:col-span-2 lg:col-span-4">
               <button className="btn btn-primary" type="submit">
                 {tPlan("create")}

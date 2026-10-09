@@ -265,6 +265,23 @@ export const plans = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* Promotions sur les offres d'abonnement                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Promotion d'une formule : réduction en pourcentage accordée automatiquement aux clients qui ont déjà payé
+ * au moins une des formules listées (formules d'autres activités). Une ligne par formule en promotion.
+ */
+export const planPromotions = pgTable("plan_promotions", {
+  planId: integer("plan_id")
+    .primaryKey()
+    .references(() => plans.id, { onDelete: "cascade" }),
+  percent: integer("percent").notNull(),
+  requiredPlanIds: jsonb("required_plan_ids").$type<number[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* ------------------------------------------------------------------ */
 /* Abonnements (club de chant) et billets (événements ponctuels)       */
 /* ------------------------------------------------------------------ */
 
@@ -293,6 +310,7 @@ export const subscriptions = pgTable(
     /**
      * Billet : prix retenu à l'achat et nom du tarif choisi (copiés, pour rester exacts si le tarif est modifié
      * ou supprimé ensuite). Vide sur les anciens billets : le prix est alors celui de l'activité.
+     * Abonnement : prix réduit quand une promotion s'applique au client ; vide = prix de la formule.
      */
     amountCents: integer("amount_cents"),
     priceLabel: varchar("price_label", { length: 120 }),
@@ -472,3 +490,4 @@ export type NotificationRow = typeof notifications.$inferSelect;
 export type NotificationRule = typeof notificationRules.$inferSelect;
 export type HeroSlide = typeof heroSlides.$inferSelect;
 export type PaymentLink = typeof paymentLinks.$inferSelect;
+export type PlanPromotion = typeof planPromotions.$inferSelect;

@@ -48,6 +48,7 @@ import {
 import { localize, readTranslations } from "@/lib/i18n/content";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { isRecurring, toActivityKind } from "@/lib/memberships";
+import { savePlanPromotion } from "@/lib/promotions";
 import { translatorFor } from "@/i18n/translator";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -715,8 +716,11 @@ export async function createPlanAction(formData: FormData): Promise<void> {
   const back = planBackPath(formData);
   if (!activityId || !values.name) redirect(withMessage(back, "erreur", "planRequiredFields"));
   if (!(await activityOffersMemberships(activityId))) redirect(withMessage(back, "erreur", "planRecurringOnly"));
-  await db.insert(plans).values({ ...values, activityId });
+  const inserted = await db.insert(plans).values({ ...values, activityId }).returning({ id: plans.id });
+  const promoError = await savePlanPromotion(inserted[0]!.id, activityId, formData);
   revalidatePath(back);
+  // L'offre est créée même si la promotion saisie est incomplète : le message dit quoi corriger.
+  if (promoError) redirect(withMessage(back, "erreur", promoError));
   redirect(withMessage(back, "ok", "planCreated"));
 }
 
@@ -731,7 +735,9 @@ export async function updatePlanAction(formData: FormData): Promise<void> {
     redirect(withMessage(back, "erreur", "planRecurringOnly"));
   }
   await db.update(plans).set(values).where(eq(plans.id, id));
+  const promoError = await savePlanPromotion(id, current.activityId, formData);
   revalidatePath(back);
+  if (promoError) redirect(withMessage(back, "erreur", promoError));
   redirect(withMessage(back, "ok", "planUpdated"));
 }
 

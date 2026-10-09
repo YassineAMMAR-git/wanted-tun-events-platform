@@ -80,7 +80,13 @@ export default async function PaymentPage({
 
   const alreadyPaid = subscription.paymentStatus === "paid" || link?.status === "paid";
   const awaitingCheck = subscription.paymentStatus === "declared";
-  const price = formatPrice(ticket ? (subscription.amountCents ?? activity.priceCents) : plan!.priceCents, locale);
+  const priceCents = subscription.amountCents ?? (ticket ? activity.priceCents : plan!.priceCents);
+  const price = formatPrice(priceCents, locale);
+  // Abonnement en promotion : le prix retenu sur la commande est inférieur à celui de la formule.
+  const promoPercent =
+    !ticket && plan!.priceCents > 0 && priceCents < plan!.priceCents
+      ? Math.round(100 - (priceCents * 100) / plan!.priceCents)
+      : 0;
 
   // Avant le paiement d'un abonnement : les séances auxquelles le client sera inscrit s'il paie maintenant.
   const pack =
@@ -124,9 +130,24 @@ export default async function PaymentPage({
           </div>
           <div className="text-end">
             <p className="text-xs tracking-wider text-zinc-500 uppercase">{t("price")}</p>
-            <p className="text-2xl font-black text-gold-dark">{price}</p>
+            {promoPercent > 0 ? <s className="block text-sm text-zinc-500">{formatPrice(plan!.priceCents, locale)}</s> : null}
+            <p className={`text-2xl font-black ${promoPercent > 0 ? "text-rose-600" : "text-gold-dark"}`}>{price}</p>
           </div>
         </div>
+
+        {promoPercent > 0 ? (
+          <div className="mt-4 flex items-center gap-3 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-3 text-white shadow-md">
+            <span className="text-2xl" aria-hidden>
+              🎉
+            </span>
+            <div>
+              <p className="text-sm font-black">{t("promoApplied", { percent: promoPercent })}</p>
+              <p className="text-xs text-white/90">
+                {t("promoText", { price, original: formatPrice(plan!.priceCents, locale) })}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <dl className="mt-5 grid gap-3 sm:grid-cols-2">
           {(ticket

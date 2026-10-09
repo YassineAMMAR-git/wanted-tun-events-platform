@@ -323,8 +323,8 @@ export async function getMySubscriptions(userId: number, locale: Locale) {
     activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(category, locale, CATEGORY_TRANSLATABLE).name,
     categoryEmoji: category.emoji,
-    /** Prix payé ou à payer : celui de l'offre pour un abonnement ; pour un billet, le tarif retenu à l'achat. */
-    priceCents: plan ? plan.priceCents : (rest.subscription.amountCents ?? activity.priceCents),
+    /** Prix payé ou à payer : celui retenu à l'achat (tarif du billet, promotion), sinon celui de l'offre ou de l'activité. */
+    priceCents: rest.subscription.amountCents ?? (plan ? plan.priceCents : activity.priceCents),
   }));
 }
 

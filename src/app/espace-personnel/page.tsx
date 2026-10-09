@@ -230,7 +230,7 @@ export default async function DashboardPage({
                       </span>
                       <h3 className="mt-2 text-lg font-bold text-zinc-900">{row.activity.name}</h3>
                       <p className="text-sm text-zinc-600">
-                        {t("offer", { name: row.plan.name, price: formatPrice(row.plan.priceCents, locale) })}
+                        {t("offer", { name: row.plan.name, price: formatPrice(row.priceCents, locale) })}
                       </p>
                     </div>
                     <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`subscription.${status}`)}</span>

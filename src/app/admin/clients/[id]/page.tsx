@@ -264,7 +264,7 @@ export default async function AdminClientDetail({
                             row.subscription.priceLabel ? ` · ${row.subscription.priceLabel}` : ""
                           }`}
                     </td>
-                    <td className="whitespace-nowrap">{formatPrice(row.plan?.priceCents ?? row.subscription.amountCents ?? row.activity.priceCents, locale)}</td>
+                    <td className="whitespace-nowrap">{formatPrice(row.subscription.amountCents ?? row.plan?.priceCents ?? row.activity.priceCents, locale)}</td>
                     <td className="whitespace-nowrap text-zinc-600">{formatDate(row.subscription.startsAt, locale)}</td>
                     <td className="text-zinc-700" dir="ltr">
                       {/* Séances du pack qui ont eu lieu, que le client soit venu ou non. */}

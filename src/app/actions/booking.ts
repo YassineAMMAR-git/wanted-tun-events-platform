@@ -8,6 +8,7 @@ import { activities, attendances, plans, sessions, subscriptions, ticketPrices }
 import { getCurrentUser } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
 import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
+import { promotionForClient } from "@/lib/promotions";
 import { activateSubscription, membershipEndsAt, placesTaken, respondToAttendance } from "@/lib/subscriptions";
 
 /**
@@ -37,6 +38,8 @@ export async function subscribeAction(formData: FormData): Promise<void> {
     redirect(`/connexion?erreur=loginToSubscribe&next=/activites/${row.activity.slug}`);
   }
 
+  // Promotion : le client qui possède une des formules exigées paie le prix réduit, fixé ici sur la commande.
+  const promotion = await promotionForClient(plan, user.id);
   const startsAt = new Date();
 
   const inserted = await db
@@ -52,6 +55,7 @@ export async function subscribeAction(formData: FormData): Promise<void> {
       endsAt: membershipEndsAt(startsAt),
       sessionsIncluded: plan.sessionsIncluded,
       sessionsUsed: 0,
+      ...(promotion ? { amountCents: promotion.priceCents, priceLabel: `Promotion -${promotion.percent} %` } : {}),
     })
     .returning({ id: subscriptions.id });
 

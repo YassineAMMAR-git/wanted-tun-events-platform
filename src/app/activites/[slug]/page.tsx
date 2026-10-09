@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ensureSeeded } from "@/lib/seed";
 import { getActivityDetail } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/auth";
+import { planOffers } from "@/lib/promotions";
 import { buyTicketAction, subscribeAction } from "@/app/actions/booking";
 import { formatDate, formatDuration, formatPrice, formatTime, parseParisDateTime, toDateTimeLocalValue } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
@@ -34,6 +36,9 @@ export default async function ActivityDetailPage({
   if (!detail) notFound();
 
   const { activity, categoryName, categoryEmoji, plans, upcoming, past, upcomingTotal, upcomingPlaces } = detail;
+  // Promotions des formules : prix réduit pour le client connecté qui y a droit, annonce pour les autres.
+  const viewer = plans.length > 0 ? await getCurrentUser() : null;
+  const offers = await planOffers(plans, viewer?.id ?? null, locale);
   const filtered = Boolean(du || au || lieu);
   const today = toDateTimeLocalValue(new Date()).slice(0, 10);
   const pagePath = `/activites/${activity.slug}`;
@@ -298,8 +303,19 @@ export default async function ActivityDetailPage({
             </Card>
           ) : (
             <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {plans.map((plan) => (
-                <div key={plan.id} className="card card-hover flex h-full flex-col p-5">
+              {plans.map((plan) => {
+                const offer = offers.get(plan.id);
+                const priceCents = offer?.eligible ? offer.priceCents : plan.priceCents;
+                return (
+                <div
+                  key={plan.id}
+                  className={`card card-hover relative flex h-full flex-col p-5 ${offer ? "border-rose-300 ring-2 ring-rose-200" : ""}`}
+                >
+                  {offer ? (
+                    <span className="absolute -end-3 -top-3 z-10 rotate-6 rounded-full bg-gradient-to-br from-rose-500 to-amber-500 px-3 py-1.5 text-sm font-black text-white shadow-lg">
+                      🏷️ {t("promoSticker", { percent: offer.percent })}
+                    </span>
+                  ) : null}
                   {/* Hauteurs fixes (titre, description) : prix et boutons alignés d'une carte à l'autre. */}
                   <div className="flex min-h-12 items-start justify-between gap-3">
                     <h3 className="line-clamp-2 text-base font-bold text-zinc-900">{plan.name}</h3>
@@ -310,12 +326,26 @@ export default async function ActivityDetailPage({
                   <p className="mt-1 line-clamp-2 min-h-10 text-sm text-zinc-600" title={plan.description ?? undefined}>
                     {plan.description}
                   </p>
-                  <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
+                  {offer?.eligible ? (
+                    <p className="mt-3 flex flex-wrap items-baseline gap-2">
+                      <span className="text-2xl font-black text-rose-600">{formatPrice(priceCents, locale)}</span>
+                      <s className="text-sm text-zinc-500">{formatPrice(plan.priceCents, locale)}</s>
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-2xl font-black text-gold-dark">{formatPrice(plan.priceCents, locale)}</p>
+                  )}
                   <p className="text-xs text-zinc-500">
                     {t("perSession", {
-                      price: formatPrice(Math.round(plan.priceCents / Math.max(plan.sessionsIncluded, 1)), locale),
+                      price: formatPrice(Math.round(priceCents / Math.max(plan.sessionsIncluded, 1)), locale),
                     })}
                   </p>
+                  {offer ? (
+                    <p className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                      {offer.eligible
+                        ? t("promoYours", { percent: offer.percent })
+                        : t("promoFor", { percent: offer.percent, plans: offer.requiredNames.join(" · ") })}
+                    </p>
+                  ) : null}
 
                   <ul className="mt-4 flex-1 space-y-1.5 text-sm text-zinc-700">
                     <li>📍 {plan.address ?? address}</li>
@@ -332,13 +362,14 @@ export default async function ActivityDetailPage({
                     <form action={subscribeAction}>
                       <input type="hidden" name="planId" value={plan.id} />
                       <button className="btn btn-primary w-full" type="submit">
-                        {t("choose", { price: formatPrice(plan.priceCents, locale) })}
+                        {t("choose", { price: formatPrice(priceCents, locale) })}
                       </button>
                     </form>
                     <p className="text-center text-[11px] text-zinc-500">{t("securePayment")}</p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

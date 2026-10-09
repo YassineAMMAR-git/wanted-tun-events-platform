@@ -33,6 +33,7 @@ import { ImageUploadField } from "@/components/image-upload-field";
 import { TicketPriceFields } from "@/components/ticket-price-fields";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
 import { isRecurring } from "@/lib/memberships";
+import { loadPromotions, promoPlanOptions } from "@/lib/promotions";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function AdminActivityDetail({
   const activity = (await db.select().from(activities).where(eq(activities.id, activityId)).limit(1))[0];
   if (!activity) notFound();
 
-  const [categoryList, sessionList, planList, priceList] = await Promise.all([
+  const [categoryList, sessionList, planList, priceList, promoPlans, promotions] = await Promise.all([
     db.select().from(categories).orderBy(asc(categories.position)),
     db.select().from(sessions).where(eq(sessions.activityId, activityId)).orderBy(desc(sessions.startsAt)),
     db.select().from(plans).where(eq(plans.activityId, activityId)).orderBy(asc(plans.priceCents)),
@@ -68,6 +69,8 @@ export default async function AdminActivityDetail({
       .from(ticketPrices)
       .where(eq(ticketPrices.activityId, activityId))
       .orderBy(asc(ticketPrices.position), asc(ticketPrices.id)),
+    promoPlanOptions(locale),
+    loadPromotions(),
   ]);
 
   // « Dupliquer cette séance » : le formulaire d'ajout est prérempli avec la séance choisie, une semaine plus tard.
@@ -492,7 +495,12 @@ export default async function AdminActivityDetail({
                   <form action={updatePlanAction} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <input type="hidden" name="id" value={plan.id} />
                     <input type="hidden" name="redirectTo" value={backTo} />
-                    <PlanFields plan={plan} />
+                    <PlanFields
+                      plan={plan}
+                      promotion={promotions.get(plan.id)}
+                      promoPlans={promoPlans}
+                      activityId={activity.id}
+                    />
                     <div className="sm:col-span-2 lg:col-span-4">
                       <button className="btn btn-primary btn-sm" type="submit">
                         {tPlan("save")}
@@ -509,7 +517,11 @@ export default async function AdminActivityDetail({
               <form action={createPlanAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="hidden" name="activityId" value={activity.id} />
                 <input type="hidden" name="redirectTo" value={backTo} />
-                <PlanFields defaults={{ address: activity.address, scheduleText: activity.scheduleText }} />
+                <PlanFields
+                  defaults={{ address: activity.address, scheduleText: activity.scheduleText }}
+                  promoPlans={promoPlans}
+                  activityId={activity.id}
+                />
                 <div className="sm:col-span-2 lg:col-span-4">
                   <button className="btn btn-primary" type="submit">
                     {tPlan("create")}

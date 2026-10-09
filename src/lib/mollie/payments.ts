@@ -151,8 +151,9 @@ export async function ensurePaymentLink(subscriptionId: number): Promise<Payment
   const ticket = row.subscription.kind === "ticket";
   if (!ticket && !row.plan) return null;
 
-  // Billet : prix retenu à l'achat (tarif choisi), sinon prix de l'activité.
-  const amountCents = ticket ? (row.subscription.amountCents ?? row.activity.priceCents) : row.plan!.priceCents;
+  // Prix retenu à l'achat (tarif choisi pour un billet, prix en promotion pour un abonnement),
+  // sinon prix de l'activité ou de la formule.
+  const amountCents = row.subscription.amountCents ?? (ticket ? row.activity.priceCents : row.plan!.priceCents);
 
   // Un paiement ouvert n'est repris que s'il est au bon montant (le client a pu changer de tarif entre-temps).
   const current = await latestPaymentLink(subscriptionId);
