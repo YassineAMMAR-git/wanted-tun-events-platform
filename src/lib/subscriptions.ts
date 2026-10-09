@@ -53,7 +53,7 @@ export async function closeConfirmations(): Promise<number> {
 /*
  * Un abonnement est un pack de séances : il ne dépend d'aucune durée en jours.
  *  - À l'achat, le client est inscrit aux prochaines séances de l'activité encore ouvertes à la confirmation
- *    de présence, dans la limite des séances de son pack ; s'il n'y en a pas assez, il est inscrit aux
+ *    de présence et non complètes, dans la limite des séances de son pack ; s'il n'y en a pas assez, il est inscrit aux
  *    suivantes dès qu'elles sont programmées.
  *  - Chaque séance du pack qui a lieu est décomptée, que le client soit venu ou non.
  *  - Une séance annulée ou reportée n'est pas décomptée : elle est remplacée par la suivante.
@@ -83,8 +83,9 @@ export async function packSlotsLeft(subscriptionId: number, sessionsIncluded: nu
 }
 
 /**
- * Inscrit un abonné aux prochaines séances de l'activité encore ouvertes à la confirmation de présence,
- * tant qu'il reste des séances à attribuer dans son pack.
+ * Inscrit un abonné aux prochaines séances de l'activité encore ouvertes à la confirmation de présence
+ * et non complètes, tant qu'il reste des séances à attribuer dans son pack. Une séance complète est sautée :
+ * le pack porte sur les suivantes.
  */
 export async function ensureAttendances(params: {
   userId: number;
@@ -122,8 +123,15 @@ export async function ensureAttendances(params: {
       ),
     );
   const known = new Set(existing.map((row) => row.sessionId));
+  const [activity, taken] = await Promise.all([
+    db.select({ capacity: activities.capacity }).from(activities).where(eq(activities.id, params.activityId)).limit(1),
+    placesTaken(upcoming.map((session) => session.id)),
+  ]);
+  const capacity = activity[0]?.capacity ?? 0;
   // Une séance où le client est déjà inscrit autrement (billet, ajout manuel) n'est pas prise sur le pack.
-  const missing = upcoming.filter((session) => !known.has(session.id)).slice(0, slots);
+  const missing = upcoming
+    .filter((session) => !known.has(session.id) && (taken.get(session.id) ?? 0) < capacity)
+    .slice(0, slots);
   if (missing.length === 0) return 0;
 
   await db
