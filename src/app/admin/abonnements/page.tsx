@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -26,6 +26,7 @@ import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { PlanFields } from "@/app/admin/_components/plan-fields";
+import { AutoSubmitSelect } from "@/app/admin/_components/auto-submit-select";
 import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +38,18 @@ const toPaymentStatus = (value: string) =>
 export default async function AdminPlansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string; q?: string; activite?: string; etat?: string; tri?: string }>;
+  searchParams: Promise<{
+    ok?: string;
+    erreur?: string;
+    q?: string;
+    activite?: string;
+    etat?: string;
+    tri?: string;
+    inscritsActivite?: string;
+    inscritsFormule?: string;
+  }>;
 }) {
-  const { ok, erreur, q, activite, etat, tri } = await searchParams;
+  const { ok, erreur, q, activite, etat, tri, inscritsActivite, inscritsFormule } = await searchParams;
   const [locale, t, tCommon, tStatus, tPlan] = await Promise.all([
     getLocale(),
     getTranslations("admin.plans"),
@@ -99,38 +109,44 @@ export default async function AdminPlansPage({
       .orderBy(asc(categories.position), asc(activities.name), asc(plans.priceCents)),
   ]);
 
-  // Tableau des abonnés : clients de chaque formule affichée (hors abonnements annulés).
-  const planIds = rows.map((row) => row.plan.id);
-  const [subscribers, clients, allPlans] = await Promise.all([
-    planIds.length === 0
-      ? []
-      : db
-          .select({ subscription: subscriptions, user: users })
+  // Tableau des inscrits : une seule activité à la fois (la première par défaut), toutes ses formules ou une seule.
+  const allPlans = await db
+    .select({ plan: plans, activity: activities })
+    .from(plans)
+    .innerJoin(activities, eq(activities.id, plans.activityId))
+    .where(eq(activities.kind, "recurring"))
+    .orderBy(asc(activities.name), asc(plans.priceCents), asc(plans.name));
+  const shownActivity = (activityList.find((row) => String(row.activity.id) === inscritsActivite) ?? activityList[0])?.activity;
+  const activityPlans = allPlans.filter((row) => row.plan.activityId === shownActivity?.id).map((row) => row.plan);
+  // Une formule d'une autre activité (activité changée entre-temps) est ignorée.
+  const shownPlan = activityPlans.find((plan) => String(plan.id) === inscritsFormule);
+  const [subscribers, clients] = await Promise.all([
+    shownActivity
+      ? db
+          .select({ subscription: subscriptions, user: users, plan: plans })
           .from(subscriptions)
           .innerJoin(users, eq(users.id, subscriptions.userId))
+          .innerJoin(plans, eq(plans.id, subscriptions.planId))
           .where(
             and(
               eq(subscriptions.kind, "membership"),
-              inArray(subscriptions.planId, planIds),
+              eq(subscriptions.activityId, shownActivity.id),
+              shownPlan ? eq(subscriptions.planId, shownPlan.id) : undefined,
               ne(subscriptions.status, "cancelled"),
             ),
           )
-          .orderBy(asc(users.lastName), asc(users.firstName)),
+          .orderBy(asc(users.lastName), asc(users.firstName))
+      : [],
     db.select().from(users).where(ne(users.role, "admin")).orderBy(asc(users.lastName)),
-    // Toutes les formules, y compris celles masquées par les filtres : cibles possibles d'un changement.
-    db
-      .select({ plan: plans, activity: activities })
-      .from(plans)
-      .innerJoin(activities, eq(activities.id, plans.activityId))
-      .where(eq(activities.kind, "recurring"))
-      .orderBy(asc(activities.name), asc(plans.name)),
   ]);
-  const subscribersByPlan = new Map<number, typeof subscribers>();
-  for (const row of subscribers) {
-    const list = subscribersByPlan.get(row.subscription.planId!) ?? [];
-    list.push(row);
-    subscribersByPlan.set(row.subscription.planId!, list);
-  }
+
+  // Les actions du tableau des inscrits reviennent sur l'activité et la formule affichées.
+  const subscriberContext = (
+    <>
+      {shownActivity ? <input type="hidden" name="inscritsActivite" value={shownActivity.id} /> : null}
+      {shownPlan ? <input type="hidden" name="inscritsFormule" value={shownPlan.id} /> : null}
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -139,6 +155,8 @@ export default async function AdminPlansPage({
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
       <FilterBar action="/admin/abonnements" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
+        {/* L'activité et la formule choisies pour le tableau des inscrits sont conservées. */}
+        {subscriberContext}
         <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
         <FilterSelect
           name="activite"
@@ -245,42 +263,64 @@ export default async function AdminPlansPage({
 
       <section id="abonnes" className="scroll-mt-20">
         <SectionTitle eyebrow={t("subscribersEyebrow")} title={t("subscribersTitle")} subtitle={t("subscribersSubtitle")} />
-        <div className="card scroll-x">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>{t("colClient")}</th>
-                <th>{t("colValidity")}</th>
-                <th>{t("colStatus")}</th>
-                <th>{t("colPayment")}</th>
-                <th>{t("colChange")}</th>
-                <th>{t("colActions")}</th>
-              </tr>
-            </thead>
-            {rows.map((row) => {
-              const members = subscribersByPlan.get(row.plan.id) ?? [];
-              // Un abonné « en cours » (en attente ou actif) ne peut pas être inscrit une seconde fois à la formule.
-              const enrolled = new Set(
-                members.filter((m) => m.subscription.status !== "expired").map((m) => m.user.id),
-              );
-              // Changement possible uniquement vers la formule d'une autre activité, au même prix.
-              const alternatives = allPlans.filter(
-                (other) => other.plan.activityId !== row.plan.activityId && other.plan.priceCents === row.plan.priceCents,
-              );
-              return (
-                <tbody key={row.plan.id}>
-                  <tr className="bg-zinc-50">
-                    <td colSpan={6}>
-                      <span className="font-bold text-zinc-900">{localize(row.plan, locale, PLAN_TRANSLATABLE).name}</span>
-                      <span className="text-zinc-600">
-                        {" "}
-                        · {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name} ·{" "}
-                        {formatPrice(row.plan.priceCents, locale)} · {t("subscriberCount", { count: members.length })}
-                      </span>
-                    </td>
+        {shownActivity ? (
+          <>
+            <Card>
+              {/* Formulaire GET appliqué dès qu'on change d'activité ou de formule ; les filtres des offres sont conservés. */}
+              <form action="/admin/abonnements#abonnes" className="grid items-end gap-3 sm:grid-cols-2">
+                {search ? <input type="hidden" name="q" value={search} /> : null}
+                {activite ? <input type="hidden" name="activite" value={activite} /> : null}
+                {etat ? <input type="hidden" name="etat" value={etat} /> : null}
+                {tri ? <input type="hidden" name="tri" value={tri} /> : null}
+                <AutoSubmitSelect
+                  name="inscritsActivite"
+                  label={t("filterActivity")}
+                  value={String(shownActivity.id)}
+                  options={activityList.map((row) => ({
+                    value: String(row.activity.id),
+                    label: localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
+                  }))}
+                />
+                <AutoSubmitSelect
+                  name="inscritsFormule"
+                  label={t("filterPlan")}
+                  value={shownPlan ? String(shownPlan.id) : ""}
+                  placeholder={t("allPlans")}
+                  options={activityPlans.map((plan) => ({
+                    value: String(plan.id),
+                    label: `${localize(plan, locale, PLAN_TRANSLATABLE).name} — ${formatPrice(plan.priceCents, locale)}`,
+                  }))}
+                />
+                <noscript className="sm:col-span-2">
+                  <button className="btn btn-primary" type="submit">
+                    {tCommon("filter")}
+                  </button>
+                </noscript>
+              </form>
+            </Card>
+
+            <p className="mt-4 text-sm text-zinc-600">{t("subscriberCount", { count: subscribers.length })}</p>
+
+            <div className="card scroll-x mt-3">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>{t("colClient")}</th>
+                    <th>{t("colPlan")}</th>
+                    <th>{t("colValidity")}</th>
+                    <th>{t("colStatus")}</th>
+                    <th>{t("colPayment")}</th>
+                    <th>{t("colChange")}</th>
+                    <th>{t("colActions")}</th>
                   </tr>
-                  {members.map(({ subscription, user }) => {
+                </thead>
+                <tbody>
+                  {subscribers.map(({ subscription, user, plan }) => {
                     const status = toSubscriptionStatus(subscription.status);
+                    // Changement possible uniquement vers la formule d'une autre activité, au même prix.
+                    const alternatives = allPlans.filter(
+                      (other) => other.plan.activityId !== plan.activityId && other.plan.priceCents === plan.priceCents,
+                    );
                     return (
                       <tr key={subscription.id}>
                         <td>
@@ -290,6 +330,10 @@ export default async function AdminPlansPage({
                           <span className="block text-xs text-zinc-500" dir="ltr">
                             {user.email}
                           </span>
+                        </td>
+                        <td className="text-zinc-800">
+                          {localize(plan, locale, PLAN_TRANSLATABLE).name}
+                          <span className="block text-xs text-zinc-500">{formatPrice(plan.priceCents, locale)}</span>
                         </td>
                         <td className="whitespace-nowrap text-zinc-600">
                           {tCommon("dateRange", {
@@ -307,6 +351,7 @@ export default async function AdminPlansPage({
                           {alternatives.length > 0 ? (
                             <form action={changeSubscriptionPlanAction} className="flex items-center gap-2">
                               <input type="hidden" name="id" value={subscription.id} />
+                              {subscriberContext}
                               <select name="planId" required defaultValue="" className="select" aria-label={t("colChange")}>
                                 <option value="" disabled>
                                   {t("changeChoose")}
@@ -329,6 +374,7 @@ export default async function AdminPlansPage({
                         <td>
                           <form action={removePlanSubscriberAction}>
                             <input type="hidden" name="id" value={subscription.id} />
+                            {subscriberContext}
                             <button className="btn btn-danger btn-sm" type="submit">
                               {t("removeSubscriber")}
                             </button>
@@ -337,40 +383,70 @@ export default async function AdminPlansPage({
                       </tr>
                     );
                   })}
-                  <tr>
-                    <td colSpan={6}>
-                      <form action={addPlanSubscriberAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <input type="hidden" name="planId" value={row.plan.id} />
-                        <select name="userId" required defaultValue="" className="select sm:max-w-md" aria-label={t("addSubscriber")}>
-                          <option value="" disabled>
-                            {t("addSubscriber")}
-                          </option>
-                          {clients.map((client) => (
-                            <option key={client.id} value={client.id} disabled={enrolled.has(client.id)}>
-                              {client.firstName} {client.lastName} — {client.email}
-                            </option>
-                          ))}
-                        </select>
-                        <button className="btn btn-primary btn-sm" type="submit">
-                          {tCommon("add")}
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
+                  {subscribers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center text-zinc-500">
+                        {t("noSubscribers")}
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
-              );
-            })}
-            {rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={6} className="text-center text-zinc-500">
-                    {t("noPlans")}
-                  </td>
-                </tr>
-              </tbody>
+              </table>
+            </div>
+
+            {activityPlans.length > 0 ? (
+              <Card className="mt-5">
+                <h3 className="text-base font-bold text-zinc-900">
+                  {t("addTitle", { activity: localize(shownActivity, locale, ACTIVITY_TRANSLATABLE).name ?? "" })}
+                </h3>
+                <form action={addPlanSubscriberAction} className="mt-3 grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                  {subscriberContext}
+                  <div>
+                    <label className="label" htmlFor="addUserId">
+                      {t("colClient")}
+                    </label>
+                    <select id="addUserId" name="userId" required defaultValue="" className="select">
+                      <option value="" disabled>
+                        {t("addSubscriber")}
+                      </option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName} — {client.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="addPlanId">
+                      {t("filterPlan")}
+                    </label>
+                    <select
+                      key={shownPlan?.id ?? activityPlans[0]!.id}
+                      id="addPlanId"
+                      name="planId"
+                      required
+                      defaultValue={shownPlan?.id ?? activityPlans[0]!.id}
+                      className="select"
+                    >
+                      {activityPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {localize(plan, locale, PLAN_TRANSLATABLE).name} — {formatPrice(plan.priceCents, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button className="btn btn-primary" type="submit">
+                    {tCommon("add")}
+                  </button>
+                </form>
+              </Card>
             ) : null}
-          </table>
-        </div>
+          </>
+        ) : (
+          <Card>
+            <p className="text-sm text-zinc-600">{t("noRecurringActivity")}</p>
+          </Card>
+        )}
       </section>
 
       {legacy.length > 0 ? (

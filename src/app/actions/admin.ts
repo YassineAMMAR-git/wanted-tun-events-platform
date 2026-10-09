@@ -52,7 +52,7 @@ const bool = (data: FormData, key: string) => data.get(key) === "on" || data.get
  * `message` est une clé de « admin.flash » (ex. « clientCreated ») ou une clé complète (ex. « validation.emailInvalid »).
  */
 const withMessage = (path: string, kind: "ok" | "erreur", message: string) =>
-  `${path}?${kind}=${encodeURIComponent(message)}`;
+  `${path}${path.includes("?") ? "&" : "?"}${kind}=${encodeURIComponent(message)}`;
 
 /* ------------------------------- clients -------------------------------- */
 
@@ -719,6 +719,16 @@ async function releaseUpcomingAttendances(subscriptionId: number): Promise<void>
     );
 }
 
+/** Retour au tableau des inscrits, sur l'activité et la formule qui y étaient affichées. */
+function subscribersBackPath(formData: FormData): string {
+  const query = new URLSearchParams();
+  for (const key of ["inscritsActivite", "inscritsFormule"]) {
+    const value = Math.round(num(formData, key));
+    if (value > 0) query.set(key, String(value));
+  }
+  return query.size > 0 ? `/admin/abonnements?${query}` : "/admin/abonnements";
+}
+
 /** Le client a-t-il déjà cette formule (en attente de paiement ou active) ? */
 async function hasOpenMembership(userId: number, planId: number): Promise<boolean> {
   const rows = await db
@@ -738,7 +748,7 @@ async function hasOpenMembership(userId: number, planId: number): Promise<boolea
 /** L'administration inscrit un client à une formule : abonnement actif tout de suite, sans paiement en ligne. */
 export async function addPlanSubscriberAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const back = "/admin/abonnements";
+  const back = subscribersBackPath(formData);
   const planId = num(formData, "planId");
   const userId = num(formData, "userId");
 
@@ -772,7 +782,7 @@ export async function addPlanSubscriberAction(formData: FormData): Promise<void>
   // Activation : présences aux prochaines séances et e-mail de confirmation au client.
   await activateSubscription(inserted[0]!.id);
 
-  revalidatePath(back);
+  revalidatePath("/admin/abonnements");
   redirect(withMessage(back, "ok", "subscriberAdded"));
 }
 
@@ -782,7 +792,7 @@ export async function addPlanSubscriberAction(formData: FormData): Promise<void>
  */
 export async function removePlanSubscriberAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const back = "/admin/abonnements";
+  const back = subscribersBackPath(formData);
   const id = num(formData, "id");
   const row = (await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1))[0];
   if (!row || row.kind !== "membership") redirect(withMessage(back, "erreur", "subscriberNotFound"));
@@ -795,7 +805,7 @@ export async function removePlanSubscriberAction(formData: FormData): Promise<vo
     .where(eq(subscriptions.id, id));
   await releaseUpcomingAttendances(id);
 
-  revalidatePath(back);
+  revalidatePath("/admin/abonnements");
   redirect(withMessage(back, "ok", "subscriberRemoved"));
 }
 
@@ -806,7 +816,7 @@ export async function removePlanSubscriberAction(formData: FormData): Promise<vo
  */
 export async function changeSubscriptionPlanAction(formData: FormData): Promise<void> {
   await requireAdmin();
-  const back = "/admin/abonnements";
+  const back = subscribersBackPath(formData);
   const id = num(formData, "id");
   const targetPlanId = num(formData, "planId");
 
@@ -850,7 +860,7 @@ export async function changeSubscriptionPlanAction(formData: FormData): Promise<
     if (updated.status === "active") await grantAttendances(updated);
   }
 
-  revalidatePath(back);
+  revalidatePath("/admin/abonnements");
   redirect(withMessage(back, "ok", "planChanged"));
 }
 
