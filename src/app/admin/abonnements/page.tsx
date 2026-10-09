@@ -152,115 +152,6 @@ export default async function AdminPlansPage({
     <div className="space-y-6">
       <Flash ok={ok} erreur={erreur} />
 
-      <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
-
-      <FilterBar action="/admin/abonnements" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
-        {/* L'activité et la formule choisies pour le tableau des inscrits sont conservées. */}
-        {subscriberContext}
-        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
-        <FilterSelect
-          name="activite"
-          label={t("filterActivity")}
-          defaultValue={activite}
-          placeholder={tCommon("all")}
-          options={activityList.map((row) => ({
-            value: String(row.activity.id),
-            label: localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
-          }))}
-        />
-        <FilterSelect
-          name="etat"
-          label={t("filterState")}
-          defaultValue={etat}
-          placeholder={tCommon("all")}
-          options={[
-            { value: "active", label: tStatus("plan.active") },
-            { value: "inactive", label: tStatus("plan.inactive") },
-          ]}
-        />
-        <FilterSelect
-          name="tri"
-          label={tCommon("sortBy")}
-          defaultValue={tri}
-          options={[
-            { value: "", label: t("sortDefault") },
-            { value: "prix", label: t("sortPriceAsc") },
-            { value: "prixDesc", label: t("sortPriceDesc") },
-            { value: "vendus", label: t("sortSold") },
-            { value: "nom", label: t("sortName") },
-          ]}
-        />
-      </FilterBar>
-
-      <p className="text-sm text-zinc-600">{t("resultCount", { count: rows.length })}</p>
-
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Stat
-          label={t("statConfigured")}
-          value={rows.length}
-          hint={t("statConfiguredHint", { count: rows.filter((r) => r.plan.isActive).length })}
-        />
-        <Stat label={t("statWithLink")} value={rows.filter((r) => r.plan.paymentUrl).length} />
-        <Stat label={t("statActiveSubs")} value={sold[0]?.count ?? 0} />
-      </section>
-
-      <div className="space-y-4">
-        {rows.map((row) => {
-          const localizedPlan = localize(row.plan, locale, PLAN_TRANSLATABLE);
-          return (
-            <Card key={row.plan.id}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900">{localizedPlan.name}</h3>
-                  <p className="text-xs text-zinc-500">
-                    <Link href={`/admin/activites/${row.activity.id}`} className="hover:text-gold-dark">
-                      {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
-                    </Link>{" "}
-                    · {localize(row.category, locale, CATEGORY_TRANSLATABLE).name} · {t("sold", { count: row.sold })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black text-gold-dark">{formatPrice(row.plan.priceCents, locale)}</span>
-                  <span
-                    className={`badge ${
-                      row.plan.isActive
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-zinc-200 bg-zinc-100 text-zinc-600"
-                    }`}
-                  >
-                    {tStatus(row.plan.isActive ? "plan.active" : "plan.inactive")}
-                  </span>
-                  <form action={togglePlanAction}>
-                    <input type="hidden" name="id" value={row.plan.id} />
-                    <input type="hidden" name="isActive" value={row.plan.isActive ? "false" : "true"} />
-                    <button className="btn btn-ghost btn-sm" type="submit">
-                      {row.plan.isActive ? t("deactivate") : t("activate")}
-                    </button>
-                  </form>
-                  <form action={deletePlanAction}>
-                    <input type="hidden" name="id" value={row.plan.id} />
-                    <button className="btn btn-danger btn-sm" type="submit">
-                      {tCommon("delete")}
-                    </button>
-                  </form>
-                </div>
-              </div>
-
-              <form action={updatePlanAction} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <input type="hidden" name="id" value={row.plan.id} />
-                <input type="hidden" name="redirectTo" value="/admin/abonnements" />
-                <PlanFields plan={row.plan} />
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <button className="btn btn-primary btn-sm" type="submit">
-                    {tCommon("save")}
-                  </button>
-                </div>
-              </form>
-            </Card>
-          );
-        })}
-      </div>
-
       <section id="abonnes" className="scroll-mt-20">
         <SectionTitle eyebrow={t("subscribersEyebrow")} title={t("subscribersTitle")} subtitle={t("subscribersSubtitle")} />
         {shownActivity ? (
@@ -448,6 +339,115 @@ export default async function AdminPlansPage({
           </Card>
         )}
       </section>
+
+      <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
+
+      <FilterBar action="/admin/abonnements" active={filtered} submitLabel={tCommon("search")} resetLabel={tCommon("reset")}>
+        {/* L'activité et la formule choisies pour le tableau des inscrits sont conservées. */}
+        {subscriberContext}
+        <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+        <FilterSelect
+          name="activite"
+          label={t("filterActivity")}
+          defaultValue={activite}
+          placeholder={tCommon("all")}
+          options={activityList.map((row) => ({
+            value: String(row.activity.id),
+            label: localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
+          }))}
+        />
+        <FilterSelect
+          name="etat"
+          label={t("filterState")}
+          defaultValue={etat}
+          placeholder={tCommon("all")}
+          options={[
+            { value: "active", label: tStatus("plan.active") },
+            { value: "inactive", label: tStatus("plan.inactive") },
+          ]}
+        />
+        <FilterSelect
+          name="tri"
+          label={tCommon("sortBy")}
+          defaultValue={tri}
+          options={[
+            { value: "", label: t("sortDefault") },
+            { value: "prix", label: t("sortPriceAsc") },
+            { value: "prixDesc", label: t("sortPriceDesc") },
+            { value: "vendus", label: t("sortSold") },
+            { value: "nom", label: t("sortName") },
+          ]}
+        />
+      </FilterBar>
+
+      <p className="text-sm text-zinc-600">{t("resultCount", { count: rows.length })}</p>
+
+      <section className="grid gap-4 sm:grid-cols-3">
+        <Stat
+          label={t("statConfigured")}
+          value={rows.length}
+          hint={t("statConfiguredHint", { count: rows.filter((r) => r.plan.isActive).length })}
+        />
+        <Stat label={t("statWithLink")} value={rows.filter((r) => r.plan.paymentUrl).length} />
+        <Stat label={t("statActiveSubs")} value={sold[0]?.count ?? 0} />
+      </section>
+
+      <div className="space-y-4">
+        {rows.map((row) => {
+          const localizedPlan = localize(row.plan, locale, PLAN_TRANSLATABLE);
+          return (
+            <Card key={row.plan.id}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">{localizedPlan.name}</h3>
+                  <p className="text-xs text-zinc-500">
+                    <Link href={`/admin/activites/${row.activity.id}`} className="hover:text-gold-dark">
+                      {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
+                    </Link>{" "}
+                    · {localize(row.category, locale, CATEGORY_TRANSLATABLE).name} · {t("sold", { count: row.sold })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-gold-dark">{formatPrice(row.plan.priceCents, locale)}</span>
+                  <span
+                    className={`badge ${
+                      row.plan.isActive
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-zinc-200 bg-zinc-100 text-zinc-600"
+                    }`}
+                  >
+                    {tStatus(row.plan.isActive ? "plan.active" : "plan.inactive")}
+                  </span>
+                  <form action={togglePlanAction}>
+                    <input type="hidden" name="id" value={row.plan.id} />
+                    <input type="hidden" name="isActive" value={row.plan.isActive ? "false" : "true"} />
+                    <button className="btn btn-ghost btn-sm" type="submit">
+                      {row.plan.isActive ? t("deactivate") : t("activate")}
+                    </button>
+                  </form>
+                  <form action={deletePlanAction}>
+                    <input type="hidden" name="id" value={row.plan.id} />
+                    <button className="btn btn-danger btn-sm" type="submit">
+                      {tCommon("delete")}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <form action={updatePlanAction} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <input type="hidden" name="id" value={row.plan.id} />
+                <input type="hidden" name="redirectTo" value="/admin/abonnements" />
+                <PlanFields plan={row.plan} />
+                <div className="sm:col-span-2 lg:col-span-4">
+                  <button className="btn btn-primary btn-sm" type="submit">
+                    {tCommon("save")}
+                  </button>
+                </div>
+              </form>
+            </Card>
+          );
+        })}
+      </div>
 
       {legacy.length > 0 ? (
         <section id="anciennes-offres">
