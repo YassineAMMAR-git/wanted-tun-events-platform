@@ -1117,6 +1117,9 @@ const ar: Messages = {
       emptyText: "أضف أول شريحة باستخدام النموذج أدناه.",
     },
     payments: {
+      filterActivity: "النشاط",
+      allActivities: "كل الأنشطة",
+      filterApply: "تصفية",
       pageNewer: "→ الأحدث",
       pageOlder: "المدفوعات العشر السابقة ←",
       pageStatus: "الصفحة {page} من {count} · {total, plural, one {محاولة واحدة} other {# محاولات}}",

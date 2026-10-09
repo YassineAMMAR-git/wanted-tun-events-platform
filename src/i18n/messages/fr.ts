@@ -1120,6 +1120,9 @@ const fr = {
       emptyText: "Ajoutez votre première diapositive avec le formulaire ci-dessous.",
     },
     payments: {
+      filterActivity: "Activité",
+      allActivities: "Toutes les activités",
+      filterApply: "Filtrer",
       pageNewer: "← Plus récents",
       pageOlder: "10 paiements précédents →",
       pageStatus: "Page {page} sur {count} · {total, plural, one {# tentative} other {# tentatives}}",

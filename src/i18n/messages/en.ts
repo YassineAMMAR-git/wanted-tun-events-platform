@@ -1113,6 +1113,9 @@ const en: Messages = {
       emptyText: "Add your first slide with the form below.",
     },
     payments: {
+      filterActivity: "Activity",
+      allActivities: "All activities",
+      filterApply: "Filter",
       pageNewer: "← Newer",
       pageOlder: "Previous 10 payments →",
       pageStatus: "Page {page} of {count} · {total, plural, one {# attempt} other {# attempts}}",
