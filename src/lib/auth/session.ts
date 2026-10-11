@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, eq, gt, lte, ne } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { userSessions, users, type User } from "@/db/schema";
 import { SESSION_COOKIE_NAME, SESSION_TTL_MS } from "@/lib/auth/constants";
@@ -11,14 +11,15 @@ import { generateToken, hashToken } from "@/lib/auth/tokens";
 /**
  * Crée une session en base et pose le cookie correspondant.
  * Le cookie contient un jeton aléatoire ; la base ne stocke que son empreinte.
+ * Les sessions précédentes du compte sont supprimées : il n'est ouvert que sur un appareil à la fois.
  */
 export async function createSession(user: Pick<User, "id" | "role">): Promise<void> {
   const { token, tokenHash } = generateToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS[user.role]);
   const requestHeaders = await headers();
 
-  // Nettoyage opportuniste des sessions expirées de cet utilisateur.
-  await db.delete(userSessions).where(and(eq(userSessions.userId, user.id), lte(userSessions.expiresAt, new Date())));
+  // Un seul appareil à la fois : se connecter ici ferme le compte partout ailleurs.
+  await db.delete(userSessions).where(eq(userSessions.userId, user.id));
 
   await db.insert(userSessions).values({
     userId: user.id,
