@@ -343,7 +343,11 @@ export default async function DashboardPage({
                                 <form action={respondAttendanceAction}>
                                   <input type="hidden" name="attendanceId" value={row.attendance.id} />
                                   <input type="hidden" name="response" value="confirmed" />
-                                  <button className="btn btn-primary btn-sm" type="submit">
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    type="submit"
+                                    disabled={attendance === "confirmed"}
+                                  >
                                     {t("confirm")}
                                   </button>
                                 </form>
@@ -352,7 +356,11 @@ export default async function DashboardPage({
                                 <form action={respondAttendanceAction}>
                                   <input type="hidden" name="attendanceId" value={row.attendance.id} />
                                   <input type="hidden" name="response" value="declined" />
-                                  <button className="btn btn-ghost btn-sm" type="submit">
+                                  <button
+                                    className="btn btn-ghost btn-sm"
+                                    type="submit"
+                                    disabled={attendance === "declined"}
+                                  >
                                     {t("absent")}
                                   </button>
                                 </form>

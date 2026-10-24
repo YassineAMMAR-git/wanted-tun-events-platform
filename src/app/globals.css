@@ -102,6 +102,13 @@ html[lang="ar"] :where(*):not([dir="ltr"], [dir="ltr"] *) {
   .btn:active {
     transform: translateY(1px);
   }
+  .btn:disabled,
+  .btn:disabled:hover {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+    transform: none;
+  }
   .btn-primary {
     background: linear-gradient(135deg, #c99a3f, #a97a22);
     color: #ffffff;
