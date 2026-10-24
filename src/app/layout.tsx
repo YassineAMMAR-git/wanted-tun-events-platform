@@ -89,7 +89,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     </a>
                   </li>
                   <li dir="ltr" className="text-start">
-                    +33 1 23 45 67 89
+                    <a href="tel:+33768376462" className="hover:text-gold-dark">
+                      +33 7 68 37 64 62
+                    </a>
                   </li>
                   <li>{t("footer.city")}</li>
                 </ul>
