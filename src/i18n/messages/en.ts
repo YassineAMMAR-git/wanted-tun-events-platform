@@ -167,6 +167,8 @@ const en: Messages = {
     searchPlaceholder: "Name, place, keyword…",
     emptyTitle: "No activity matches your search",
     emptyText: "Try another category or reset the filters. New activities are added regularly.",
+    emptyCategoryTitle: "No activities yet",
+    emptyCategoryText: "This category has no activities yet. Come back soon, new activities are on the way!",
     upcomingSessions: "{count, plural, =0 {Schedule coming soon} one {# upcoming session} other {# upcoming sessions}}",
     location: "📍 Place",
     schedule: "🕒 Schedule",

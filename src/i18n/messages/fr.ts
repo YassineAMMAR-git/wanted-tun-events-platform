@@ -169,6 +169,8 @@ const fr = {
     searchPlaceholder: "Nom, lieu, mot-clé…",
     emptyTitle: "Aucune activité ne correspond à votre recherche",
     emptyText: "Essayez une autre catégorie ou réinitialisez les filtres. De nouvelles activités arrivent régulièrement.",
+    emptyCategoryTitle: "Pas d’activités pour le moment",
+    emptyCategoryText: "Cette catégorie n’a pas encore d’activités. Revenez bientôt, de nouvelles activités arrivent !",
     upcomingSessions: "{count, plural, =0 {Programmation à venir} one {# séance à venir} other {# séances à venir}}",
     location: "📍 Lieu",
     schedule: "🕒 Horaires",

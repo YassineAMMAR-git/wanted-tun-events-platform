@@ -76,7 +76,7 @@ export default async function HomePage() {
             return (
               <Link
                 key={category.id}
-                href={available ? `/activites?categorie=${category.slug}` : "/activites"}
+                href={`/activites?categorie=${category.slug}`}
                 className={`card card-hover overflow-hidden ${available ? "" : "opacity-75"}`}
               >
                 {category.imageUrl ? (

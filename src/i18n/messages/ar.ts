@@ -166,6 +166,8 @@ const ar: Messages = {
     searchPlaceholder: "الاسم، المكان، كلمة مفتاحية…",
     emptyTitle: "لا يوجد نشاط يطابق بحثك",
     emptyText: "جرّب فئة أخرى أو أعد تعيين عوامل التصفية. تُضاف أنشطة جديدة بانتظام.",
+    emptyCategoryTitle: "لا توجد أنشطة حاليًا",
+    emptyCategoryText: "لا تحتوي هذه الفئة على أنشطة بعد. عُد قريبًا، أنشطة جديدة في الطريق!",
     upcomingSessions:
       "{count, plural, zero {البرمجة قريبًا} one {حصة قادمة واحدة} two {حصتان قادمتان} few {# حصص قادمة} many {# حصة قادمة} other {# حصة قادمة}}",
     location: "📍 المكان",

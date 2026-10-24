@@ -208,7 +208,9 @@ export default async function ActivitiesPage({
         </div>
       ) : null}
 
-      {activities.length === 0 ? (
+      {activities.length === 0 && current && !params.q ? (
+        <EmptyState title={t("emptyCategoryTitle")} description={t("emptyCategoryText")} />
+      ) : activities.length === 0 ? (
         <EmptyState title={t("emptyTitle")} description={t("emptyText")} />
       ) : open.length === 0 ? (
         <EmptyState title={t("noOpenTitle")} description={t("noOpenText")} />
