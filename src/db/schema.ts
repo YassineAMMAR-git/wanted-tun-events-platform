@@ -78,6 +78,30 @@ export const userSessions = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* Acceptation des conditions générales et de la politique de confidentialité */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Preuve de l'acceptation (RGPD art. 7 § 1) : une ligne par acceptation, avec la version des textes acceptés.
+ * Créée au démarrage si elle manque (voir ensureConsentTable) : la base de production n'a pas à être migrée à la main.
+ */
+export const userConsents = pgTable(
+  "user_consents",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** « terms_privacy » : conditions générales + politique de confidentialité, acceptées ensemble à l'inscription. */
+    document: varchar("document", { length: 40 }).notNull(),
+    version: varchar("version", { length: 20 }).notNull(),
+    ipAddress: varchar("ip_address", { length: 64 }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("user_consents_user_idx").on(table.userId)],
+);
+
+/* ------------------------------------------------------------------ */
 /* Jetons de vérification d'adresse e-mail (usage unique, durée limitée) */
 /* ------------------------------------------------------------------ */
 export const emailVerificationTokens = pgTable(
@@ -491,3 +515,4 @@ export type NotificationRule = typeof notificationRules.$inferSelect;
 export type HeroSlide = typeof heroSlides.$inferSelect;
 export type PaymentLink = typeof paymentLinks.$inferSelect;
 export type PlanPromotion = typeof planPromotions.$inferSelect;
+export type UserConsent = typeof userConsents.$inferSelect;

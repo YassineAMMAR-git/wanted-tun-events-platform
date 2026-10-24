@@ -326,6 +326,24 @@ export default async function PaymentPage({
         )}
       </Card>
 
+      {/* Information précontractuelle (Code de la consommation, art. L221-5 et L221-28 12°). */}
+      {!alreadyPaid && !cancelled && !ticketClosed ? (
+        <p className="text-center text-xs leading-relaxed text-zinc-500">
+          {t.rich("legalNotice", {
+            terms: (chunks) => (
+              <Link href="/conditions-generales" target="_blank" className="underline hover:text-gold-dark">
+                {chunks}
+              </Link>
+            ),
+            privacy: (chunks) => (
+              <Link href="/confidentialite" target="_blank" className="underline hover:text-gold-dark">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+      ) : null}
+
       {!alreadyPaid && !cancelled && subscription.paymentStatus === "pending" && link?.status !== "processing" ? (
         <form action={cancelPendingAction} className="text-center">
           <input type="hidden" name="subscriptionId" value={subscription.id} />

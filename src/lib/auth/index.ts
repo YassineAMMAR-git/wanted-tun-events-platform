@@ -9,6 +9,7 @@ export {
   requireUser,
   requireAdmin,
   isAdmin,
+  clientIp,
 } from "@/lib/auth/session";
 export { randomToken } from "@/lib/auth/tokens";
 export {

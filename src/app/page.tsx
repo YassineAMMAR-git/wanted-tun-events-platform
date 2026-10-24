@@ -32,8 +32,9 @@ const DEFAULT_SLIDES = [
   },
 ] as const;
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ compte?: string }> }) {
   await ensureSeeded();
+  const { compte } = await searchParams;
   const [locale, t] = await Promise.all([getLocale(), getTranslations("home")]);
   const [categories, upcoming, storedSlides] = await Promise.all([
     getCategoriesWithCounts(locale),
@@ -65,6 +66,11 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-12">
+      {compte === "supprime" ? (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          ✅ {t("accountDeleted")}
+        </div>
+      ) : null}
       <HeroCarousel slides={slides} />
 
       {/* CATEGORIES */}

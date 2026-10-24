@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import SiteHeader from "@/components/site-header";
 import { localeDirection } from "@/i18n/config";
-import { CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/site";
+import { CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS } from "@/lib/site";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -89,16 +89,40 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     </a>
                   </li>
                   <li dir="ltr" className="text-start">
-                    <a href="tel:+33768376462" className="hover:text-gold-dark">
-                      +33 7 68 37 64 62
+                    <a href={`tel:${CONTACT_PHONE.replace(/\s/g, "")}`} className="hover:text-gold-dark">
+                      {CONTACT_PHONE}
                     </a>
                   </li>
                   <li>{t("footer.city")}</li>
                 </ul>
               </div>
             </div>
-            <div className="border-t border-zinc-200 px-4 py-4 text-center text-xs text-zinc-400">
-              {t("footer.rights", { year: new Date().getFullYear() })}
+            <div className="border-t border-zinc-200 px-4 py-5 text-center text-xs text-zinc-500">
+              <p className="mx-auto max-w-3xl">
+                🔒{" "}
+                {t.rich("footer.privacyStatement", {
+                  link: (chunks) => (
+                    <Link href="/confidentialite" className="font-semibold text-zinc-600 underline hover:text-gold-dark">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </p>
+              <nav aria-label={t("footer.legal")} className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                <Link href="/mentions-legales" className="hover:text-gold-dark">
+                  {t("footer.legalNotice")}
+                </Link>
+                <Link href="/confidentialite" className="hover:text-gold-dark">
+                  {t("footer.privacy")}
+                </Link>
+                <Link href="/conditions-generales" className="hover:text-gold-dark">
+                  {t("footer.terms")}
+                </Link>
+                <Link href="/confidentialite#cookies" className="hover:text-gold-dark">
+                  {t("footer.cookies")}
+                </Link>
+              </nav>
+              <p className="mt-3 text-zinc-400">{t("footer.rights", { year: new Date().getFullYear() })}</p>
             </div>
           </footer>
         </NextIntlClientProvider>

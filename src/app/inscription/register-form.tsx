@@ -159,6 +159,43 @@ export function RegisterForm() {
         </div>
         <p className="text-xs text-zinc-500 sm:col-span-2">🔒 {tAuth("passwordHint", { min: PASSWORD_MIN_LENGTH })}</p>
         <div className="sm:col-span-2">
+          <label className="flex items-start gap-2.5 text-sm text-zinc-700">
+            <input
+              id="terms"
+              name="terms"
+              type="checkbox"
+              required
+              defaultChecked={values.terms === "on"}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
+              {...fieldA11y("terms", errors.terms)}
+            />
+            <span>
+              {t.rich("terms", {
+                terms: (chunks) => (
+                  <Link href="/conditions-generales" target="_blank" className="font-semibold text-gold-dark underline">
+                    {chunks}
+                  </Link>
+                ),
+                privacy: (chunks) => (
+                  <Link href="/confidentialite" target="_blank" className="font-semibold text-gold-dark underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
+            </span>
+          </label>
+          <FieldError id="terms-error" errors={errors.terms} />
+        </div>
+        <p className="text-[11px] leading-relaxed text-zinc-500 sm:col-span-2">
+          {t.rich("dataNotice", {
+            link: (chunks) => (
+              <Link href="/confidentialite" target="_blank" className="underline hover:text-gold-dark">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+        <div className="sm:col-span-2">
           <button className="btn btn-primary w-full" type="submit" disabled={pending}>
             {pending ? t("submitting") : t("submit")}
           </button>

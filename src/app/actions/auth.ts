@@ -21,7 +21,10 @@ import {
 } from "@/lib/auth";
 import { LOGIN_LOCK_MS, LOGIN_MAX_ATTEMPTS } from "@/lib/auth/constants";
 import { ensureSeeded } from "@/lib/seed";
+import { deleteAccount, ensureConsentTable, recordTermsAcceptance } from "@/lib/privacy";
 import {
+  DELETE_ACCOUNT_FIELDS,
+  deleteAccountSchema,
   FORGOT_PASSWORD_FIELDS,
   RESET_PASSWORD_FIELDS,
   forgotPasswordSchema,
@@ -130,6 +133,8 @@ export async function registerAction(_previous: RegisterState, formData: FormDat
   if (!parsed.success) return validationErrorState(parsed.error, raw, ["password", "confirm"]);
 
   const data = parsed.data;
+  // La preuve d'acceptation doit pouvoir être enregistrée avant de créer le compte.
+  await ensureConsentTable();
   // Hachage systématique : le temps de réponse est le même que l'adresse soit déjà inscrite ou non.
   const passwordHash = await hashPassword(data.password);
   const existing = (await db.select().from(users).where(eq(users.email, data.email)).limit(1))[0];
@@ -152,7 +157,10 @@ export async function registerAction(_previous: RegisterState, formData: FormDat
       })
       .onConflictDoNothing({ target: users.email })
       .returning();
-    if (inserted[0]) await sendVerificationEmail(inserted[0]);
+    if (inserted[0]) {
+      await recordTermsAcceptance(inserted[0].id);
+      await sendVerificationEmail(inserted[0]);
+    }
   }
 
   // Réponse identique dans tous les cas : le formulaire ne révèle pas si une adresse est déjà inscrite.
@@ -271,6 +279,40 @@ export async function updateProfileAction(_previous: FormState<ProfileField>, fo
     message: changePassword ? "forms.profileAndPasswordSaved" : "forms.profileSaved",
     values: withoutSensitive(raw, sensitive),
   };
+}
+
+/* --------------------------- suppression du compte --------------------------- */
+
+type DeleteAccountField = (typeof DELETE_ACCOUNT_FIELDS)[number];
+
+/** Droit à l'effacement (RGPD art. 17) : le titulaire supprime son compte après avoir saisi son mot de passe. */
+export async function deleteAccountAction(
+  _previous: FormState<DeleteAccountField>,
+  formData: FormData,
+): Promise<FormState<DeleteAccountField>> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/connexion");
+
+  const raw = readFields(formData, DELETE_ACCOUNT_FIELDS);
+  const parsed = deleteAccountSchema.safeParse(raw);
+  if (!parsed.success) return validationErrorState(parsed.error, raw, ["password"]);
+
+  const { valid } = await verifyPassword(parsed.data.password, user.passwordHash);
+  if (!valid) {
+    return {
+      status: "error",
+      message: "forms.fixErrors",
+      fieldErrors: { password: ["forms.wrongCurrentPassword"] },
+      values: withoutSensitive(raw, ["password"]),
+    };
+  }
+
+  // Les administrateurs sont supprimés depuis l'administration : la plateforme ne doit pas se retrouver sans administrateur.
+  if (user.role === "admin") return { status: "error", message: "forms.adminCannotSelfDelete" };
+
+  await deleteAccount(user.id);
+  await destroySession();
+  redirect("/?compte=supprime");
 }
 
 /* -------------------------------- déconnexion -------------------------------- */

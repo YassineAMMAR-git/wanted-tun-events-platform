@@ -229,4 +229,33 @@ html[lang="ar"] :where(*):not([dir="ltr"], [dir="ltr"] *) {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Pages légales (mentions légales, confidentialité, conditions générales). */
+  .legal-content ul {
+    list-style: disc;
+    padding-inline-start: 1.25rem;
+    display: grid;
+    gap: 0.3rem;
+  }
+  .legal-content a {
+    color: #8a6318;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+  }
+  .legal-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .legal-content th,
+  .legal-content td {
+    border: 1px solid #e7e5e4;
+    padding: 0.45rem 0.6rem;
+    text-align: start;
+    vertical-align: top;
+  }
+  .legal-content th {
+    background: #fbf5e8;
+    color: #1c1917;
+  }
 }

@@ -101,7 +101,7 @@ export const resetPasswordSchema = z
     message: "validation.passwordMismatch",
   });
 
-export const REGISTER_FIELDS = ["firstName", "lastName", "email", "phone", "city", "password", "confirm"] as const;
+export const REGISTER_FIELDS = ["firstName", "lastName", "email", "phone", "city", "password", "confirm", "terms"] as const;
 export const registerSchema = z
   .object({
     firstName: personName("firstName"),
@@ -111,6 +111,8 @@ export const registerSchema = z
     city: optionalCity,
     password: newPasswordSchema,
     confirm: z.string(),
+    /** Case « J'accepte les conditions générales et la politique de confidentialité » : obligatoire. */
+    terms: z.string().refine((value) => value === "on", "validation.termsRequired"),
   })
   .refine((data) => data.password === data.confirm, {
     path: ["confirm"],
@@ -148,6 +150,13 @@ export const profileSchema = z
       ctx.addIssue({ code: "custom", path: ["confirm"], message: "validation.passwordMismatch" });
     }
   });
+
+/** Suppression du compte par son titulaire : mot de passe actuel + case de confirmation. */
+export const DELETE_ACCOUNT_FIELDS = ["password", "confirmDelete"] as const;
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "validation.passwordRequired").max(PASSWORD_MAX_LENGTH, "validation.passwordTooLong"),
+  confirmDelete: z.string().refine((value) => value === "on", "validation.deleteConfirmRequired"),
+});
 
 const adminClientBase = {
   firstName: personName("firstName"),

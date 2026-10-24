@@ -97,7 +97,7 @@ export function isAdmin(user: Pick<User, "role"> | null | undefined): boolean {
   return user?.role === "admin";
 }
 
-function clientIp(requestHeaders: Headers): string | null {
+export function clientIp(requestHeaders: Headers): string | null {
   const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
   return (forwarded || requestHeaders.get("x-real-ip") || null)?.slice(0, 64) ?? null;
 }

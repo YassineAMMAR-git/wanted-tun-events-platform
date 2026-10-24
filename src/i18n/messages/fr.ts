@@ -64,6 +64,13 @@ const fr = {
     follow: "Suivez-nous",
     onInstagram: "WANTED TUN EVENTS sur Instagram",
     onFacebook: "WANTED TUN EVENTS sur Facebook",
+    legal: "Informations légales",
+    legalNotice: "Mentions légales",
+    privacy: "Politique de confidentialité",
+    terms: "CGU / CGV",
+    cookies: "Cookies",
+    privacyStatement:
+      "Site conforme au RGPD et à la loi Informatique et Libertés : vos données personnelles sont protégées, ne sont jamais vendues, et vous en gardez le contrôle. <link>Politique de confidentialité</link>",
   },
 
   status: {
@@ -84,6 +91,8 @@ const fr = {
   },
 
   home: {
+    accountDeleted:
+      "Votre compte a été supprimé et vos données personnelles effacées (les pièces comptables obligatoires sont conservées sous forme anonyme).",
     createAccount: "Créer mon compte",
     upcomingEyebrow: "Au programme",
     upcomingTitle: "Prochaines séances",
@@ -267,6 +276,8 @@ const fr = {
   },
 
   payment: {
+    legalNotice:
+      "En payant, vous acceptez nos <terms>conditions générales de vente</terms>. Billets, séances et abonnements portent sur des activités de loisirs à date déterminée : ils ne bénéficient pas du droit de rétractation (art. L221-28 12° du Code de la consommation). Vos données sont traitées selon notre <privacy>politique de confidentialité</privacy>.",
     cancelOrder: "Je me suis trompé : annuler cette commande",
     orderCancelled: "Cette commande a été annulée. Rien n’a été débité.",
     backToActivity: "Retour à l’activité",
@@ -395,6 +406,29 @@ const fr = {
     saving: "Enregistrement…",
   },
 
+  privacyCenter: {
+    title: "Mes données personnelles",
+    intro: "Conformément au RGPD, vous gardez le contrôle de vos données. Tout est expliqué dans notre <link>politique de confidentialité</link>.",
+    exportText: "Recevez une copie de toutes les données de votre compte (fichier JSON).",
+    exportButton: "Télécharger mes données",
+    deleteTitle: "Supprimer mon compte",
+    deleteText:
+      "La suppression est définitive : vos informations personnelles sont effacées et vous êtes déconnecté(e). Si vous avez des commandes payées, elles sont conservées sous forme anonyme pour nos obligations comptables. Vos abonnements en cours prennent fin, sans remboursement automatique.",
+    deletePassword: "Mot de passe actuel",
+    deleteConfirm: "Je comprends que la suppression de mon compte est définitive.",
+    deleteSubmit: "Supprimer définitivement mon compte",
+    deleting: "Suppression…",
+  },
+
+  legal: {
+    eyebrow: "Informations légales",
+    updated: "Dernière mise à jour : {date}",
+    frenchOnly: "Ce document est rédigé en français.",
+    legalNotice: "Mentions légales",
+    privacy: "Politique de confidentialité",
+    terms: "Conditions générales d’utilisation et de vente",
+  },
+
   auth: {
     forgot: {
       eyebrow: "Récupération de compte",
@@ -470,6 +504,10 @@ const fr = {
         "Un e-mail de confirmation a été envoyé à <strong>{email}</strong>. Cliquez sur le bouton <strong>« Confirmer mon compte »</strong> qu’il contient pour activer votre compte.",
       successHint: "Le lien est valable 24 heures. Pensez à vérifier vos courriers indésirables.",
       goToLogin: "Aller à la page de connexion",
+      terms:
+        "J’ai lu et j’accepte les <terms>conditions générales d’utilisation et de vente</terms> et la <privacy>politique de confidentialité</privacy>. *",
+      dataNotice:
+        "Vos données sont traitées par WANTED TUN EVENTS pour gérer votre compte, vos réservations et vos séances. Elles ne sont jamais vendues. Vous pouvez à tout moment y accéder, les corriger, les télécharger ou supprimer votre compte. <link>En savoir plus</link>",
     },
   },
 
@@ -487,6 +525,7 @@ const fr = {
     wrongCurrentPassword: "Mot de passe actuel incorrect.",
     profileSaved: "Vos informations ont été mises à jour.",
     profileAndPasswordSaved: "Vos informations et votre mot de passe ont été mis à jour. Vos autres appareils ont été déconnectés.",
+    adminCannotSelfDelete: "Un compte administrateur ne peut pas être supprimé depuis cette page.",
   },
 
   validation: {
@@ -508,6 +547,8 @@ const fr = {
     passwordDigit: "Le mot de passe doit contenir au moins un chiffre.",
     passwordSpecial: "Le mot de passe doit contenir au moins un caractère spécial.",
     passwordMismatch: "Les deux mots de passe ne correspondent pas.",
+    termsRequired: "Vous devez accepter les conditions générales et la politique de confidentialité pour créer un compte.",
+    deleteConfirmRequired: "Cochez la case pour confirmer la suppression.",
     currentPasswordRequired: "Saisissez votre mot de passe actuel.",
     phoneTooLong: "Le numéro de téléphone est trop long.",
     phoneInvalid: "Numéro de téléphone invalide (ex. 06 12 34 56 78 ou +33 6 12 34 56 78).",

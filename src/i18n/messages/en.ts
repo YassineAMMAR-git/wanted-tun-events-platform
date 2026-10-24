@@ -63,6 +63,13 @@ const en: Messages = {
     follow: "Follow us",
     onInstagram: "WANTED TUN EVENTS on Instagram",
     onFacebook: "WANTED TUN EVENTS on Facebook",
+    legal: "Legal information",
+    legalNotice: "Legal notice",
+    privacy: "Privacy policy",
+    terms: "Terms of use & sale",
+    cookies: "Cookies",
+    privacyStatement:
+      "This site complies with the GDPR and French data protection law: your personal data is protected, never sold, and you stay in control of it. <link>Privacy policy</link>",
   },
 
   status: {
@@ -83,6 +90,8 @@ const en: Messages = {
   },
 
   home: {
+    accountDeleted:
+      "Your account has been deleted and your personal data erased (mandatory accounting records are kept in anonymous form).",
     createAccount: "Create my account",
     upcomingEyebrow: "On the programme",
     upcomingTitle: "Upcoming sessions",
@@ -265,6 +274,8 @@ const en: Messages = {
   },
 
   payment: {
+    legalNotice:
+      "By paying, you accept our <terms>terms of sale</terms>. Tickets, sessions and memberships are leisure activities on set dates: they are not eligible for the right of withdrawal (French Consumer Code, art. L221-28 12°). Your data is processed according to our <privacy>privacy policy</privacy>.",
     cancelOrder: "I made a mistake: cancel this order",
     orderCancelled: "This order has been cancelled. Nothing was charged.",
     backToActivity: "Back to the activity",
@@ -393,6 +404,29 @@ const en: Messages = {
     saving: "Saving…",
   },
 
+  privacyCenter: {
+    title: "My personal data",
+    intro: "Under the GDPR, you stay in control of your data. Everything is explained in our <link>privacy policy</link>.",
+    exportText: "Get a copy of all the data in your account (JSON file).",
+    exportButton: "Download my data",
+    deleteTitle: "Delete my account",
+    deleteText:
+      "Deletion is permanent: your personal information is erased and you are logged out. If you have paid orders, they are kept in anonymous form for our accounting obligations. Your current memberships end, with no automatic refund.",
+    deletePassword: "Current password",
+    deleteConfirm: "I understand that deleting my account is permanent.",
+    deleteSubmit: "Permanently delete my account",
+    deleting: "Deleting…",
+  },
+
+  legal: {
+    eyebrow: "Legal information",
+    updated: "Last updated: {date}",
+    frenchOnly: "This document is written in French, the legally binding version, as our services are provided in France.",
+    legalNotice: "Legal notice",
+    privacy: "Privacy policy",
+    terms: "Terms of use and sale",
+  },
+
   auth: {
     forgot: {
       eyebrow: "Account recovery",
@@ -467,6 +501,10 @@ const en: Messages = {
         "A confirmation email has been sent to <strong>{email}</strong>. Click the <strong>“Confirm my account”</strong> button inside to activate your account.",
       successHint: "The link is valid for 24 hours. Remember to check your spam folder.",
       goToLogin: "Go to the login page",
+      terms:
+        "I have read and accept the <terms>terms of use and sale</terms> and the <privacy>privacy policy</privacy>. *",
+      dataNotice:
+        "Your data is processed by WANTED TUN EVENTS to manage your account, bookings and sessions. It is never sold. You can access, correct or download it, or delete your account, at any time. <link>Learn more</link>",
     },
   },
 
@@ -483,6 +521,7 @@ const en: Messages = {
     wrongCurrentPassword: "Current password is incorrect.",
     profileSaved: "Your details have been updated.",
     profileAndPasswordSaved: "Your details and password have been updated. Your other devices have been logged out.",
+    adminCannotSelfDelete: "An administrator account can’t be deleted from this page.",
   },
 
   validation: {
@@ -504,6 +543,8 @@ const en: Messages = {
     passwordDigit: "Password must contain at least one digit.",
     passwordSpecial: "Password must contain at least one special character.",
     passwordMismatch: "The two passwords don’t match.",
+    termsRequired: "You must accept the terms and the privacy policy to create an account.",
+    deleteConfirmRequired: "Tick the box to confirm the deletion.",
     currentPasswordRequired: "Enter your current password.",
     phoneTooLong: "Phone number is too long.",
     phoneInvalid: "Invalid phone number (e.g. 06 12 34 56 78 or +33 6 12 34 56 78).",

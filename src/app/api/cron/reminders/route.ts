@@ -2,6 +2,8 @@ import { runReminderJob } from "@/lib/reminders";
 import { ensureSeeded } from "@/lib/seed";
 import { reconcilePendingPayments } from "@/lib/mollie/payments";
 import { deleteOrphanImages } from "@/lib/media";
+import { purgeExpiredPersonalData } from "@/lib/privacy";
+import { secretsMatch } from "@/lib/auth/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
   if (secret) {
     const provided =
       request.headers.get("x-cron-secret") ?? request.headers.get("authorization")?.replace("Bearer ", "");
-    if (provided !== secret) {
+    if (!secretsMatch(provided, secret)) {
       return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
   }
@@ -37,8 +39,14 @@ export async function GET(request: Request) {
       console.error("[media] nettoyage impossible", error);
       return 0;
     });
-    return Response.json({ ok: true, ...result, payments, imagesDeleted });
+    // Durées de conservation des données personnelles (RGPD art. 5 § 1 e).
+    const purged = await purgeExpiredPersonalData().catch((error) => {
+      console.error("[privacy] purge impossible", error);
+      return null;
+    });
+    return Response.json({ ok: true, ...result, payments, imagesDeleted, purged });
   } catch (error) {
-    return Response.json({ ok: false, error: String(error) }, { status: 500 });
+    console.error("[cron] échec", error);
+    return Response.json({ ok: false, error: "internal" }, { status: 500 });
   }
 }
