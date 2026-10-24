@@ -68,7 +68,7 @@ export default async function DashboardPage({
           <h1 className="mt-1.5 text-2xl font-black tracking-tight text-zinc-900">{t("hello", { name: user.firstName })}</h1>
           <p className="mt-1.5 text-sm text-zinc-600">{t("intro")}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/activites" className="btn btn-primary btn-sm">
             {t("newActivity")}
           </Link>
@@ -109,7 +109,7 @@ export default async function DashboardPage({
         </div>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label={t("stats.activeSubscriptions")} value={activeSubscriptions.length} />
         <Stat label={t("stats.upcoming")} value={upcoming.length} hint={t("stats.upcomingHint")} />
         <Stat label={t("stats.done")} value={past.length} hint={t("stats.doneHint")} />
@@ -186,7 +186,7 @@ export default async function DashboardPage({
                     </div>
                     <span className={`badge ${SUBSCRIPTION_STATUS[status]}`}>{tStatus(`ticket.${status}`)}</span>
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-gold-dark">
                       {row.subscription.priceLabel ? `${row.subscription.priceLabel} · ` : ""}
                       {formatPrice(row.priceCents, locale)}
@@ -400,7 +400,7 @@ export default async function DashboardPage({
                             </p>
                           </div>
                         </div>
-                        <span className={`badge ${ATTENDANCE_STATUS[attendance].className}`}>
+                        <span className={`badge self-start sm:self-auto ${ATTENDANCE_STATUS[attendance].className}`}>
                           {ATTENDANCE_STATUS[attendance].dot} {tStatus(`attendance.${attendance}`)}
                         </span>
                       </li>

@@ -3,10 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { MobileMenu } from "@/components/mobile-menu";
 
 const publicLinks = [
   { href: "/", key: "home" },
   { href: "/activites", key: "activities" },
+  { href: "/abonnements", key: "plans" },
 ] as const;
 
 export default async function SiteHeader() {
@@ -19,7 +21,7 @@ export default async function SiteHeader() {
           {/* Même fichier que l'icône du navigateur (src/app/favicon.ico), servi par Next.js sur /favicon.ico */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/favicon.ico" alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-contain" />
-          <span className="leading-tight" dir="ltr">
+          <span className="leading-tight max-[359px]:hidden" dir="ltr">
             <span className="block text-[13px] font-black tracking-[0.2em] text-zinc-900">WANTED</span>
             <span className="block text-[10px] font-semibold tracking-[0.28em] text-gold">TUN EVENTS</span>
           </span>
@@ -80,9 +82,8 @@ export default async function SiteHeader() {
 
         <div className="ms-auto flex items-center gap-2 md:hidden">
           <LanguageSwitcher />
-          <details>
-            <summary className="btn btn-ghost btn-sm list-none">{t("menu")}</summary>
-            <div className="absolute start-2 end-2 mt-2 flex flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-3 shadow-lg">
+          <MobileMenu label={t("menu")}>
+            <div className="flex flex-col gap-1">
               {publicLinks.map((link) => (
                 <Link key={link.href} href={link.href} className="rounded-lg px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-100">
                   {t(link.key)}
@@ -115,7 +116,7 @@ export default async function SiteHeader() {
                 </div>
               )}
             </div>
-          </details>
+          </MobileMenu>
         </div>
       </div>
     </header>

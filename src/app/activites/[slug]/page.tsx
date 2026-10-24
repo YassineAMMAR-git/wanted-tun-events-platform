@@ -124,11 +124,14 @@ export default async function ActivityDetailPage({
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <Card>
-          <h2 className="text-lg font-bold text-zinc-900">{t("description")}</h2>
-          <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-zinc-700">{activity.description}</p>
-        </Card>
+      <section className={`grid gap-4 ${activity.description?.trim() ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
+        {/* Sans description, pas de carte vide : les informations pratiques prennent toute la largeur. */}
+        {activity.description?.trim() ? (
+          <Card>
+            <h2 className="text-lg font-bold text-zinc-900">{t("description")}</h2>
+            <p className="mt-3 text-sm leading-relaxed break-words whitespace-pre-line text-zinc-700">{activity.description}</p>
+          </Card>
+        ) : null}
         <Card>
           <h2 className="text-lg font-bold text-zinc-900">{t("practical")}</h2>
           <dl className="mt-3 space-y-3 text-sm">
@@ -302,7 +305,7 @@ export default async function ActivityDetailPage({
               <p className="text-sm text-zinc-600">{t("noPlans")}</p>
             </Card>
           ) : (
-            <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-3">
               {plans.map((plan) => {
                 const offer = offers.get(plan.id);
                 const priceCents = offer?.eligible ? offer.priceCents : plan.priceCents;
@@ -316,14 +319,18 @@ export default async function ActivityDetailPage({
                       🏷️ {t("promoSticker", { percent: offer.percent })}
                     </span>
                   ) : null}
-                  {/* Hauteurs fixes (titre, description) : prix et boutons alignés d'une carte à l'autre. */}
-                  <div className="flex min-h-12 items-start justify-between gap-3">
-                    <h3 className="line-clamp-2 text-base font-bold text-zinc-900">{plan.name}</h3>
-                    <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">
+                  {/* Hauteurs fixes (titre, description) à partir de deux colonnes : prix et boutons alignés d'une carte à l'autre.
+                      Sur téléphone (une colonne), pas d'espace réservé. */}
+                  <div className="flex items-start justify-between gap-3 md:min-h-12">
+                    <h3 className="line-clamp-2 min-w-0 text-base font-bold text-zinc-900">{plan.name}</h3>
+                    <span className="badge shrink-0 border-emerald-200 bg-emerald-50 text-emerald-700">
                       {tCommon("sessions", { count: plan.sessionsIncluded })}
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 min-h-10 text-sm text-zinc-600" title={plan.description ?? undefined}>
+                  <p
+                    className={`mt-1 line-clamp-2 text-sm text-zinc-600 md:min-h-10 ${plan.description ? "" : "hidden md:block"}`}
+                    title={plan.description ?? undefined}
+                  >
                     {plan.description}
                   </p>
                   {offer?.eligible ? (

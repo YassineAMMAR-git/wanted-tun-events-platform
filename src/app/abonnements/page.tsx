@@ -52,7 +52,7 @@ export default async function PlansPage({
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
-        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-3">
           {rows.map(({ plan, activity }) => (
             <div key={plan.id} className="card card-hover flex h-full flex-col p-5">
               <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +60,8 @@ export default async function PlansPage({
                   {tCommon("sessions", { count: plan.sessionsIncluded })}
                 </span>
               </div>
-              <h3 className="mt-3 line-clamp-2 min-h-12 text-base font-bold text-zinc-900">{plan.name}</h3>
+              {/* Hauteur réservée seulement à partir de deux colonnes (alignement des cartes côte à côte). */}
+              <h3 className="mt-3 line-clamp-2 text-base font-bold text-zinc-900 md:min-h-12">{plan.name}</h3>
               <Link href={`/activites/${activity.slug}`} className="mt-1 text-sm text-gold-dark hover:underline">
                 {activity.name}
               </Link>

@@ -24,8 +24,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <SiteHeader />
           <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
           <footer className="mt-10 border-t border-zinc-200 bg-zinc-50">
-            <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-              <div>
+            {/* Téléphone : « Plateforme » et « Suivez-nous » côte à côte, pour un pied de page plus court. */}
+            <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+              <div className="col-span-2 lg:col-span-1">
                 <p className="text-sm font-black tracking-[0.2em] text-zinc-900">{t("common.brand")}</p>
                 <p className="mt-2 text-sm text-zinc-500">{t("footer.tagline")}</p>
               </div>
@@ -80,7 +81,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   </a>
                 </div>
               </div>
-              <div className="text-sm">
+              <div className="col-span-2 text-sm sm:col-span-1">
                 <p className="mb-2 font-semibold text-zinc-700">{t("footer.contact")}</p>
                 <ul className="space-y-1 text-zinc-500">
                   <li dir="ltr" className="text-start">

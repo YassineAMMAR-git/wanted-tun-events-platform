@@ -173,6 +173,15 @@ html[lang="ar"] :where(*):not([dir="ltr"], [dir="ltr"] *) {
     min-height: 5.5rem;
     resize: vertical;
   }
+  /* Téléphone : 16 px minimum dans les champs, sinon iOS zoome sur la page à chaque saisie. */
+  @media (max-width: 639px) {
+    .input,
+    .select,
+    .textarea {
+      font-size: 16px;
+      padding-block: 0.6rem;
+    }
+  }
 
   .badge {
     display: inline-flex;
@@ -186,6 +195,15 @@ html[lang="ar"] :where(*):not([dir="ltr"], [dir="ltr"] *) {
     font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
+    max-width: 100%;
+  }
+  /* Téléphone : un badge long (adresse…) passe à la ligne au lieu de déborder de l'écran. */
+  @media (max-width: 639px) {
+    .badge {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      flex-shrink: 0;
+    }
   }
 
   .eyebrow {
