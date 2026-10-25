@@ -4,13 +4,35 @@ import { and, asc, desc, eq, gte, ilike, lt, lte, or, sql, type SQL } from "driz
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, CATEGORY_TRANSLATABLE, SESSION_TRANSLATABLE, activities, categories, sessions } from "@/db/schema";
-import { SESSION_STATUS_STYLES, formatDate, formatDuration, formatTime, isPast, parseParisDateTime, sessionDisplayStatus } from "@/lib/format";
+import { SESSION_STATUS_STYLES, formatDate, formatPrice, formatDuration, formatTime, isPast, parseParisDateTime, sessionDisplayStatus } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { FilterBar, FilterDate, FilterSelect, FilterText } from "@/components/filter-bar";
 import { Flash } from "@/components/flash";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Chiffre d'affaires d'une séance, en centimes : la part de chaque inscrit payant.
+ *  - billet : son prix entier ;
+ *  - abonnement : son prix divisé par le nombre de séances du pack (4 séances à 100 € → 25 € par séance).
+ * Une absence compte quand même (la séance est décomptée du pack). Ne comptent pas : une séance annulée ou
+ * reportée, un ajout manuel sans abonnement, un abonnement ajouté par l'administration ou jamais payé.
+ */
+const SESSION_REVENUE = sql<number>`coalesce((
+  select round(sum(
+    case when sub.kind = 'ticket' then coalesce(sub.amount_cents, act.price_cents)::numeric
+    else coalesce(sub.amount_cents, p.price_cents, 0)::numeric / greatest(sub.sessions_included, 1) end
+  ))
+  from attendances a
+  join subscriptions sub on sub.id = a.subscription_id
+  join activities act on act.id = sub.activity_id
+  left join plans p on p.id = sub.plan_id
+  where a.session_id = ${sessions.id}
+    and ${sessions.status} = 'scheduled'
+    and sub.payment_status = 'paid'
+    and coalesce(sub.payment_reference, '') <> 'administration'
+), 0)::int`;
 
 export default async function AdminSessionsPage({
   searchParams,
@@ -70,6 +92,7 @@ export default async function AdminSessionsPage({
       total: sql<number>`(select count(*) from attendances a where a.session_id = ${sessions.id})::int`,
       confirmed: sql<number>`(select count(*) from attendances a where a.session_id = ${sessions.id} and a.status = 'confirmed')::int`,
       declined: sql<number>`(select count(*) from attendances a where a.session_id = ${sessions.id} and a.status = 'declined')::int`,
+      revenueCents: SESSION_REVENUE,
     })
     .from(sessions)
     .innerJoin(activities, eq(activities.id, sessions.activityId))
@@ -94,8 +117,9 @@ export default async function AdminSessionsPage({
       participants: acc.participants + row.total,
       confirmed: acc.confirmed + row.confirmed,
       declined: acc.declined + row.declined,
+      revenueCents: acc.revenueCents + row.revenueCents,
     }),
-    { participants: 0, confirmed: 0, declined: 0 },
+    { participants: 0, confirmed: 0, declined: 0, revenueCents: 0 },
   );
 
   const views = [
@@ -110,11 +134,12 @@ export default async function AdminSessionsPage({
 
       <SectionTitle eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label={t("statShown")} value={rows.length} />
         <Stat label={t("statParticipants")} value={totals.participants} />
         <Stat label={t("statConfirmed")} value={totals.confirmed} />
         <Stat label={t("statDeclined")} value={totals.declined} />
+        <Stat label={t("statRevenue")} value={formatPrice(totals.revenueCents, locale)} hint={t("statRevenueHint")} />
       </section>
 
       <div className="flex flex-wrap gap-2">
@@ -180,6 +205,7 @@ export default async function AdminSessionsPage({
               <th>{t("colRegistered")}</th>
               <th>🟢 / 🟠 / 🔴</th>
               <th>{t("colStatus")}</th>
+              <th>{t("colRevenue")}</th>
               <th></th>
             </tr>
           </thead>
@@ -214,6 +240,9 @@ export default async function AdminSessionsPage({
                   <td>
                     <span className={`badge ${SESSION_STATUS_STYLES[status]}`}>{tStatus(`session.${status}`)}</span>
                   </td>
+                  <td className="whitespace-nowrap font-semibold text-zinc-900">
+                    {session.status === "scheduled" ? formatPrice(row.revenueCents, locale) : tCommon("none")}
+                  </td>
                   <td>
                     <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm">
                       {t("participants")}
@@ -224,7 +253,7 @@ export default async function AdminSessionsPage({
             })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center text-zinc-500">
+                <td colSpan={10} className="text-center text-zinc-500">
                   {t("empty")}
                 </td>
               </tr>

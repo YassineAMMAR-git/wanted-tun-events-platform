@@ -857,6 +857,9 @@ const ar: Messages = {
       promoNoPlans: "لا توجد صيغة في نشاط آخر حاليًا.",
     },
     sessions: {
+      colRevenue: "رقم المعاملات",
+      statRevenue: "رقم المعاملات",
+      statRevenueHint: "التذاكر + حصة الاشتراكات (السعر ÷ عدد حصص الباقة)",
       searchPlaceholder: "العنوان أو المكان أو النشاط",
       filterActivity: "النشاط",
       filterStatus: "الحالة",
@@ -1159,6 +1162,11 @@ const ar: Messages = {
       emptyText: "أضف أول شريحة باستخدام النموذج أدناه.",
     },
     payments: {
+      searchPlaceholder: "الاسم أو البريد الإلكتروني",
+      filterStatus: "حالة الدفع",
+      allStatuses: "كل الحالات",
+      statusFilter: { paye: "مدفوع", attente: "قيد الانتظار", expire: "منتهي / ملغى" },
+      packSessions: "{count, plural, one {حصة واحدة} other {# حصص}}",
       filterActivity: "النشاط",
       allActivities: "كل الأنشطة",
       filterApply: "تصفية",

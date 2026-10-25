@@ -859,6 +859,9 @@ const fr = {
       promoNoPlans: "Aucune formule dans une autre activité pour le moment.",
     },
     sessions: {
+      colRevenue: "Chiffre d’affaires",
+      statRevenue: "Chiffre d’affaires",
+      statRevenueHint: "Billets + part des abonnements (prix ÷ nombre de séances du pack)",
       searchPlaceholder: "Titre, lieu ou activité",
       filterActivity: "Activité",
       filterStatus: "Statut",
@@ -1163,6 +1166,11 @@ const fr = {
       emptyText: "Ajoutez votre première diapositive avec le formulaire ci-dessous.",
     },
     payments: {
+      searchPlaceholder: "Nom, prénom ou e-mail",
+      filterStatus: "Statut du paiement",
+      allStatuses: "Tous les statuts",
+      statusFilter: { paye: "Payé", attente: "En attente", expire: "Expiré / annulé" },
+      packSessions: "{count, plural, one {# séance} other {# séances}}",
       filterActivity: "Activité",
       allActivities: "Toutes les activités",
       filterApply: "Filtrer",

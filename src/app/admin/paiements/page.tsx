@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, activities, paymentLinks, plans, subscriptions, users } from "@/db/schema";
@@ -8,7 +8,7 @@ import { formatDateTime, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { Pagination, readPage } from "@/components/pagination";
-import { AutoSubmitSelect } from "@/app/admin/_components/auto-submit-select";
+import { FilterBar, FilterSelect, FilterText } from "@/components/filter-bar";
 import { localize } from "@/lib/i18n/content";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +16,40 @@ export const dynamic = "force-dynamic";
 /** Nombre de paiements affichés par page. */
 const PAGE_SIZE = 10;
 
-/** Une page de paiements (de toutes les activités ou d'une seule), du plus récent au plus ancien, et leur nombre total. */
-async function loadPayments(rawPage: string | undefined, activityId: number | null) {
-  const filter = activityId ? eq(subscriptions.activityId, activityId) : undefined;
+/** Filtre « statut » de l'URL → statuts du paiement Mollie regroupés. */
+const STATUS_FILTERS = {
+  paye: ["paid"],
+  attente: ["open", "processing"],
+  expire: ["expired", "canceled"],
+} as const;
+type StatusFilter = keyof typeof STATUS_FILTERS;
+const isStatusFilter = (value: string | undefined): value is StatusFilter => !!value && value in STATUS_FILTERS;
+
+type PaymentFilters = { activityId: number | null; search: string; status: StatusFilter | null };
+
+/** Une page de paiements filtrés, du plus récent au plus ancien, et leur nombre total. */
+async function loadPayments(rawPage: string | undefined, filters: PaymentFilters) {
+  const conditions: SQL[] = [];
+  if (filters.activityId) conditions.push(eq(subscriptions.activityId, filters.activityId));
+  if (filters.status) conditions.push(inArray(paymentLinks.status, [...STATUS_FILTERS[filters.status]]));
+  if (filters.search) {
+    const like = `%${filters.search}%`;
+    conditions.push(
+      or(
+        ilike(users.email, like),
+        ilike(users.firstName, like),
+        ilike(users.lastName, like),
+        sql`concat_ws(' ', ${users.firstName}, ${users.lastName}) ilike ${like}`,
+      )!,
+    );
+  }
+  const filter = conditions.length > 0 ? and(...conditions) : undefined;
   try {
     const [{ total }] = await db
       .select({ total: sql<number>`count(*)::int` })
       .from(paymentLinks)
       .innerJoin(subscriptions, eq(subscriptions.id, paymentLinks.subscriptionId))
+      .innerJoin(users, eq(users.id, subscriptions.userId))
       .where(filter);
     const pageCount = Math.max(Math.ceil(total / PAGE_SIZE), 1);
     const page = readPage(rawPage, pageCount);
@@ -62,16 +88,19 @@ const LINK_STATUS_STYLE: Record<string, string> = {
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; erreur?: string; page?: string; activite?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; page?: string; activite?: string; q?: string; statut?: string }>;
 }) {
-  const { ok, erreur, page: rawPage, activite } = await searchParams;
-  const [locale, t, activityList] = await Promise.all([
+  const { ok, erreur, page: rawPage, activite, q, statut } = await searchParams;
+  const [locale, t, tCommon, activityList] = await Promise.all([
     getLocale(),
     getTranslations("admin.payments"),
+    getTranslations("common"),
     db.select().from(activities).orderBy(asc(activities.name)),
   ]);
   // Filtre du tableau : une activité connue, sinon toutes.
   const shownActivity = activityList.find((activity) => String(activity.id) === activite);
+  const search = q?.trim().slice(0, 100) ?? "";
+  const status = isStatusFilter(statut) ? statut : null;
   const configured = mollieConfigured();
 
   // Rien n'est affiché quand tout va bien : seul un problème de paiement en ligne est signalé.
@@ -85,7 +114,7 @@ export default async function AdminPaymentsPage({
       problem = t("checkApiError", { error: error instanceof Error ? error.message : String(error) });
     }
   }
-  const payments = await loadPayments(rawPage, shownActivity?.id ?? null);
+  const payments = await loadPayments(rawPage, { activityId: shownActivity?.id ?? null, search, status });
   if (payments === null) problem = t("checkTablesHint");
   const recent = payments?.rows ?? null;
 
@@ -105,24 +134,35 @@ export default async function AdminPaymentsPage({
 
       <section id="paiements" className="scroll-mt-20">
         <SectionTitle eyebrow={t("eyebrow")} title={t("recentTitle")} subtitle={t("recentSubtitle")} />
-        {/* Formulaire GET appliqué dès qu'on change d'activité ; le tableau repart de la première page. */}
-        <form action="/admin/paiements#paiements" className="mb-4 sm:max-w-sm">
-          <AutoSubmitSelect
+        {/* Formulaire GET : les critères restent dans l'URL et le tableau repart de la première page. */}
+        <FilterBar
+          action="/admin/paiements#paiements"
+          active={Boolean(search || shownActivity || status)}
+          submitLabel={t("filterApply")}
+          resetLabel={tCommon("reset")}
+        >
+          <FilterText name="q" label={tCommon("search")} defaultValue={search} placeholder={t("searchPlaceholder")} />
+          <FilterSelect
             name="activite"
             label={t("filterActivity")}
-            value={shownActivity ? String(shownActivity.id) : ""}
+            defaultValue={shownActivity ? String(shownActivity.id) : ""}
             placeholder={t("allActivities")}
             options={activityList.map((activity) => ({
               value: String(activity.id),
               label: localize(activity, locale, ACTIVITY_TRANSLATABLE).name ?? "",
             }))}
           />
-          <noscript>
-            <button className="btn btn-primary mt-2" type="submit">
-              {t("filterApply")}
-            </button>
-          </noscript>
-        </form>
+          <FilterSelect
+            name="statut"
+            label={t("filterStatus")}
+            defaultValue={status ?? ""}
+            placeholder={t("allStatuses")}
+            options={(Object.keys(STATUS_FILTERS) as StatusFilter[]).map((value) => ({
+              value,
+              label: t(`statusFilter.${value}`),
+            }))}
+          />
+        </FilterBar>
         {!recent || recent.length === 0 ? (
           <EmptyState title={t("recentEmpty")} />
         ) : (
@@ -148,7 +188,23 @@ export default async function AdminPaymentsPage({
                         {user.email}
                       </span>
                     </td>
-                    <td>{planName ?? t("ticketOf", { name: activityName })}</td>
+                    <td>
+                      {subscription.kind === "membership" && planName ? (
+                        <>
+                          <span className="font-semibold text-zinc-900">{planName}</span>
+                          <span className="block text-xs text-zinc-500">
+                            {activityName} · {t("packSessions", { count: subscription.sessionsIncluded })}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {t("ticketOf", { name: activityName })}
+                          {subscription.priceLabel ? (
+                            <span className="block text-xs text-zinc-500">{subscription.priceLabel}</span>
+                          ) : null}
+                        </>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap">{formatPrice(link.amountCents, locale)}</td>
                     <td>
                       <span className={`badge ${LINK_STATUS_STYLE[link.status] ?? LINK_STATUS_STYLE.expired}`}>
@@ -172,7 +228,11 @@ export default async function AdminPaymentsPage({
             page={payments.page}
             pageCount={payments.pageCount}
             basePath="/admin/paiements"
-            params={{ activite: shownActivity ? String(shownActivity.id) : undefined }}
+            params={{
+              activite: shownActivity ? String(shownActivity.id) : undefined,
+              q: search || undefined,
+              statut: status ?? undefined,
+            }}
             anchor="paiements"
             labels={{
               previous: t("pageNewer"),

@@ -854,6 +854,9 @@ const en: Messages = {
       promoNoPlans: "No plan in another activity yet.",
     },
     sessions: {
+      colRevenue: "Revenue",
+      statRevenue: "Revenue",
+      statRevenueHint: "Tickets + share of memberships (price ÷ sessions in the pack)",
       searchPlaceholder: "Title, place or activity",
       filterActivity: "Activity",
       filterStatus: "Status",
@@ -1156,6 +1159,11 @@ const en: Messages = {
       emptyText: "Add your first slide with the form below.",
     },
     payments: {
+      searchPlaceholder: "Name or email",
+      filterStatus: "Payment status",
+      allStatuses: "All statuses",
+      statusFilter: { paye: "Paid", attente: "Pending", expire: "Expired / cancelled" },
+      packSessions: "{count, plural, one {# session} other {# sessions}}",
       filterActivity: "Activity",
       allActivities: "All activities",
       filterApply: "Filter",
