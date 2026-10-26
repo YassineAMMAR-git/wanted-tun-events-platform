@@ -858,6 +858,7 @@ const ar: Messages = {
       promoNoPlans: "لا توجد صيغة في نشاط آخر حاليًا.",
     },
     sessions: {
+      registeredTotal: "المجموع: {count}",
       viewParticipants: "عرض القائمة",
       colDocuments: "الوثائق",
       documentAdd: "📎 إضافة ملف PDF",

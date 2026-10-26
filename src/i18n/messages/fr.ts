@@ -860,6 +860,7 @@ const fr = {
       promoNoPlans: "Aucune formule dans une autre activité pour le moment.",
     },
     sessions: {
+      registeredTotal: "Total : {count}",
       viewParticipants: "Voir la liste",
       colDocuments: "Documents",
       documentAdd: "📎 Ajouter un PDF",

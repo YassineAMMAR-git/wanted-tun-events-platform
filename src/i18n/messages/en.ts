@@ -855,6 +855,7 @@ const en: Messages = {
       promoNoPlans: "No plan in another activity yet.",
     },
     sessions: {
+      registeredTotal: "Total: {count}",
       viewParticipants: "View list",
       colDocuments: "Documents",
       documentAdd: "📎 Add a PDF",

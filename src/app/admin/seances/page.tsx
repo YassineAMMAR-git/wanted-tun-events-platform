@@ -210,7 +210,7 @@ export default async function AdminSessionsPage({
             <tr>
               <th>{t("colDate")}</th>
               <th>{t("colSession")}</th>
-              <th>{t("colRegistered")}</th>
+              <th className="text-center">{t("colRegistered")}</th>
               <th>{t("colStatus")}</th>
               <th>{t("colRevenue")}</th>
               <th>{t("colDocuments")}</th>
@@ -250,13 +250,13 @@ export default async function AdminSessionsPage({
                       </span>
                     ) : null}
                   </td>
-                  <td className="whitespace-nowrap">
-                    <span className="text-base font-bold text-zinc-900">{row.total}</span>
+                  <td className="whitespace-nowrap text-center">
                     <span className="block text-xs" dir="ltr">
                       <span className="text-emerald-700">🟢 {row.confirmed}</span>{" "}
                       <span className="text-gold-dark">🟠 {pending}</span>{" "}
                       <span className="text-rose-700">🔴 {row.declined}</span>
                     </span>
+                    <span className="mt-0.5 block text-[0.7rem] text-zinc-500">{t("registeredTotal", { count: row.total })}</span>
                   </td>
                   <td className="whitespace-nowrap">
                     <span className={`badge ${SESSION_STATUS_STYLES[status]}`}>{tStatus(`session.${status}`)}</span>
