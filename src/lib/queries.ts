@@ -24,6 +24,7 @@ import { localize } from "@/lib/i18n/content";
 import { isFinished, isRecurring } from "@/lib/memberships";
 import { PACK_SESSIONS_USED, closeConfirmations, placesTaken } from "@/lib/subscriptions";
 import { ensureReminderRules } from "@/lib/reminders";
+import { listSessionDocuments } from "@/lib/session-documents";
 
 /*
  * Requêtes des pages publiques et de l'espace personnel : le contenu est renvoyé dans la langue demandée
@@ -339,9 +340,11 @@ export async function getMySessions(userId: number, locale: Locale) {
     .innerJoin(categories, eq(categories.id, activities.categoryId))
     .where(eq(attendances.userId, userId))
     .orderBy(asc(sessions.startsAt));
+  const documents = await listSessionDocuments(rows.map((row) => row.session.id));
 
   return rows.map(({ session, activity, category, attendance }) => ({
     attendance,
+    documents: documents.get(session.id) ?? [],
     session: localize(session, locale, SESSION_TRANSLATABLE),
     activity: localize(activity, locale, ACTIVITY_TRANSLATABLE),
     categoryName: localize(category, locale, CATEGORY_TRANSLATABLE).name,

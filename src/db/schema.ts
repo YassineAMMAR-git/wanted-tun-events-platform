@@ -472,6 +472,29 @@ export const images = pgTable("images", {
 });
 
 /* ------------------------------------------------------------------ */
+/* Documents PDF d'une séance (cours, note…)                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fichiers PDF joints à une séance par l'administration, téléchargeables par les inscrits à la séance.
+ * Servis par /documents/{id} après vérification de l'inscription ; supprimés avec la séance.
+ */
+export const sessionDocuments = pgTable(
+  "session_documents",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: integer("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    fileName: varchar("file_name", { length: 200 }).notNull(),
+    data: bytea("data").notNull(),
+    size: integer("size").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("session_documents_session_idx").on(table.sessionId)],
+);
+
+/* ------------------------------------------------------------------ */
 /* Paiement en ligne via Mollie                                        */
 /* ------------------------------------------------------------------ */
 
@@ -516,3 +539,4 @@ export type HeroSlide = typeof heroSlides.$inferSelect;
 export type PaymentLink = typeof paymentLinks.$inferSelect;
 export type PlanPromotion = typeof planPromotions.$inferSelect;
 export type UserConsent = typeof userConsents.$inferSelect;
+export type SessionDocument = typeof sessionDocuments.$inferSelect;

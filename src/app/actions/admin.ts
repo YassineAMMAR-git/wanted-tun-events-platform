@@ -17,6 +17,7 @@ import {
   heroSlides,
   notificationRules,
   plans,
+  sessionDocuments,
   sessions,
   subscriptions,
   ticketPrices,
@@ -678,6 +679,14 @@ export async function removeParticipantAction(formData: FormData): Promise<void>
   const sessionId = num(formData, "sessionId");
   await db.delete(attendances).where(eq(attendances.id, id));
   redirect(withMessage(`/admin/seances/${sessionId}`, "ok", "participantRemoved"));
+}
+
+export async function deleteSessionDocumentAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = num(formData, "id");
+  const sessionId = num(formData, "sessionId");
+  await db.delete(sessionDocuments).where(and(eq(sessionDocuments.id, id), eq(sessionDocuments.sessionId, sessionId)));
+  redirect(`${withMessage(`/admin/seances/${sessionId}`, "ok", "documentDeleted")}#documents`);
 }
 
 /* ------------------------------ abonnements ------------------------------ */

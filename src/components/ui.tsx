@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`card p-4 sm:p-5 ${className}`}>{children}</div>;
+export function Card({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
+  return (
+    <div id={id} className={`card p-4 sm:p-5 ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 export function SectionTitle({

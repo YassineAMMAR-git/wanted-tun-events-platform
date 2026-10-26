@@ -19,6 +19,40 @@ import {
   toSubscriptionStatus,
 } from "@/lib/format";
 import { Card, EmptyState, Progress, SectionTitle, Stat } from "@/components/ui";
+import { formatFileSize } from "@/lib/session-documents";
+
+/** Liens de téléchargement des PDF joints à une séance (cours, note…). */
+function SessionDocuments({
+  documents,
+  label,
+  locale,
+}: {
+  documents: { id: number; fileName: string; size: number }[];
+  label: string;
+  locale: string;
+}) {
+  if (documents.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <p className="text-xs font-semibold text-zinc-600">{label}</p>
+      <ul className="mt-1 flex flex-wrap gap-2">
+        {documents.map((doc) => (
+          <li key={doc.id}>
+            <a
+              href={`/documents/${doc.id}`}
+              download
+              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 hover:border-gold-dark hover:text-gold-dark"
+            >
+              <span aria-hidden>📄</span>
+              <span className="break-all">{doc.fileName}</span>
+              <span className="shrink-0 text-zinc-500">({formatFileSize(doc.size, locale)})</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -328,6 +362,7 @@ export default async function DashboardPage({
                                 })}
                               </p>
                             ) : null}
+                            <SessionDocuments documents={row.documents} label={t("documents")} locale={locale} />
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -398,6 +433,7 @@ export default async function DashboardPage({
                               {formatDate(row.session.startsAt, locale)} — {formatTime(row.session.startsAt, locale)} ·{" "}
                               {tStatus(`session.${sessionDisplayStatus(row.session)}`)}
                             </p>
+                            <SessionDocuments documents={row.documents} label={t("documents")} locale={locale} />
                           </div>
                         </div>
                         <span className={`badge self-start sm:self-auto ${ATTENDANCE_STATUS[attendance].className}`}>
