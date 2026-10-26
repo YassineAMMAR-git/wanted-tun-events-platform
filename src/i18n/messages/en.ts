@@ -331,7 +331,7 @@ const en: Messages = {
   },
 
   dashboard: {
-    documents: "📎 Documents to download",
+    documents: "Session documents",
     confirmBefore: "⏳ Confirm before {date}",
     confirmationsClosed: "🔒 Attendance closed (48 hours before the session)",
     cancelOrder: "Cancel",
@@ -855,6 +855,7 @@ const en: Messages = {
       promoNoPlans: "No plan in another activity yet.",
     },
     sessions: {
+      viewParticipants: "View list",
       colDocuments: "Documents",
       documentAdd: "📎 Add a PDF",
       documentUploading: "Uploading…",

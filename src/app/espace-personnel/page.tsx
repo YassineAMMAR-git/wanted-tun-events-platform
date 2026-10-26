@@ -21,7 +21,7 @@ import {
 import { Card, EmptyState, Progress, SectionTitle, Stat } from "@/components/ui";
 import { formatFileSize } from "@/lib/session-documents";
 
-/** Liens de téléchargement des PDF joints à une séance (cours, note…). */
+/** Boutons de téléchargement des PDF joints à une séance (cours, note…). */
 function SessionDocuments({
   documents,
   label,
@@ -33,19 +33,33 @@ function SessionDocuments({
 }) {
   if (documents.length === 0) return null;
   return (
-    <div className="mt-2">
-      <p className="text-xs font-semibold text-zinc-600">{label}</p>
-      <ul className="mt-1 flex flex-wrap gap-2">
+    <div className="mt-3">
+      <p className="text-[0.68rem] font-semibold tracking-wider text-zinc-500 uppercase">{label}</p>
+      <ul className="mt-1.5 grid gap-2 sm:grid-cols-2">
         {documents.map((doc) => (
-          <li key={doc.id}>
+          <li key={doc.id} className="min-w-0">
             <a
               href={`/documents/${doc.id}`}
               download
-              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-800 hover:border-gold-dark hover:text-gold-dark"
+              className="group flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-2 pe-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
             >
-              <span aria-hidden>📄</span>
-              <span className="break-all">{doc.fileName}</span>
-              <span className="shrink-0 text-zinc-500">({formatFileSize(doc.size, locale)})</span>
+              <span className="flex h-10 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-[0.6rem] font-bold tracking-wide text-rose-600 ring-1 ring-rose-100">
+                PDF
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-zinc-900" title={doc.fileName}>
+                  {doc.fileName.replace(/\.pdf$/i, "")}
+                </span>
+                <span className="block text-xs text-zinc-500">{formatFileSize(doc.size, locale)}</span>
+              </span>
+              <span
+                aria-hidden
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition group-hover:bg-amber-500 group-hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" />
+                </svg>
+              </span>
             </a>
           </li>
         ))}
@@ -339,9 +353,9 @@ export default async function DashboardPage({
                         key={row.attendance.id}
                         className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
                           <span className="dot-live mt-1 h-3 w-3 shrink-0 rounded-full bg-emerald-400" />
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="font-semibold text-zinc-900">
                               {row.activity.name}
                               <span className="ms-2 text-xs font-normal text-zinc-500">
@@ -423,11 +437,11 @@ export default async function DashboardPage({
                     return (
                       <li
                         key={row.attendance.id}
-                        className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 opacity-80 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-zinc-400" />
-                          <div>
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                          <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-zinc-400" />
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm text-zinc-700">{row.activity.name}</p>
                             <p className="text-xs text-zinc-500">
                               {formatDate(row.session.startsAt, locale)} — {formatTime(row.session.startsAt, locale)} ·{" "}

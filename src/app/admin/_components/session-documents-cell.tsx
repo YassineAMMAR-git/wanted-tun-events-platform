@@ -45,14 +45,14 @@ export function SessionDocumentsCell({ sessionId, documents, returnTo, deleteAct
   }
 
   return (
-    <div className="flex min-w-48 flex-col gap-1.5">
+    <div className="flex w-44 flex-col gap-1.5">
       {documents.length > 0 ? (
         <ul className="flex flex-col gap-1">
           {documents.map((doc) => (
             <li key={doc.id} className="flex items-center gap-1.5">
               <a
                 href={`/documents/${doc.id}`}
-                className="min-w-0 truncate text-xs text-zinc-800 hover:text-gold-dark"
+                className="min-w-0 flex-1 truncate text-xs text-zinc-800 hover:text-gold-dark"
                 title={`${doc.fileName} (${doc.sizeLabel})`}
               >
                 📄 {doc.fileName}

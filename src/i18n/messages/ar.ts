@@ -332,7 +332,7 @@ const ar: Messages = {
   },
 
   dashboard: {
-    documents: "📎 وثائق للتنزيل",
+    documents: "وثائق الحصة",
     confirmBefore: "⏳ للتأكيد قبل {date}",
     confirmationsClosed: "🔒 أُغلق تأكيد الحضور (قبل الحصة بـ 48 ساعة)",
     cancelOrder: "إلغاء",
@@ -858,6 +858,7 @@ const ar: Messages = {
       promoNoPlans: "لا توجد صيغة في نشاط آخر حاليًا.",
     },
     sessions: {
+      viewParticipants: "عرض القائمة",
       colDocuments: "الوثائق",
       documentAdd: "📎 إضافة ملف PDF",
       documentUploading: "جارٍ الإرسال…",

@@ -333,7 +333,7 @@ const fr = {
   },
 
   dashboard: {
-    documents: "📎 Documents à télécharger",
+    documents: "Documents de la séance",
     confirmBefore: "⏳ À confirmer avant le {date}",
     confirmationsClosed: "🔒 Présences clôturées (48 h avant la séance)",
     cancelOrder: "Annuler",
@@ -860,6 +860,7 @@ const fr = {
       promoNoPlans: "Aucune formule dans une autre activité pour le moment.",
     },
     sessions: {
+      viewParticipants: "Voir la liste",
       colDocuments: "Documents",
       documentAdd: "📎 Ajouter un PDF",
       documentUploading: "Envoi…",

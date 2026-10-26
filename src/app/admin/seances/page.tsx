@@ -209,16 +209,12 @@ export default async function AdminSessionsPage({
           <thead>
             <tr>
               <th>{t("colDate")}</th>
-              <th>{t("colActivity")}</th>
               <th>{t("colSession")}</th>
-              <th>{t("colPlace")}</th>
-              <th>{t("colDuration")}</th>
               <th>{t("colRegistered")}</th>
-              <th>🟢 / 🟠 / 🔴</th>
               <th>{t("colStatus")}</th>
               <th>{t("colRevenue")}</th>
               <th>{t("colDocuments")}</th>
-              <th></th>
+              <th>{t("participants")}</th>
             </tr>
           </thead>
           <tbody>
@@ -226,30 +222,43 @@ export default async function AdminSessionsPage({
               const session = localize(row.session, locale, SESSION_TRANSLATABLE);
               const past = isPast(session.startsAt);
               const status = sessionDisplayStatus(session);
+              const pending = Math.max(row.total - row.confirmed - row.declined, 0);
               return (
-                <tr key={session.id} id={`seance-${session.id}`} className="scroll-mt-24">
+                <tr key={session.id} id={`seance-${session.id}`} className="scroll-mt-24 align-top">
                   <td className="whitespace-nowrap">
-                    <span className={past ? "text-zinc-600" : "text-emerald-700"}>
+                    <span className={`font-semibold ${past ? "text-zinc-600" : "text-emerald-700"}`}>
                       {past ? "⚪" : "🟢"} {formatDate(session.startsAt, locale)}
                     </span>
-                    <span className="block text-xs text-zinc-500">{formatTime(session.startsAt, locale)}</span>
+                    <span className="block text-xs text-zinc-500">
+                      {formatTime(session.startsAt, locale)} · {formatDuration(session.durationMinutes, locale)}
+                    </span>
                   </td>
-                  <td>
-                    <Link href={`/admin/activites/${row.activity.id}`} className="text-zinc-800 hover:text-gold-dark">
+                  <td className="min-w-44 max-w-64">
+                    <Link
+                      href={`/admin/activites/${row.activity.id}`}
+                      className="font-semibold text-zinc-900 hover:text-gold-dark"
+                    >
                       {localize(row.activity, locale, ACTIVITY_TRANSLATABLE).name}
                     </Link>
-                    <span className="block text-xs text-zinc-500">{localize(row.category, locale, CATEGORY_TRANSLATABLE).name}</span>
+                    <span className="block text-xs text-zinc-500">
+                      {localize(row.category, locale, CATEGORY_TRANSLATABLE).name}
+                      {session.title ? ` · ${session.title}` : ""}
+                    </span>
+                    {session.location ? (
+                      <span className="block truncate text-xs text-zinc-500" title={session.location}>
+                        📍 {session.location}
+                      </span>
+                    ) : null}
                   </td>
-                  <td className="text-zinc-600">{session.title ?? tCommon("none")}</td>
-                  <td className="text-zinc-600">{session.location ?? tCommon("none")}</td>
-                  <td className="whitespace-nowrap text-zinc-600">{formatDuration(session.durationMinutes, locale)}</td>
-                  <td className="font-semibold text-zinc-900">{row.total}</td>
-                  <td className="whitespace-nowrap" dir="ltr">
-                    <span className="text-emerald-700">{row.confirmed}</span> /{" "}
-                    <span className="text-gold-dark">{Math.max(row.total - row.confirmed - row.declined, 0)}</span> /{" "}
-                    <span className="text-rose-700">{row.declined}</span>
+                  <td className="whitespace-nowrap">
+                    <span className="text-base font-bold text-zinc-900">{row.total}</span>
+                    <span className="block text-xs" dir="ltr">
+                      <span className="text-emerald-700">🟢 {row.confirmed}</span>{" "}
+                      <span className="text-gold-dark">🟠 {pending}</span>{" "}
+                      <span className="text-rose-700">🔴 {row.declined}</span>
+                    </span>
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <span className={`badge ${SESSION_STATUS_STYLES[status]}`}>{tStatus(`session.${status}`)}</span>
                   </td>
                   <td className="whitespace-nowrap font-semibold text-zinc-900">
@@ -268,8 +277,8 @@ export default async function AdminSessionsPage({
                     />
                   </td>
                   <td>
-                    <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm">
-                      {t("participants")}
+                    <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm whitespace-nowrap">
+                      👥 {t("viewParticipants")}
                     </Link>
                   </td>
                 </tr>
@@ -277,7 +286,7 @@ export default async function AdminSessionsPage({
             })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center text-zinc-500">
+                <td colSpan={7} className="text-center text-zinc-500">
                   {t("empty")}
                 </td>
               </tr>
