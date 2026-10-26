@@ -50,6 +50,7 @@ import { localize, readTranslations } from "@/lib/i18n/content";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { isRecurring, toActivityKind } from "@/lib/memberships";
 import { savePlanPromotion } from "@/lib/promotions";
+import { sessionsReturnUrl } from "@/lib/session-documents";
 import { translatorFor } from "@/i18n/translator";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -686,7 +687,7 @@ export async function deleteSessionDocumentAction(formData: FormData): Promise<v
   const id = num(formData, "id");
   const sessionId = num(formData, "sessionId");
   await db.delete(sessionDocuments).where(and(eq(sessionDocuments.id, id), eq(sessionDocuments.sessionId, sessionId)));
-  redirect(`${withMessage(`/admin/seances/${sessionId}`, "ok", "documentDeleted")}#documents`);
+  redirect(sessionsReturnUrl(formData.get("returnTo"), sessionId, "ok", "documentDeleted"));
 }
 
 /* ------------------------------ abonnements ------------------------------ */

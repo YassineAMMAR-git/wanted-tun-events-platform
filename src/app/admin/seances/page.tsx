@@ -9,6 +9,9 @@ import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { FilterBar, FilterDate, FilterSelect, FilterText } from "@/components/filter-bar";
 import { Flash } from "@/components/flash";
+import { deleteSessionDocumentAction } from "@/app/actions/admin";
+import { formatFileSize, listSessionDocuments } from "@/lib/session-documents";
+import { SessionDocumentsCell } from "@/app/admin/_components/session-documents-cell";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +103,15 @@ export default async function AdminSessionsPage({
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(...order);
 
+  const documents = await listSessionDocuments(rows.map((row) => row.session.id));
   const filtered = Boolean(search || activite || statut || du || au || tri);
+
+  /** Page actuelle (vue et filtres) : on y revient après l'ajout ou la suppression d'un document. */
+  const currentParams = new URLSearchParams();
+  for (const [key, value] of Object.entries({ vue, q: search, activite, statut, du, au, tri })) {
+    if (value) currentParams.set(key, value);
+  }
+  const returnTo = `/admin/seances${currentParams.size > 0 ? `?${currentParams.toString()}` : ""}`;
 
   /** Conserve les filtres courants quand on change d'onglet de vue. */
   const viewHref = (view: string) => {
@@ -206,6 +217,7 @@ export default async function AdminSessionsPage({
               <th>🟢 / 🟠 / 🔴</th>
               <th>{t("colStatus")}</th>
               <th>{t("colRevenue")}</th>
+              <th>{t("colDocuments")}</th>
               <th></th>
             </tr>
           </thead>
@@ -215,7 +227,7 @@ export default async function AdminSessionsPage({
               const past = isPast(session.startsAt);
               const status = sessionDisplayStatus(session);
               return (
-                <tr key={session.id}>
+                <tr key={session.id} id={`seance-${session.id}`} className="scroll-mt-24">
                   <td className="whitespace-nowrap">
                     <span className={past ? "text-zinc-600" : "text-emerald-700"}>
                       {past ? "⚪" : "🟢"} {formatDate(session.startsAt, locale)}
@@ -244,6 +256,18 @@ export default async function AdminSessionsPage({
                     {session.status === "scheduled" ? formatPrice(row.revenueCents, locale) : tCommon("none")}
                   </td>
                   <td>
+                    <SessionDocumentsCell
+                      sessionId={session.id}
+                      returnTo={returnTo}
+                      deleteAction={deleteSessionDocumentAction}
+                      documents={(documents.get(session.id) ?? []).map((doc) => ({
+                        id: doc.id,
+                        fileName: doc.fileName,
+                        sizeLabel: formatFileSize(doc.size, locale),
+                      }))}
+                    />
+                  </td>
+                  <td>
                     <Link href={`/admin/seances/${session.id}`} className="btn btn-ghost btn-sm">
                       {t("participants")}
                     </Link>
@@ -253,7 +277,7 @@ export default async function AdminSessionsPage({
             })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center text-zinc-500">
+                <td colSpan={11} className="text-center text-zinc-500">
                   {t("empty")}
                 </td>
               </tr>

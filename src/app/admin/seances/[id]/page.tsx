@@ -8,7 +8,6 @@ import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, activities, attendances, sessions, users } from "@/db/schema";
 import {
   addParticipantAction,
-  deleteSessionDocumentAction,
   removeParticipantAction,
   setAttendanceStatusAction,
   setSessionStatusAction,
@@ -29,8 +28,6 @@ import { localize } from "@/lib/i18n/content";
 import { Card, SectionTitle, Stat } from "@/components/ui";
 import { Flash } from "@/components/flash";
 import { TranslationFields } from "@/components/translation-fields";
-import { formatFileSize, listSessionDocuments } from "@/lib/session-documents";
-import { DocumentUploadForm } from "@/app/admin/_components/document-upload-form";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +69,7 @@ export default async function AdminSessionDetail({
 
   // Présences clôturées 48 h avant la séance : les compteurs affichés sont à jour.
   await closeConfirmations();
-  const [participants, clients, documentsBySession] = await Promise.all([
+  const [participants, clients] = await Promise.all([
     db
       .select({ attendance: attendances, user: users })
       .from(attendances)
@@ -80,9 +77,7 @@ export default async function AdminSessionDetail({
       .where(eq(attendances.sessionId, sessionId))
       .orderBy(asc(users.lastName)),
     db.select().from(users).where(ne(users.role, "admin")).orderBy(asc(users.lastName)),
-    listSessionDocuments([sessionId]),
   ]);
-  const documents = documentsBySession.get(sessionId) ?? [];
 
   const confirmed = participants.filter((p) => p.attendance.status === "confirmed").length;
   const declined = participants.filter((p) => p.attendance.status === "declined").length;
@@ -195,37 +190,6 @@ export default async function AdminSessionDetail({
             </form>
           </div>
         ) : null}
-      </Card>
-
-      <Card id="documents">
-        <h2 className="text-lg font-bold text-zinc-900">📄 {t("documentsTitle")}</h2>
-        <p className="mt-1 text-sm text-zinc-600">{t("documentsSubtitle")}</p>
-        {documents.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">{t("documentsEmpty")}</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-zinc-200 rounded-xl border border-zinc-200">
-            {documents.map((doc) => (
-              <li key={doc.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <a href={`/documents/${doc.id}`} className="font-semibold break-all text-zinc-900 hover:text-gold-dark">
-                    {doc.fileName}
-                  </a>
-                  <p className="text-xs text-zinc-500">
-                    {formatFileSize(doc.size, locale)} · {formatDateTime(doc.createdAt, locale)}
-                  </p>
-                </div>
-                <form action={deleteSessionDocumentAction}>
-                  <input type="hidden" name="id" value={doc.id} />
-                  <input type="hidden" name="sessionId" value={session.id} />
-                  <button className="btn btn-danger btn-sm" type="submit">
-                    {t("documentDelete")}
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-        <DocumentUploadForm sessionId={session.id} />
       </Card>
 
       <section>

@@ -68,6 +68,20 @@ export async function isEnrolled(userId: number, sessionId: number): Promise<boo
   return row.length > 0;
 }
 
+/**
+ * Adresse de retour après un envoi ou une suppression : une page du tableau des séances (filtres compris),
+ * jamais un autre site. Le message à afficher remplace celui de l'action précédente.
+ */
+export function sessionsReturnUrl(raw: unknown, sessionId: number, kind: "ok" | "erreur", key: string): string {
+  const path =
+    typeof raw === "string" && raw.startsWith("/admin/seances") && !raw.startsWith("//") ? raw : "/admin/seances";
+  const url = new URL(path, "http://local");
+  url.searchParams.delete("ok");
+  url.searchParams.delete("erreur");
+  url.searchParams.set(kind, key);
+  return `${url.pathname}${url.search}#seance-${sessionId}`;
+}
+
 /** Taille lisible dans la langue de la page : 350 ko, 1,2 Mo / 350 kB, 1.2 MB. */
 export function formatFileSize(bytes: number, locale: string): string {
   const mb = bytes >= 1024 * 1024;
