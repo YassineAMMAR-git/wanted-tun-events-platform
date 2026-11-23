@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { activities, attendances, plans, sessions, subscriptions, ticketPrices } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
-import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
+import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
 import { promotionForClient } from "@/lib/promotions";
 import { activateSubscription, membershipEndsAt, placesTaken, respondToAttendance } from "@/lib/subscriptions";
 
@@ -177,8 +177,8 @@ export async function buyTicketAction(formData: FormData): Promise<void> {
 }
 
 /**
- * Bouton « Payer » : crée (ou reprend) le paiement Mollie de la commande puis envoie le client sur la page Mollie.
- * Mollie le renvoie ensuite sur la page de paiement du site, qui constate le résultat.
+ * Bouton « Payer » : crée (ou reprend) la commande de paiement Viva puis envoie le client sur la page de paiement Viva.
+ * Viva le renvoie ensuite (via /api/viva/retour) sur la page de paiement du site, qui constate le résultat.
  */
 export async function startPaymentAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -212,7 +212,7 @@ export async function startPaymentAction(formData: FormData): Promise<void> {
     const link = await ensurePaymentLink(owned.subscription.id);
     if (link && link.status === "open") checkoutUrl = link.url;
   } catch (error) {
-    console.error("[mollie] création du paiement impossible", error);
+    console.error("[viva] création du paiement impossible", error);
     redirect(`${page}?lien=erreur`);
   }
   // Déjà payé ou confirmation en cours : la page de paiement affiche l'état.
@@ -238,7 +238,7 @@ export async function cancelPendingAction(formData: FormData): Promise<void> {
   )[0];
   if (!owned) redirect("/espace-personnel?erreur=subscriptionNotFound");
 
-  // Dernière vérification chez Mollie : si le paiement vient d'aboutir, la commande est activée au lieu d'être annulée.
+  // Dernière vérification chez Viva : si le paiement vient d'aboutir, la commande est activée au lieu d'être annulée.
   if (await onlinePaymentsEnabled()) {
     const link = await latestPaymentLink(owned.id);
     if (link?.status === "paid") redirect("/espace-personnel");

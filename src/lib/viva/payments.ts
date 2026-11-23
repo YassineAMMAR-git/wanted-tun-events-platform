@@ -12,30 +12,44 @@ import {
   type PaymentLink,
 } from "@/db/schema";
 import { activateSubscription } from "@/lib/subscriptions";
-import { createPayment, getPayment, type MolliePaymentStatus } from "@/lib/mollie/client";
-import { appUrl, mollieConfigured, mollieWebhookUrl, webhookReachable } from "@/lib/mollie/config";
+import {
+  PAYMENT_TIMEOUT_SECONDS,
+  checkoutUrl,
+  createOrder,
+  getTransaction,
+  listOrderTransactions,
+  type VivaTransaction,
+} from "@/lib/viva/client";
+import { vivaConfigured } from "@/lib/viva/config";
 import { formatDateTime } from "@/lib/format";
 
 /** Statuts enregistrés en base (colonne payment_links.status). */
 export type PaymentLinkStatus = "open" | "processing" | "paid" | "expired" | "canceled";
 
-/** « pending » / « authorized » : payé côté client, confirmation en cours ; « failed » : refusé, à retenter. */
-function toLinkStatus(status: MolliePaymentStatus): PaymentLinkStatus {
-  switch (status) {
-    case "paid":
+/** « A » / « C » : payé côté client, confirmation en cours ; « E » / « X » : refusé ou annulé, à retenter. */
+function toLinkStatus(statusId: string): PaymentLinkStatus {
+  switch (statusId) {
+    case "F":
       return "paid";
-    case "pending":
-    case "authorized":
+    case "A":
+    case "C":
       return "processing";
-    case "expired":
-      return "expired";
-    case "canceled":
-    case "failed":
+    case "E":
+    case "X":
       return "canceled";
     default:
       return "open";
   }
 }
+
+/** Les codes de commande Viva sont numériques ; les anciens paiements Mollie (tr_…) ne sont plus consultables. */
+const isVivaOrder = (link: PaymentLink) => /^d+$/.test(link.externalId);
+
+/**
+ * Délai de grâce après l'expiration de la page de paiement : une transaction commencée juste avant
+ * peut encore aboutir. Passé ce délai, une commande sans transaction réussie est expirée.
+ */
+const EXPIRY_GRACE_MS = 15 * 60 * 1000;
 
 /** Statuts après lesquels un paiement n'évolue plus. */
 const FINAL: PaymentLinkStatus[] = ["paid", "expired", "canceled"];
@@ -48,9 +62,9 @@ export function isLinkUsable(link: PaymentLink | null): boolean {
   return link.status === "open" && (!link.expiresAt || link.expiresAt.getTime() > Date.now());
 }
 
-/** Paiement en ligne actif : clé Mollie renseignée. */
+/** Paiement en ligne actif : identifiants Viva renseignés. */
 export async function onlinePaymentsEnabled(): Promise<boolean> {
-  return mollieConfigured();
+  return vivaConfigured();
 }
 
 /**
@@ -68,20 +82,71 @@ async function claimAndActivate(subscriptionId: number): Promise<boolean> {
   return true;
 }
 
-/** Relit le paiement chez Mollie (jamais sur la seule foi d'un webhook) et active la commande s'il est payé. */
-export async function syncPaymentLink(link: PaymentLink): Promise<PaymentLink> {
-  const remote = await getPayment(link.externalId);
-  const status = toLinkStatus(remote.status);
+/** Une transaction ne compte que si elle appartient bien à cette commande ; une réussite doit être au bon montant. */
+function statusFrom(link: PaymentLink, transaction: VivaTransaction): PaymentLinkStatus | null {
+  if (transaction.orderCode && transaction.orderCode !== link.externalId) return null;
+  const status = toLinkStatus(transaction.statusId);
+  if (status === "paid" && transaction.amountCents !== link.amountCents) {
+    console.error(
+      `[viva] montant inattendu pour la commande ${link.externalId} : ${transaction.amountCents} au lieu de ${link.amountCents}`,
+    );
+    return null;
+  }
+  return status;
+}
+
+/** État de la commande d'après ses transactions chez Viva (la plus avancée l'emporte). */
+async function remoteState(
+  link: PaymentLink,
+  transactionId: string | null,
+): Promise<{ status: PaymentLinkStatus; transactionId: string | null }> {
+  // Transaction signalée par le retour du client ou par le webhook : relue chez Viva, jamais crue sur parole.
+  const id = transactionId ?? link.transactionId;
+  if (id) {
+    const status = statusFrom(link, await getTransaction(id));
+    if (status === "paid" || status === "processing") return { status, transactionId: id };
+    // Refusée ou annulée et signalée à l'instant (retour du client) : il peut retenter avec une nouvelle page.
+    if (status && transactionId) return { status, transactionId: id };
+  }
+
+  const transactions = await listOrderTransactions(link.externalId);
+  for (const wanted of ["paid", "processing"] as const) {
+    const found = transactions.find((transaction) => statusFrom(link, transaction) === wanted);
+    if (found) return { status: wanted, transactionId: found.id };
+  }
+  const expired = link.expiresAt && link.expiresAt.getTime() + EXPIRY_GRACE_MS < Date.now();
+  return { status: expired ? "expired" : link.status === "processing" ? "processing" : "open", transactionId: id };
+}
+
+/**
+ * Relit la commande chez Viva (jamais sur la seule foi d'un webhook) et active la commande du site si elle est payée.
+ * `transactionId` : transaction signalée par le retour du client ou le webhook.
+ */
+export async function syncPaymentLink(link: PaymentLink, transactionId: string | null = null): Promise<PaymentLink> {
+  // Ancien paiement Mollie encore ouvert : le compte est fermé, il ne peut plus aboutir.
+  if (!isVivaOrder(link)) {
+    const [closed] = await db
+      .update(paymentLinks)
+      .set({ status: "canceled", updatedAt: new Date() })
+      .where(eq(paymentLinks.id, link.id))
+      .returning();
+    return closed ?? { ...link, status: "canceled" };
+  }
+  // Un paiement constaté ne revient jamais en arrière (un webhook d'échec peut arriver après la réussite).
+  if (link.status === "paid") return link;
+
+  const remote = await remoteState(link, transactionId);
+  const status = remote.status;
   const [updated] = await db
     .update(paymentLinks)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(paymentLinks.id, link.id))
+    .set({ status, transactionId: remote.transactionId, updatedAt: new Date() })
+    .where(and(eq(paymentLinks.id, link.id), ne(paymentLinks.status, "paid")))
     .returning();
   if (status === "paid") {
     await alignTicketWithPayment(link);
     await claimAndActivate(link.subscriptionId);
   }
-  return updated ?? { ...link, status };
+  return updated ?? { ...link, status, transactionId: remote.transactionId };
 }
 
 /**
@@ -125,13 +190,13 @@ export async function latestPaymentLink(subscriptionId: number): Promise<Payment
   try {
     return await syncPaymentLink(link);
   } catch (error) {
-    console.error("[mollie] synchronisation du paiement impossible", error);
+    console.error("[viva] synchronisation du paiement impossible", error);
     return link;
   }
 }
 
 /**
- * Paiement Mollie pour un abonnement ou un billet en attente.
+ * Commande de paiement Viva pour un abonnement ou un billet en attente.
  * Réutilise le paiement ouvert s'il existe, sinon en crée un au prix lu en base (jamais envoyé par le client) :
  * celui de l'offre pour un abonnement, celui de l'activité pour un billet.
  */
@@ -160,51 +225,69 @@ export async function ensurePaymentLink(subscriptionId: number): Promise<Payment
   if (current && (current.status === "paid" || current.status === "processing")) return current;
   if (current && isLinkUsable(current) && current.amountCents === amountCents) return current;
 
-  // Libellé affiché au client sur la page Mollie et dans le tableau de bord Mollie.
+  // Libellé affiché au client sur la page de paiement Viva et dans l'espace Viva.
   const description = ticket
     ? `${row.activity.name} — billet${row.subscription.priceLabel ? ` ${row.subscription.priceLabel}` : ""}${
         row.session ? ` du ${formatDateTime(row.session.startsAt)}` : ""
       } (n°${row.subscription.id})`
     : `${row.activity.name} — ${row.plan!.name} (abonnement n°${row.subscription.id})`;
 
-  const created = await createPayment({
+  const orderCode = await createOrder({
     amountCents,
     description,
-    redirectUrl: `${appUrl()}/abonnement/${subscriptionId}/paiement?retour=1`,
-    webhookUrl: webhookReachable() ? mollieWebhookUrl() : undefined,
-    metadata: {
-      subscriptionId,
-      kind: row.subscription.kind,
-      customer: `${row.user.firstName} ${row.user.lastName} <${row.user.email}>`,
-    },
+    merchantReference: `${ticket ? "billet" : "abonnement"} n°${subscriptionId}`,
+    customer: { email: row.user.email, fullName: `${row.user.firstName} ${row.user.lastName}`.trim() },
   });
-  const checkoutUrl = created._links.checkout?.href;
-  if (!checkoutUrl) throw new Error(`Paiement Mollie ${created.id} sans page de paiement (statut ${created.status}).`);
 
   const [link] = await db
     .insert(paymentLinks)
     .values({
       subscriptionId,
-      externalId: created.id,
-      url: checkoutUrl,
+      externalId: orderCode,
+      url: checkoutUrl(orderCode),
       amountCents,
-      status: toLinkStatus(created.status),
-      expiresAt: created.expiresAt ? new Date(created.expiresAt) : null,
+      status: "open",
+      expiresAt: new Date(Date.now() + PAYMENT_TIMEOUT_SECONDS * 1000),
     })
     .returning();
   return link;
 }
 
-/** Webhook : on ne traite que les paiements créés par ce site. */
-export async function handlePaymentWebhook(externalId: string): Promise<void> {
-  const link = (await db.select().from(paymentLinks).where(eq(paymentLinks.externalId, externalId)).limit(1))[0];
+/** Paiement du site correspondant à un code de commande Viva (aucun pour une commande créée ailleurs). */
+async function findByOrderCode(orderCode: string): Promise<PaymentLink | null> {
+  if (!/^d{1,20}$/.test(orderCode)) return null;
+  return (await db.select().from(paymentLinks).where(eq(paymentLinks.externalId, orderCode)).limit(1))[0] ?? null;
+}
+
+const cleanTransactionId = (value: string | null | undefined) =>
+  value && /^[0-9a-f-]{20,64}$/i.test(value) ? value : null;
+
+/** Webhook : on ne traite que les commandes créées par ce site. */
+export async function handlePaymentWebhook(orderCode: string, transactionId: string | null): Promise<void> {
+  const link = await findByOrderCode(orderCode);
   if (!link) return;
-  await syncPaymentLink(link);
+  await syncPaymentLink(link, cleanTransactionId(transactionId));
+}
+
+/**
+ * Retour du client depuis la page Viva (s = code de commande, t = transaction) :
+ * constate le résultat et renvoie la commande du site à afficher.
+ */
+export async function handlePaymentReturn(orderCode: string, transactionId: string | null): Promise<number | null> {
+  const link = await findByOrderCode(orderCode);
+  if (!link) return null;
+  try {
+    await syncPaymentLink(link, cleanTransactionId(transactionId));
+  } catch (error) {
+    // La page de paiement réessaie à chaque affichage ; le webhook et la tâche quotidienne prennent le relais.
+    console.error("[viva] vérification au retour impossible", error);
+  }
+  return link.subscriptionId;
 }
 
 /**
  * Filet de sécurité (tâche quotidienne) : resynchronise les paiements encore ouverts des 30 derniers jours,
- * au cas où un webhook aurait été manqué.
+ * au cas où le webhook et le retour du client auraient été manqués.
  */
 export async function reconcilePendingPayments(): Promise<{ checked: number; activated: number; error?: string }> {
   if (!(await onlinePaymentsEnabled())) return { checked: 0, activated: 0 };

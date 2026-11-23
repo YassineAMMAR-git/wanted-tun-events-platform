@@ -409,7 +409,7 @@ export async function getAdminStats() {
 
 /*
  * Montant encaissé pour une commande payée (alias SQL : s = subscriptions, p = plans, a = activities) :
- * le montant réellement payé chez Mollie s'il existe ; sinon, pour une commande marquée payée à la main,
+ * le montant réellement payé chez le prestataire de paiement s'il existe ; sinon, pour une commande marquée payée à la main,
  * le tarif retenu sur le billet, le prix de la formule, ou le prix de l'activité.
  */
 const PAID_AMOUNT = `coalesce(
@@ -418,7 +418,7 @@ const PAID_AMOUNT = `coalesce(
   case when s.kind = 'ticket' then a.price_cents else p.price_cents end,
   0
 )`;
-/** Date d'encaissement : confirmation Mollie si elle existe, sinon création de la commande. */
+/** Date d'encaissement : confirmation du paiement en ligne si elle existe, sinon création de la commande. */
 const PAID_AT = `coalesce(
   (select pl.updated_at from payment_links pl where pl.subscription_id = s.id and pl.status = 'paid' order by pl.created_at desc limit 1),
   s.created_at
@@ -431,7 +431,7 @@ const PAID_ORDERS = `subscriptions s
 /**
  * Chiffre d'affaires du site : somme des commandes payées (abonnements, billets, séances à l'unité).
  * Montants bruts, avant frais de paiement ; ne comprend ni les ventes faites sur une billetterie externe,
- * ni les remboursements effectués directement chez Mollie. Le mois est celui de Paris.
+ * ni les remboursements effectués directement chez le prestataire de paiement (Viva, ou Mollie auparavant). Le mois est celui de Paris.
  */
 export async function getRevenueStats() {
   const result = await db.execute<{

@@ -495,12 +495,13 @@ export const sessionDocuments = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
-/* Paiement en ligne via Mollie                                        */
+/* Paiement en ligne via Viva                                          */
 /* ------------------------------------------------------------------ */
 
 /**
- * Paiements Mollie, un par tentative de paiement d'un abonnement ou d'un billet.
- * external_id = identifiant Mollie (tr_…), url = page de paiement Mollie.
+ * Paiements en ligne, un par tentative de paiement d'un abonnement ou d'un billet.
+ * external_id = code de commande Viva (16 chiffres ; tr_… pour les anciens paiements Mollie),
+ * url = page de paiement Viva, transaction_id = dernière transaction Viva constatée pour cette commande.
  */
 export const paymentLinks = pgTable(
   "payment_links",
@@ -510,6 +511,7 @@ export const paymentLinks = pgTable(
       .notNull()
       .references(() => subscriptions.id, { onDelete: "cascade" }),
     externalId: varchar("external_id", { length: 64 }).notNull(),
+    transactionId: varchar("transaction_id", { length: 64 }),
     url: text("url").notNull(),
     amountCents: integer("amount_cents").notNull(),
     /** open, processing (paiement reçu, confirmation en cours), paid, expired, canceled (annulé ou refusé). */

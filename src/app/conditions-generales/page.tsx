@@ -73,7 +73,7 @@ export default async function TermsPage() {
             formule) : le prix réduit est alors affiché avant le paiement.
           </li>
           <li>
-            Le paiement s’effectue en ligne via notre prestataire sécurisé Mollie, ou selon le moyen de paiement
+            Le paiement s’effectue en ligne via notre prestataire sécurisé Viva, ou selon le moyen de paiement
             indiqué sur la page de paiement. Nous n’avons jamais accès à vos données bancaires.
           </li>
           <li>

@@ -19,7 +19,7 @@ import { localize } from "@/lib/i18n/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
 import { PaymentWatcher } from "@/components/payment-watcher";
-import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/mollie/payments";
+import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
 import { planPackSessions } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
@@ -70,10 +70,10 @@ export default async function PaymentPage({
   // Commande annulée par le client avant paiement.
   const cancelled = subscription.status === "cancelled" && subscription.paymentStatus !== "paid";
 
-  // Paiement Mollie : relu chez Mollie à chaque affichage (notamment au retour du client), ce qui active la commande si elle est payée.
+  // Paiement Viva : relu chez Viva à chaque affichage (notamment au retour du client), ce qui active la commande si elle est payée.
   const online = await onlinePaymentsEnabled();
   const link = online && subscription.paymentStatus !== "paid" && !ticketClosed && !cancelled ? await latestPaymentLink(subscription.id) : null;
-  // Retour de Mollie : « ouvert » peut vouloir dire que la confirmation n'est pas encore arrivée (on vérifie
+  // Retour de Viva : « ouvert » peut vouloir dire que la confirmation n'est pas encore arrivée (on vérifie
   // quelques secondes) ; annulé, refusé ou expiré signifie que le paiement n'a pas abouti.
   const verifying = Boolean(retour) && link?.status === "open";
   const notCompleted = Boolean(retour) && (link?.status === "canceled" || link?.status === "expired");

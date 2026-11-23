@@ -60,7 +60,7 @@ export default async function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-zinc-900">Paiement :</strong> vos données bancaires sont saisies directement
-            chez notre prestataire de paiement Mollie. <strong>Nous n’y avons jamais accès</strong> et ne les
+            chez notre prestataire de paiement Viva. <strong>Nous n’y avons jamais accès</strong> et ne les
             conservons pas.
           </li>
           <li>
@@ -140,8 +140,8 @@ export default async function PrivacyPolicyPage() {
             <strong className="text-zinc-900">Resend</strong> — envoi des e-mails de service.
           </li>
           <li>
-            <strong className="text-zinc-900">Mollie B.V.</strong> (Amsterdam, Pays-Bas) — paiement en ligne. Mollie
-            traite vos données bancaires en tant que responsable de traitement distinct, selon sa propre politique
+            <strong className="text-zinc-900">Viva Payment Services S.A.</strong> (Athènes, Grèce) — paiement en ligne.
+            Viva traite vos données bancaires en tant que responsable de traitement distinct, selon sa propre politique
             de confidentialité.
           </li>
         </ul>
@@ -288,7 +288,7 @@ export default async function PrivacyPolicyPage() {
           <li>blocage temporaire du compte après plusieurs tentatives de connexion échouées ;</li>
           <li>un compte n’est ouvert que sur un seul appareil à la fois ; changer de mot de passe déconnecte les autres appareils ;</li>
           <li>accès aux données réservé aux administrateurs authentifiés ;</li>
-          <li>données bancaires traitées uniquement par Mollie, prestataire de paiement agréé.</li>
+          <li>données bancaires traitées uniquement par Viva, établissement de paiement agréé.</li>
         </ul>
         <p>
           En cas de violation de données présentant un risque pour vous, nous en informerons la CNIL et, si

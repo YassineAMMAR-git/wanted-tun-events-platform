@@ -10,7 +10,7 @@ const SLOW_INTERVAL_MS = 5000;
 const MAX_DURATION_MS = 30 * 60 * 1000;
 
 /**
- * Au retour de la page de paiement, tant que Mollie n'a pas confirmé, la page se recharge toute seule :
+ * Au retour de la page de paiement, tant que Viva n'a pas confirmé, la page se recharge toute seule :
  * chaque seconde pendant 45 secondes, puis toutes les 5 secondes (30 minutes au plus).
  * `maxDurationMs` limite l'attente quand on ne sait pas si le client a réellement payé.
  */

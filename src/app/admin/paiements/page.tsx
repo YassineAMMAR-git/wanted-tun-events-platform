@@ -2,8 +2,8 @@ import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-o
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, activities, paymentLinks, plans, subscriptions, users } from "@/db/schema";
-import { listMethods } from "@/lib/mollie/client";
-import { mollieConfigured, mollieMode } from "@/lib/mollie/config";
+import { getAccessToken, getWebhookKey } from "@/lib/viva/client";
+import { vivaConfigured, vivaMode } from "@/lib/viva/config";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { EmptyState, SectionTitle } from "@/components/ui";
 import { Flash } from "@/components/flash";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 /** Nombre de paiements affichés par page. */
 const PAGE_SIZE = 10;
 
-/** Filtre « statut » de l'URL → statuts du paiement Mollie regroupés. */
+/** Filtre « statut » de l'URL → statuts du paiement en ligne regroupés. */
 const STATUS_FILTERS = {
   paye: ["paid"],
   attente: ["open", "processing"],
@@ -101,17 +101,24 @@ export default async function AdminPaymentsPage({
   const shownActivity = activityList.find((activity) => String(activity.id) === activite);
   const search = q?.trim().slice(0, 100) ?? "";
   const status = isStatusFilter(statut) ? statut : null;
-  const configured = mollieConfigured();
+  const configured = vivaConfigured();
 
   // Rien n'est affiché quand tout va bien : seul un problème de paiement en ligne est signalé.
   let problem: string | null = null;
   if (!configured) {
     problem = t("readyOff");
   } else {
+    // Identifiants OAuth (création des paiements), puis identifiant marchand + clé d'API (webhook et suivi).
+    const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
     try {
-      if ((await listMethods()).length === 0) problem = t("noMethods");
+      await getAccessToken();
+      try {
+        await getWebhookKey();
+      } catch (error) {
+        problem = t("checkWebhookKeyError", { error: message(error) });
+      }
     } catch (error) {
-      problem = t("checkApiError", { error: error instanceof Error ? error.message : String(error) });
+      problem = t("checkApiError", { error: message(error) });
     }
   }
   const payments = await loadPayments(rawPage, { activityId: shownActivity?.id ?? null, search, status });
@@ -126,7 +133,7 @@ export default async function AdminPaymentsPage({
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
           ⚠️ {problem}
         </div>
-      ) : mollieMode() === "test" ? (
+      ) : vivaMode() === "demo" ? (
         <div role="status" className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
           🧪 {t("readyTest")}
         </div>
