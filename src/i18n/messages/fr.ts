@@ -4,8 +4,7 @@
 const fr = {
   metadata: {
     title: "WANTED TUN EVENTS — Cours, ateliers & abonnements",
-    description:
-      "Plateforme WANTED TUN EVENTS : inscrivez-vous à nos concerts, club de chant, campings, soirées ramadanesques et cercles de Coran, gérez vos abonnements et suivez vos séances.",
+    description: "World Wide Events",
   },
 
   common: {

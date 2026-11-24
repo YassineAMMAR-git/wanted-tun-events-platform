@@ -3,8 +3,7 @@ import type { Messages } from "@/i18n/messages";
 const ar: Messages = {
   metadata: {
     title: "WANTED TUN EVENTS — دروس وورشات واشتراكات",
-    description:
-      "منصة WANTED TUN EVENTS: سجّل في حفلاتنا ونادي الغناء والتخييم والسهرات الرمضانية وحلقات القرآن، وأدِر اشتراكاتك وتابع حصصك.",
+    description: "World Wide Events",
   },
 
   common: {
