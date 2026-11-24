@@ -20,4 +20,29 @@ export async function runSchemaUpgrades(): Promise<void> {
   `);
   const withoutConfirmation = backfilled.rows.filter((row) => row.confirm_attendance === false).map((row) => row.id);
   await autoConfirmAttendances(withoutConfirmation);
+
+  // Montant des ajouts manuels (chiffre d'affaires). À l'ajout de la colonne, les ajouts manuels déjà faits
+  // (présences sans abonnement ni billet) reçoivent le prix de l'activité, ou son plus petit tarif.
+  const existing = await db.execute(sql`
+    select 1 from information_schema.columns where table_name = 'attendances' and column_name = 'amount_cents'
+  `);
+  if (existing.rows.length === 0) {
+    // Les deux étapes ensemble : un arrêt entre les deux ne laisse pas d'anciens ajouts à 0 €.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`alter table attendances add column if not exists amount_cents integer`);
+      await tx.execute(sql`
+        update attendances a
+        set amount_cents = ${MANUAL_PRICE_SQL}
+        from sessions s join activities act on act.id = s.activity_id
+        where s.id = a.session_id and a.subscription_id is null and a.amount_cents is null
+      `);
+    });
+  }
 }
+
+/** Prix d'une place ajoutée à la main : prix de l'activité, sinon son plus petit tarif (alias act = activities). */
+const MANUAL_PRICE_SQL = sql.raw(`coalesce(
+  nullif(act.price_cents, 0),
+  (select min(tp.price_cents) from ticket_prices tp where tp.activity_id = act.id),
+  0
+)`);

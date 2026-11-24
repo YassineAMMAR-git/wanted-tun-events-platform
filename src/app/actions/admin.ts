@@ -30,6 +30,7 @@ import { ADMIN_CLIENT_FIELDS, adminCreateClientSchema, adminUpdateClientSchema }
 import { firstIssueMessage, readFields } from "@/lib/validation/form";
 import {
   activateSubscription,
+  defaultManualPriceCents,
   fillMembershipSessions,
   grantAttendances,
   membershipEndsAt,
@@ -672,6 +673,9 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
       sessionId,
       userId,
       subscriptionId: subscription?.id ?? null,
+      // Place hors abonnement : son montant compte dans le chiffre d'affaires (prix de l'activité si non saisi, 0 si offerte).
+      // Prise sur le pack du client : déjà comptée avec l'abonnement.
+      amountCents: subscription ? null : await manualAmountCents(formData, row?.activity.id ?? 0),
       status: "confirmed",
       respondedAt: new Date(),
       responseChannel: "administration",
@@ -682,6 +686,14 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   // Le client est prévenu de son inscription (pas s'il était déjà inscrit, ni pour une séance passée ou arrêtée).
   if (inserted[0] && row) await notifyParticipantAdded(userId, row.session, row.activity);
   redirect(withMessage(`/admin/seances/${sessionId}`, "ok", "participantAdded"));
+}
+
+/** Montant saisi pour un ajout manuel (en euros) ; vide ou invalide : prix proposé de l'activité. */
+async function manualAmountCents(formData: FormData, activityId: number): Promise<number> {
+  const raw = str(formData, "amount").replace(",", ".");
+  const value = raw === "" ? NaN : Number(raw);
+  if (Number.isFinite(value) && value >= 0) return Math.round(value * 100);
+  return defaultManualPriceCents(activityId);
 }
 
 /** E-mail au client que l'administration vient d'inscrire à une séance (présence confirmée). */

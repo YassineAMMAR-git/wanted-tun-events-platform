@@ -418,6 +418,10 @@ const PAID_AMOUNT = `coalesce(
   case when s.kind = 'ticket' then a.price_cents else p.price_cents end,
   0
 )`;
+/** Places ajoutées à la main par l'administration, hors abonnement (alias SQL : m = attendances). */
+const MANUAL_ADDS = `attendances m where m.subscription_id is null and m.amount_cents > 0`;
+const MANUAL_AMOUNT = `m.amount_cents`;
+
 /** Date d'encaissement : confirmation du paiement en ligne si elle existe, sinon création de la commande. */
 const PAID_AT = `coalesce(
   (select pl.updated_at from payment_links pl where pl.subscription_id = s.id and pl.status = 'paid' order by pl.created_at desc limit 1),
@@ -429,7 +433,8 @@ const PAID_ORDERS = `subscriptions s
   where s.payment_status = 'paid'`;
 
 /**
- * Chiffre d'affaires du site : somme des commandes payées (abonnements, billets, séances à l'unité).
+ * Chiffre d'affaires du site : somme des commandes payées (abonnements, billets, séances à l'unité) et des places
+ * ajoutées à la main par l'administration hors abonnement (comptées avec les billets).
  * Montants bruts, avant frais de paiement ; ne comprend ni les ventes faites sur une billetterie externe,
  * ni les remboursements effectués directement chez le prestataire de paiement (Viva, ou Mollie auparavant). Le mois est celui de Paris.
  */
@@ -448,7 +453,11 @@ export async function getRevenueStats() {
         coalesce(sum(amount) filter (where kind = 'membership'), 0)::int as memberships,
         coalesce(sum(amount) filter (where kind = 'ticket'), 0)::int as tickets,
         (count(*) filter (where amount > 0))::int as orders
-      from (select ${PAID_AMOUNT} as amount, ${PAID_AT} as paid_at, s.kind as kind from ${PAID_ORDERS}) paid
+      from (
+        select ${PAID_AMOUNT} as amount, ${PAID_AT} as paid_at, s.kind as kind from ${PAID_ORDERS}
+        union all
+        select ${MANUAL_AMOUNT} as amount, m.created_at as paid_at, 'ticket' as kind from ${MANUAL_ADDS}
+      ) paid
     `),
   );
   return result.rows[0] ?? { total: 0, month: 0, memberships: 0, tickets: 0, orders: 0 };
@@ -457,7 +466,10 @@ export async function getRevenueStats() {
 /** Total dépensé par un client (commandes payées). */
 export async function getClientSpent(userId: number): Promise<number> {
   const result = await db.execute<{ spent: number }>(
-    sql`select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0)::int as spent from ${sql.raw(PAID_ORDERS)} and s.user_id = ${userId}`,
+    sql`select (
+      (select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0) from ${sql.raw(PAID_ORDERS)} and s.user_id = ${userId})
+      + (select coalesce(sum(${sql.raw(MANUAL_AMOUNT)}), 0) from ${sql.raw(MANUAL_ADDS)} and m.user_id = ${userId})
+    )::int as spent`,
   );
   return result.rows[0]?.spent ?? 0;
 }
@@ -557,7 +569,8 @@ export async function listAdminClients(filters: AdminClientFilters, paging?: { l
   const ticketCount = sql<number>`(select count(*) from subscriptions s where s.user_id = "users"."id" and s.kind = 'ticket' and s.payment_status = 'paid')::int`;
   const attendanceCount = sql<number>`(select count(*) from attendances a where a.user_id = "users"."id")::int`;
   // Total dépensé sur le site : somme des commandes payées du client.
-  const spentCents = sql<number>`(select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0) from ${sql.raw(PAID_ORDERS)} and s.user_id = "users"."id")::int`;
+  const spentCents = sql<number>`((select coalesce(sum(${sql.raw(PAID_AMOUNT)}), 0) from ${sql.raw(PAID_ORDERS)} and s.user_id = "users"."id")
+    + (select coalesce(sum(${sql.raw(MANUAL_AMOUNT)}), 0) from ${sql.raw(MANUAL_ADDS)} and m.user_id = "users"."id"))::int`;
 
   const order = {
     ancien: [asc(users.createdAt)],

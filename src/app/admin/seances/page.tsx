@@ -19,8 +19,9 @@ export const dynamic = "force-dynamic";
  * Chiffre d'affaires d'une séance, en centimes : la part de chaque inscrit payant.
  *  - billet : son prix entier ;
  *  - abonnement : son prix divisé par le nombre de séances du pack (4 séances à 100 € → 25 € par séance).
+ *  - ajout manuel hors abonnement : le montant saisi à l'ajout (prix de l'activité par défaut, 0 si offert).
  * Une absence compte quand même (la séance est décomptée du pack). Ne comptent pas : une séance annulée ou
- * reportée, un ajout manuel sans abonnement, un abonnement ajouté par l'administration ou jamais payé.
+ * reportée, un abonnement ajouté par l'administration ou jamais payé.
  */
 const SESSION_REVENUE = sql<number>`coalesce((
   select round(sum(
@@ -35,6 +36,9 @@ const SESSION_REVENUE = sql<number>`coalesce((
     and ${sessions.status} = 'scheduled'
     and sub.payment_status = 'paid'
     and coalesce(sub.payment_reference, '') <> 'administration'
+), 0)::int + coalesce((
+  select sum(m.amount_cents) from attendances m
+  where m.session_id = ${sessions.id} and m.subscription_id is null and ${sessions.status} = 'scheduled'
 ), 0)::int`;
 
 export default async function AdminSessionsPage({

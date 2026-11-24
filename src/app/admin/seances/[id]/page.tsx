@@ -1,5 +1,5 @@
 import { confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
-import { closeConfirmations } from "@/lib/subscriptions";
+import { closeConfirmations, defaultManualPriceCents } from "@/lib/subscriptions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq, ne } from "drizzle-orm";
@@ -69,7 +69,7 @@ export default async function AdminSessionDetail({
 
   // Présences clôturées 48 h avant la séance : les compteurs affichés sont à jour.
   await closeConfirmations();
-  const [participants, clients] = await Promise.all([
+  const [participants, clients, manualPrice] = await Promise.all([
     db
       .select({ attendance: attendances, user: users })
       .from(attendances)
@@ -77,6 +77,7 @@ export default async function AdminSessionDetail({
       .where(eq(attendances.sessionId, sessionId))
       .orderBy(asc(users.lastName)),
     db.select().from(users).where(ne(users.role, "admin")).orderBy(asc(users.lastName)),
+    defaultManualPriceCents(row.activity.id),
   ]);
 
   const confirmed = participants.filter((p) => p.attendance.status === "confirmed").length;
@@ -293,10 +294,26 @@ export default async function AdminSessionDetail({
                 ))}
               </select>
             </div>
+            <div className="sm:w-40">
+              <label className="label" htmlFor="amount">
+                {t("amount")}
+              </label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                min={0}
+                step="0.01"
+                defaultValue={(manualPrice / 100).toFixed(2)}
+                className="input"
+                dir="ltr"
+              />
+            </div>
             <button className="btn btn-primary" type="submit">
               {tCommon("add")}
             </button>
           </form>
+          <p className="mt-2 text-xs text-zinc-500">{t("amountHint")}</p>
         </Card>
       </section>
     </div>

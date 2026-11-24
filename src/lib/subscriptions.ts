@@ -100,6 +100,23 @@ type PackParams = {
   lastMinute?: boolean;
 };
 
+/**
+ * Prix proposé pour une place ajoutée à la main par l'administration (hors abonnement) : prix de l'activité,
+ * sinon son plus petit tarif (événement à plusieurs tarifs), sinon 0.
+ */
+export async function defaultManualPriceCents(activityId: number): Promise<number> {
+  const [row] = await db
+    .select({
+      price: activities.priceCents,
+      minTier: sql<number | null>`(select min(tp.price_cents) from ticket_prices tp where tp.activity_id = ${activities.id})::int`,
+    })
+    .from(activities)
+    .where(eq(activities.id, activityId))
+    .limit(1);
+  if (!row) return 0;
+  return row.price > 0 ? row.price : (row.minTier ?? 0);
+}
+
 /** L'activité demande-t-elle la confirmation de présence ? */
 async function activityRequiresConfirmation(activityId: number): Promise<boolean> {
   const row = (

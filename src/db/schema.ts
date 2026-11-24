@@ -380,6 +380,11 @@ export const attendances = pgTable(
     token: varchar("token", { length: 64 }).notNull(),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+    /**
+     * Ajout manuel par l'administration, hors abonnement : montant encaissé (prix de l'activité par défaut, 0 si offert),
+     * compté dans le chiffre d'affaires. Vide pour les présences liées à un abonnement ou un billet (déjà comptés).
+     */
+    amountCents: integer("amount_cents"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
