@@ -36,6 +36,7 @@ import {
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
+import { cancelOpenPaymentLinks } from "@/lib/viva/payments";
 import { autoConfirmAttendances, requiresConfirmation } from "@/lib/attendance-confirmation";
 import {
   formatDate,
@@ -843,6 +844,7 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
       .update(subscriptions)
       .set({ status: "cancelled", paymentStatus: "cancelled" })
       .where(eq(subscriptions.id, id));
+    await cancelOpenPaymentLinks(id);
   } else if (action === "markPaid") {
     const before = (
       await db.select({ paymentStatus: subscriptions.paymentStatus }).from(subscriptions).where(eq(subscriptions.id, id)).limit(1)
@@ -973,6 +975,7 @@ export async function removePlanSubscriberAction(formData: FormData): Promise<vo
     .update(subscriptions)
     .set({ status: "cancelled", paymentStatus: keepPaid ? "paid" : "cancelled" })
     .where(eq(subscriptions.id, id));
+  await cancelOpenPaymentLinks(id);
   await releaseUpcomingAttendances(id);
 
   revalidatePath("/admin/abonnements");

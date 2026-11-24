@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { activities, attendances, plans, sessions, subscriptions, ticketPrices } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isRecurring } from "@/lib/memberships";
-import { ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
+import { cancelOpenPaymentLinks, ensurePaymentLink, latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
 import { promotionForClient } from "@/lib/promotions";
 import { activateSubscription, membershipEndsAt, placesTaken, respondToAttendance } from "@/lib/subscriptions";
 
@@ -258,6 +258,8 @@ export async function cancelPendingAction(formData: FormData): Promise<void> {
       ),
     )
     .returning({ id: subscriptions.id });
+  // Le lien de paiement Viva de la commande annulée n'est plus proposé (ni affiché « ouvert » à l'administration).
+  if (cancelled[0]) await cancelOpenPaymentLinks(owned.id);
 
   revalidatePath("/espace-personnel");
   revalidatePath("/admin");

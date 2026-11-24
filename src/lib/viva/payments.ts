@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, gte, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
   activities,
@@ -51,9 +51,6 @@ const isVivaOrder = (link: PaymentLink) => /^\d+$/.test(link.externalId);
  */
 const EXPIRY_GRACE_MS = 15 * 60 * 1000;
 
-/** Statuts après lesquels un paiement n'évolue plus. */
-const FINAL: PaymentLinkStatus[] = ["paid", "expired", "canceled"];
-const isFinal = (status: string) => (FINAL as string[]).includes(status);
 
 /** Paiement sur lequel le client peut encore payer (ouvert et non expiré) ou dont la confirmation est en cours. */
 export function isLinkUsable(link: PaymentLink | null): boolean {
@@ -115,7 +112,9 @@ async function remoteState(
     if (found) return { status: wanted, transactionId: found.id };
   }
   const expired = link.expiresAt && link.expiresAt.getTime() + EXPIRY_GRACE_MS < Date.now();
-  return { status: expired ? "expired" : link.status === "processing" ? "processing" : "open", transactionId: id };
+  // Sans transaction réussie : un paiement annulé (commande annulée sur le site, carte refusée) le reste.
+  const unchanged = link.status === "processing" || link.status === "canceled" ? link.status : "open";
+  return { status: expired ? "expired" : unchanged, transactionId: id };
 }
 
 /**
@@ -176,7 +175,10 @@ async function alignTicketWithPayment(link: PaymentLink): Promise<void> {
     .where(eq(subscriptions.id, ticket.id));
 }
 
-/** Dernier paiement de la commande, resynchronisé s'il est encore en cours. */
+/**
+ * Dernier paiement de la commande, resynchronisé tant qu'il n'est pas payé : un paiement marqué annulé ou expiré
+ * peut encore avoir abouti chez Viva (carte refusée puis acceptée sur la même page, webhook manqué…).
+ */
 export async function latestPaymentLink(subscriptionId: number): Promise<PaymentLink | null> {
   const link = (
     await db
@@ -186,7 +188,7 @@ export async function latestPaymentLink(subscriptionId: number): Promise<Payment
       .orderBy(desc(paymentLinks.createdAt))
       .limit(1)
   )[0];
-  if (!link || isFinal(link.status)) return link ?? null;
+  if (!link || link.status === "paid") return link ?? null;
   try {
     return await syncPaymentLink(link);
   } catch (error) {
@@ -286,17 +288,38 @@ export async function handlePaymentReturn(orderCode: string, transactionId: stri
 }
 
 /**
- * Filet de sécurité (tâche quotidienne) : resynchronise les paiements encore ouverts des 30 derniers jours,
+ * Commande annulée sur le site : ses paiements encore ouverts sont marqués annulés (la page Viva expire d'elle-même
+ * au bout de 30 minutes). Si le client payait malgré tout, la vérification quotidienne activerait la commande.
+ */
+export async function cancelOpenPaymentLinks(subscriptionId: number): Promise<void> {
+  await db
+    .update(paymentLinks)
+    .set({ status: "canceled", updatedAt: new Date() })
+    .where(and(eq(paymentLinks.subscriptionId, subscriptionId), eq(paymentLinks.status, "open")));
+}
+
+/**
+ * Filet de sécurité (tâche quotidienne) : resynchronise les paiements non payés des 30 derniers jours dont la commande
+ * n'est pas encore payée — y compris ceux marqués annulés ou expirés, qui ont pu aboutir malgré tout chez Viva —,
  * au cas où le webhook et le retour du client auraient été manqués.
  */
 export async function reconcilePendingPayments(): Promise<{ checked: number; activated: number; error?: string }> {
   if (!(await onlinePaymentsEnabled())) return { checked: 0, activated: 0 };
   try {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const pending = await db
-      .select()
-      .from(paymentLinks)
-      .where(and(inArray(paymentLinks.status, ["open", "processing"]), gte(paymentLinks.createdAt, since)));
+    const pending = (
+      await db
+        .select({ link: paymentLinks })
+        .from(paymentLinks)
+        .innerJoin(subscriptions, eq(subscriptions.id, paymentLinks.subscriptionId))
+        .where(
+          and(
+            ne(paymentLinks.status, "paid"),
+            ne(subscriptions.paymentStatus, "paid"),
+            gte(paymentLinks.createdAt, since),
+          ),
+        )
+    ).map((row) => row.link);
     let activated = 0;
     for (const link of pending) {
       const updated = await syncPaymentLink(link).catch(() => link);
