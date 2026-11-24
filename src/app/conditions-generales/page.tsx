@@ -106,7 +106,9 @@ export default async function TermsPage() {
             Inscription de dernière minute : tant qu’il reste des places, vous pouvez vous inscrire à une séance jusqu’à
             son heure de début, y compris moins de {CONFIRMATION_CLOSE_HOURS} heures avant. Votre présence est alors
             automatiquement confirmée et ne peut plus être modifiée (ni annulée, ni signalée absente). En cas d’absence,
-            aucun remboursement n’est effectué.
+            aucun remboursement n’est effectué. Il en va de même pour un abonnement acheté moins de{" "}
+            {CONFIRMATION_CLOSE_HOURS} heures avant la prochaine séance : elle fait partie du pack et est décomptée, même
+            en cas d’absence.
           </li>
           <li>
             Une séance d’abonnement non utilisée pendant sa durée de validité ne donne pas lieu à remboursement, sauf

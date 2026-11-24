@@ -87,7 +87,18 @@ export async function packSlotsLeft(subscriptionId: number, sessionsIncluded: nu
   return Math.max(sessionsIncluded - held, 0);
 }
 
-type PackParams = { userId: number; activityId: number; subscriptionId: number; sessionsIncluded: number };
+type PackParams = {
+  userId: number;
+  activityId: number;
+  subscriptionId: number;
+  sessionsIncluded: number;
+  /**
+   * Achat du pack : les séances à moins de 48 h (non commencées, avec des places) sont aussi attribuées, en
+   * inscription de dernière minute (présence confirmée et verrouillée). Jamais quand le pack est complété plus tard
+   * (séance ajoutée, annulée…) : le client ne se retrouve pas inscrit d'office à une séance imminente.
+   */
+  lastMinute?: boolean;
+};
 
 /** L'activité demande-t-elle la confirmation de présence ? */
 async function activityRequiresConfirmation(activityId: number): Promise<boolean> {
@@ -118,7 +129,10 @@ export async function planPackSessions(
       and(
         eq(sessions.activityId, params.activityId),
         eq(sessions.status, "scheduled"),
-        gt(sessions.startsAt, new Date(Date.now() + CONFIRMATION_CLOSE_HOURS * 60 * 60 * 1000)),
+        gt(
+          sessions.startsAt,
+          params.lastMinute ? new Date() : new Date(Date.now() + CONFIRMATION_CLOSE_HOURS * 60 * 60 * 1000),
+        ),
       ),
     )
     .orderBy(asc(sessions.startsAt));
@@ -181,7 +195,7 @@ export async function ensureAttendances(params: PackParams): Promise<number> {
  * Présences auxquelles donne droit une souscription payée :
  * les prochaines séances ouvertes pour un abonnement, la seule date achetée pour un billet.
  */
-export async function grantAttendances(subscription: Subscription): Promise<void> {
+export async function grantAttendances(subscription: Subscription, options: { lastMinute?: boolean } = {}): Promise<void> {
   if (subscription.kind === "ticket") {
     if (!subscription.sessionId) return;
     const session = (
@@ -205,6 +219,7 @@ export async function grantAttendances(subscription: Subscription): Promise<void
     activityId: subscription.activityId,
     subscriptionId: subscription.id,
     sessionsIncluded: subscription.sessionsIncluded,
+    lastMinute: options.lastMinute,
   });
 }
 
@@ -262,6 +277,23 @@ function sendLater(message: Parameters<typeof logAndSend>[0]): void {
   }
 }
 
+/** Le pack compte-t-il une séance qui commence dans moins de 48 h (inscription de dernière minute) ? */
+async function hasLastMinuteSession(subscriptionId: number): Promise<boolean> {
+  const rows = await db
+    .select({ id: attendances.id })
+    .from(attendances)
+    .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+    .where(
+      and(
+        eq(attendances.subscriptionId, subscriptionId),
+        gt(sessions.startsAt, new Date()),
+        sql`${sessions.startsAt} <= now() + interval '${sql.raw(String(CONFIRMATION_CLOSE_HOURS))} hours'`,
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
 /** Active un abonnement ou un billet après paiement et crée les présences correspondantes. */
 export async function activateSubscription(subscriptionId: number): Promise<void> {
   const subscription = (
@@ -274,7 +306,8 @@ export async function activateSubscription(subscriptionId: number): Promise<void
     .set({ status: "active", paymentStatus: "paid" })
     .where(eq(subscriptions.id, subscriptionId));
 
-  await grantAttendances(subscription);
+  // Achat : une séance à moins de 48 h peut faire partie du pack (inscription de dernière minute).
+  await grantAttendances(subscription, { lastMinute: true });
 
   const info = (
     await db
@@ -340,6 +373,7 @@ export async function activateSubscription(subscriptionId: number): Promise<void
       t("emails.subscriptionActivated.active", { activity: activityName }),
       t("emails.subscriptionActivated.sessions", { count: subscription.sessionsIncluded }),
       t("emails.subscriptionActivated.rule"),
+      ...((await hasLastMinuteSession(subscription.id)) ? ["", t("emails.subscriptionActivated.lastMinute")] : []),
       "",
       t("emails.subscriptionActivated.follow"),
       `${appUrl()}/espace-personnel`,

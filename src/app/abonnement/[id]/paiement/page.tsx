@@ -68,10 +68,6 @@ export default async function PaymentPage({
     subscription.paymentStatus !== "paid" &&
     (!row.session || row.session.status !== "scheduled" || isPast(row.session.startsAt));
 
-  // Billet à moins de 48 h de la séance : inscription de dernière minute, présence confirmée et non modifiable.
-  const lastMinute =
-    ticket && subscription.paymentStatus !== "paid" && !ticketClosed && Boolean(row.session) && isLastMinute(row.session!.startsAt);
-
   // Commande annulée par le client avant paiement.
   const cancelled = subscription.status === "cancelled" && subscription.paymentStatus !== "paid";
 
@@ -101,8 +97,16 @@ export default async function PaymentPage({
           activityId: subscription.activityId,
           subscriptionId: subscription.id,
           sessionsIncluded: subscription.sessionsIncluded,
+          lastMinute: true,
         })
       : null;
+
+  // Billet, ou pack dont une séance commence dans moins de 48 h : inscription de dernière minute,
+  // présence confirmée et non modifiable.
+  const lastMinuteTicket =
+    ticket && subscription.paymentStatus !== "paid" && !ticketClosed && Boolean(row.session) && isLastMinute(row.session!.startsAt);
+  const lastMinutePack = Boolean(pack?.sessions.some((item) => isLastMinute(item.startsAt)));
+  const lastMinute = lastMinuteTicket || lastMinutePack;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -183,7 +187,7 @@ export default async function PaymentPage({
         {lastMinute ? (
           <div role="note" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
             <p className="text-sm font-bold text-gold-dark">{t("lastMinuteTitle")}</p>
-            <p className="mt-1 text-sm text-zinc-700">{t("lastMinuteText")}</p>
+            <p className="mt-1 text-sm text-zinc-700">{lastMinutePack ? t("lastMinutePackText") : t("lastMinuteText")}</p>
           </div>
         ) : null}
 
@@ -212,6 +216,9 @@ export default async function PaymentPage({
                         {index + 1}
                       </span>
                       {tCommon("dateAtTime", { date: formatDate(item.startsAt, locale), time: formatTime(item.startsAt, locale) })}
+                      {isLastMinute(item.startsAt) ? (
+                        <span className="ms-auto text-xs font-bold text-amber-700">{t("lastMinutePackBadge")}</span>
+                      ) : null}
                     </li>
                   ))}
                 </ol>

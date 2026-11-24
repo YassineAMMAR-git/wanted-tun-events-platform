@@ -53,6 +53,9 @@ export default async function ActivityDetailPage({
   const firstAvailable = ticketDates.find((date) => date.placesLeft > 0);
   // Dates à moins de 48 h encore ouvertes : inscription de dernière minute (présence confirmée, non modifiable).
   const lastMinuteOpen = ticketDates.some((date) => date.placesLeft > 0 && isLastMinute(date.startsAt));
+  // Abonnement pris maintenant : la prochaine séance avec des places, si elle est à moins de 48 h, fait partie du pack.
+  const nextOpenSession = upcoming.find((session) => session.placesLeft > 0);
+  const lastMinutePlan = Boolean(nextOpenSession && isLastMinute(nextOpenSession.startsAt));
   const free = !hasTiers && activity.priceCents <= 0;
   const ticketNotice =
     query.billet === "complet"
@@ -311,6 +314,11 @@ export default async function ActivityDetailPage({
       {detail.offersMemberships && !externalTicketUrl && (plans.length > 0 || !sessionSales) ? (
         <section>
           <SectionTitle eyebrow={t("plansEyebrow")} title={t("plansTitle")} subtitle={t("plansSubtitle")} />
+          {plans.length > 0 && lastMinutePlan ? (
+            <p role="note" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-gold-dark">
+              {t("lastMinutePlanNotice")}
+            </p>
+          ) : null}
           {plans.length === 0 ? (
             <Card>
               <p className="text-sm text-zinc-600">{t("noPlans")}</p>

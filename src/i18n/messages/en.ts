@@ -192,6 +192,7 @@ const en: Messages = {
   },
 
   activity: {
+    lastMinutePlanNotice: "⚡ The next session starts in less than 48 h: a membership taken now includes it if spots remain (attendance confirmed automatically, cannot be changed, counted even if you do not attend).",
     lastMinuteBadge: "⚡ Last minute",
     lastMinuteNotice: "⚡ Last-minute registration (less than 48 h before): your attendance is automatically confirmed and cannot be changed afterwards. No refund is given if you do not attend.",
     fromPrice: "from {price}",
@@ -275,6 +276,8 @@ const en: Messages = {
   },
 
   payment: {
+    lastMinutePackBadge: "⚡ Last minute",
+    lastMinutePackText: "The first session of this pack starts in less than 48 h. If you pay now, your attendance at that session is automatically confirmed and cannot be changed (neither cancelled nor reported as absent). It counts towards your pack even if you do not attend, with no refund.",
     lastMinuteTitle: "⚡ Last-minute registration",
     lastMinuteText: "This session starts in less than 48 h. If you register now, your attendance is automatically confirmed and cannot be changed (neither cancelled nor reported as absent). No refund is given if you do not attend.",
     lastMinuteAccept: "I understand: my attendance is confirmed and cannot be changed, and nothing is refunded if I do not attend.",
@@ -1375,6 +1378,7 @@ const en: Messages = {
       decline: "→ I can’t make it: {url}",
     },
     subscriptionActivated: {
+      lastMinute: "⚡ One session of your pack starts in less than 48 h (last-minute registration): your attendance at that session is automatically confirmed and can no longer be changed. It counts towards your pack even if you do not attend, with no refund.",
       subject: "Your {activity} membership is active",
       active: "Your “{activity}” membership is now active.",
       sessions: "Sessions included: {count}",

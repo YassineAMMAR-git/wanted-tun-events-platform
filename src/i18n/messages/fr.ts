@@ -194,6 +194,7 @@ const fr = {
   },
 
   activity: {
+    lastMinutePlanNotice: "⚡ La prochaine séance commence dans moins de 48 h : un abonnement pris maintenant l’inclut s’il reste des places (présence confirmée d’office, non modifiable, décomptée même en cas d’absence).",
     lastMinuteBadge: "⚡ Dernière minute",
     lastMinuteNotice: "⚡ Inscription de dernière minute (moins de 48 h avant) : votre présence est automatiquement confirmée et ne pourra plus être modifiée. En cas d’absence, rien n’est remboursé.",
     fromPrice: "à partir de {price}",
@@ -277,6 +278,8 @@ const fr = {
   },
 
   payment: {
+    lastMinutePackBadge: "⚡ Dernière minute",
+    lastMinutePackText: "La première séance de ce pack commence dans moins de 48 h. Si vous payez maintenant, votre présence à cette séance est automatiquement confirmée et ne pourra plus être modifiée (ni annulée, ni signalée absente). Elle est décomptée de votre pack, même en cas d’absence, sans remboursement.",
     lastMinuteTitle: "⚡ Inscription de dernière minute",
     lastMinuteText: "Cette séance commence dans moins de 48 h. En vous inscrivant maintenant, votre présence est automatiquement confirmée et ne pourra plus être modifiée (ni annulée, ni signalée absente). En cas d’absence, rien n’est remboursé.",
     lastMinuteAccept: "J’ai compris : ma présence est confirmée et non modifiable, et rien n’est remboursé en cas d’absence.",
@@ -1383,6 +1386,7 @@ const fr = {
       decline: "→ Je ne pourrai pas participer : {url}",
     },
     subscriptionActivated: {
+      lastMinute: "⚡ Une séance de votre pack commence dans moins de 48 h (inscription de dernière minute) : votre présence à cette séance est automatiquement confirmée et ne peut plus être modifiée. Elle est décomptée de votre pack, même en cas d’absence, sans remboursement.",
       subject: "Votre abonnement {activity} est activé",
       active: "Votre abonnement « {activity} » est désormais actif.",
       sessions: "Nombre de séances incluses : {count}",
