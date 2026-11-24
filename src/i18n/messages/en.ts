@@ -52,7 +52,7 @@ const en: Messages = {
   },
 
   footer: {
-    tagline: "Classes, workshops, events and memberships in France. Book, take part and track your progress.",
+    tagline: "World Wide Events",
     platform: "Platform",
     allActivities: "All activities",
     plans: "Memberships",

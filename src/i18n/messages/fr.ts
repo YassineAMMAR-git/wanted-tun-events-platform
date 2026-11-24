@@ -53,7 +53,7 @@ const fr = {
   },
 
   footer: {
-    tagline: "Cours, ateliers, événements et abonnements en France. Réservez, participez, suivez votre avancement.",
+    tagline: "World Wide Events",
     platform: "Plateforme",
     allActivities: "Toutes les activités",
     plans: "Abonnements",

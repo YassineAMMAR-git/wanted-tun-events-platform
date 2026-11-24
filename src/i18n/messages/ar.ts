@@ -52,7 +52,7 @@ const ar: Messages = {
   },
 
   footer: {
-    tagline: "دروس وورشات وفعاليات واشتراكات في فرنسا. احجز، شارك، وتابع تقدّمك.",
+    tagline: "World Wide Events",
     platform: "المنصة",
     allActivities: "جميع الأنشطة",
     plans: "الاشتراكات",
