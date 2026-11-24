@@ -1032,6 +1032,7 @@ const ar: Messages = {
         subscription_activated: "تفعيل اشتراك",
         session_cancelled: "حصة ملغاة / مؤجلة",
         session_updated: "حصة معدَّلة",
+        participant_added: "تسجيل من الإدارة",
         subscription_ending: "نهاية اشتراك",
       },
     },
@@ -1367,6 +1368,12 @@ const ar: Messages = {
       sessions: "عدد الحصص المشمولة: {count}",
       rule: "تُسجَّل تلقائيًا في الحصص القادمة المفتوحة للتأكيد. تُحتسب كل حصة من باقتك حتى في حال غيابك.",
       follow: "تابع حصصك وتقدّمك في مساحتك الشخصية:",
+    },
+    participantAdded: {
+      subject: "تسجيل في حصة — {activity}",
+      intro: "قام فريقنا بتسجيلك في الحصة «{title}». حضورك مؤكَّد.",
+      details: "معلومات الحصة:",
+      absent: "إذا لم تتمكن من الحضور، يُرجى الإبلاغ عن غيابك من فضائك الشخصي لتحرير المكان:",
     },
     sessionUpdated: {
       subject: "تعديل على الحصة — {activity}",

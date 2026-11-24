@@ -1028,6 +1028,7 @@ const en: Messages = {
         subscription_activated: "Membership activated",
         session_cancelled: "Session cancelled / postponed",
         session_updated: "Session updated",
+        participant_added: "Added by the administration",
         subscription_ending: "Membership ending",
       },
     },
@@ -1366,6 +1367,12 @@ const en: Messages = {
       sessions: "Sessions included: {count}",
       rule: "You are automatically registered for the next sessions open for confirmation. Every session in your pack is counted, even if you are absent.",
       follow: "Find your sessions and progress in your personal space:",
+    },
+    participantAdded: {
+      subject: "Registered for a session — {activity}",
+      intro: "Our team has registered you for the session “{title}”. Your attendance is confirmed.",
+      details: "Session details:",
+      absent: "If you cannot come, please report your absence from your personal space to free up the spot:",
     },
     sessionUpdated: {
       subject: "Session updated — {activity}",

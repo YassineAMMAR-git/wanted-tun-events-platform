@@ -22,6 +22,7 @@ const NOTIFICATION_TYPES = [
   "subscription_activated",
   "session_cancelled",
   "session_updated",
+  "participant_added",
   "subscription_ending",
 ] as const;
 const isKnownType = (value: string): value is (typeof NOTIFICATION_TYPES)[number] =>

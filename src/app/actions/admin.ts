@@ -33,7 +33,6 @@ import {
   fillMembershipSessions,
   grantAttendances,
   membershipEndsAt,
-  newAttendanceState,
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
@@ -639,7 +638,7 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const sessionId = num(formData, "sessionId");
   const userId = num(formData, "userId");
-  const session = (await db.select({ startsAt: sessions.startsAt }).from(sessions).where(eq(sessions.id, sessionId)).limit(1))[0];
+  const row = await loadSessionWithActivity(sessionId);
   // Rattachement à l'abonnement actif du client pour cette activité, s'il en a un (jamais au billet d'une autre date) :
   // la séance est alors prise sur son pack, s'il lui en reste à attribuer ; sinon elle lui est offerte en plus.
   const membership = (
@@ -660,18 +659,75 @@ export async function addParticipantAction(formData: FormData): Promise<void> {
   const subscription =
     membership && (await packSlotsLeft(membership.id, membership.sessionsIncluded)) > 0 ? membership : null;
 
-  await db
+  // Ajouté par l'administration : sa présence est confirmée d'office.
+  const inserted = await db
     .insert(attendances)
     .values({
       sessionId,
       userId,
       subscriptionId: subscription?.id ?? null,
-      // Ajouté après la clôture des présences : l'administration le confirme du même geste.
-      ...(session ? newAttendanceState(session.startsAt) : { status: "pending" as const }),
+      status: "confirmed",
+      respondedAt: new Date(),
+      responseChannel: "administration",
       token: randomToken(),
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: attendances.id });
+  // Le client est prévenu de son inscription (pas s'il était déjà inscrit, ni pour une séance passée ou arrêtée).
+  if (inserted[0] && row) await notifyParticipantAdded(userId, row.session, row.activity);
   redirect(withMessage(`/admin/seances/${sessionId}`, "ok", "participantAdded"));
+}
+
+/** E-mail au client que l'administration vient d'inscrire à une séance (présence confirmée). */
+async function notifyParticipantAdded(userId: number, sessionRow: SessionRow, activityRow: Activity): Promise<void> {
+  if (sessionRow.status !== "scheduled" || sessionRow.startsAt.getTime() <= Date.now()) return;
+  const user = (
+    await db
+      .select({ email: users.email, firstName: users.firstName, locale: users.locale })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+  )[0];
+  if (!user) return;
+
+  const { locale } = user;
+  const t = translatorFor(locale);
+  const activity = localize(activityRow, locale, ACTIVITY_TRANSLATABLE);
+  const session = localize(sessionRow, locale, SESSION_TRANSLATABLE);
+  const place = session.location || [activity.address, activity.city].filter(Boolean).join(", ");
+  try {
+    await logAndSend({
+      type: "participant_added",
+      userId,
+      sessionId: sessionRow.id,
+      recipient: user.email,
+      locale,
+      subject: t("emails.participantAdded.subject", { activity: activity.name }),
+      body: [
+        t("emails.hello", { name: user.firstName }),
+        "",
+        t("emails.participantAdded.intro", { title: session.title ?? activity.name }),
+        "",
+        t("emails.participantAdded.details"),
+        t("emails.reminder.activity", { value: activity.name }),
+        t("emails.reminder.date", { value: formatDate(sessionRow.startsAt, locale) }),
+        t("emails.reminder.time", {
+          time: formatTime(sessionRow.startsAt, locale),
+          duration: formatDuration(sessionRow.durationMinutes, locale),
+        }),
+        t("emails.reminder.place", { value: place || t("emails.reminder.placeTbc") }),
+        ...(session.notes ? [t("emails.sessionChanged.info", { notes: session.notes })] : []),
+        "",
+        t("emails.participantAdded.absent"),
+        `${appUrl()}/espace-personnel`,
+        "",
+        t("emails.team"),
+      ].join("\n"),
+    });
+  } catch (error) {
+    // L'inscription est faite : un e-mail impossible à envoyer ne la bloque pas.
+    console.error("[mail] e-mail d'inscription par l'administration impossible", error);
+  }
 }
 
 export async function removeParticipantAction(formData: FormData): Promise<void> {

@@ -1033,6 +1033,7 @@ const fr = {
         subscription_activated: "Abonnement activé",
         session_cancelled: "Séance annulée / reportée",
         session_updated: "Séance modifiée",
+        participant_added: "Inscription par l’administration",
         subscription_ending: "Fin d’abonnement",
       },
     },
@@ -1374,6 +1375,12 @@ const fr = {
       sessions: "Nombre de séances incluses : {count}",
       rule: "Vous êtes inscrit automatiquement aux prochaines séances ouvertes à la confirmation. Chaque séance de votre pack est décomptée, même en cas d’absence.",
       follow: "Retrouvez vos séances et votre avancement dans votre espace personnel :",
+    },
+    participantAdded: {
+      subject: "Inscription à une séance — {activity}",
+      intro: "Vous avez été inscrit(e) par notre équipe à la séance « {title} ». Votre présence est confirmée.",
+      details: "Informations de la séance :",
+      absent: "Si vous ne pouvez pas venir, merci de signaler votre absence depuis votre espace personnel pour libérer la place :",
     },
     sessionUpdated: {
       subject: "Séance modifiée — {activity}",
