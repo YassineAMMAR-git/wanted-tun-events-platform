@@ -36,7 +36,7 @@ import {
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
-import { autoConfirmAttendances } from "@/lib/attendance-confirmation";
+import { autoConfirmAttendances, requiresConfirmation } from "@/lib/attendance-confirmation";
 import {
   formatDate,
   formatDateTime,
@@ -723,7 +723,8 @@ async function notifyParticipantAdded(userId: number, sessionRow: SessionRow, ac
         t("emails.reminder.place", { value: place || t("emails.reminder.placeTbc") }),
         ...(session.notes ? [t("emails.sessionChanged.info", { notes: session.notes })] : []),
         "",
-        t("emails.participantAdded.absent"),
+        // Sans confirmation de présence, il n'y a pas d'absence à signaler : le lien mène simplement à l'espace personnel.
+        requiresConfirmation(activityRow) ? t("emails.participantAdded.absent") : t("emails.sessionUpdated.follow"),
         `${appUrl()}/espace-personnel`,
         "",
         t("emails.team"),

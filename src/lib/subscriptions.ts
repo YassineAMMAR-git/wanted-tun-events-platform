@@ -397,9 +397,15 @@ export async function respondToAttendance(
 ): Promise<RespondResult> {
   const row = (
     await db
-      .select({ id: attendances.id, startsAt: sessions.startsAt, sessionStatus: sessions.status })
+      .select({
+        id: attendances.id,
+        startsAt: sessions.startsAt,
+        sessionStatus: sessions.status,
+        confirmAttendance: activities.confirmAttendance,
+      })
       .from(attendances)
       .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+      .innerJoin(activities, eq(activities.id, sessions.activityId))
       .where(
         "token" in where
           ? eq(attendances.token, where.token)
@@ -408,6 +414,8 @@ export async function respondToAttendance(
       .limit(1)
   )[0];
   if (!row || row.sessionStatus !== "scheduled" || row.startsAt.getTime() <= Date.now()) return "invalid";
+  // Activité sans confirmation de présence : l'inscrit est présent d'office, ni confirmation ni absence à enregistrer.
+  if (!requiresConfirmation(row)) return "invalid";
   if (response === "confirmed" && isConfirmationClosed(row.startsAt)) return "closed";
 
   await db

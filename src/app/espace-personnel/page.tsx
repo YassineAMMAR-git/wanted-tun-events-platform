@@ -389,9 +389,9 @@ export default async function DashboardPage({
                           <span className={`badge ${ATTENDANCE_STATUS[attendance].className}`}>
                             {ATTENDANCE_STATUS[attendance].dot} {tStatus(`attendance.${attendance}`)}
                           </span>
-                          {row.session.status === "scheduled" ? (
+                          {row.session.status === "scheduled" && needsConfirmation ? (
                             <div className="flex gap-2">
-                              {closed || !needsConfirmation ? null : (
+                              {closed ? null : (
                                 <form action={respondAttendanceAction}>
                                   <input type="hidden" name="attendanceId" value={row.attendance.id} />
                                   <input type="hidden" name="response" value="confirmed" />
