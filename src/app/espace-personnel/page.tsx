@@ -159,7 +159,7 @@ export default async function DashboardPage({
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label={t("stats.activeSubscriptions")} value={activeSubscriptions.length} />
-        <Stat label={t("stats.upcoming")} value={upcoming.length} hint={t("stats.upcomingHint")} />
+        <Stat label={t("stats.upcoming")} value={upcoming.filter((row) => row.session.status === "scheduled").length} hint={t("stats.upcomingHint")} />
         <Stat label={t("stats.done")} value={past.length} hint={t("stats.doneHint")} />
         <Stat label={t("stats.remaining")} value={remaining} />
       </section>

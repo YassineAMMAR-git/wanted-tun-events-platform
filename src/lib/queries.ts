@@ -307,7 +307,7 @@ export async function getMySubscriptions(userId: number, locale: Locale) {
       category: categories,
       // Séances décomptées du pack : celles qui ont eu lieu, que le client soit venu ou non.
       attendedCount: PACK_SESSIONS_USED,
-      upcomingCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.starts_at >= now())::int`,
+      upcomingCount: sql<number>`(select count(*) from attendances a join sessions s on s.id = a.session_id where a.subscription_id = ${subscriptions.id} and s.status = 'scheduled' and s.starts_at >= now())::int`,
     })
     .from(subscriptions)
     .leftJoin(plans, eq(plans.id, subscriptions.planId))

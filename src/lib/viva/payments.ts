@@ -43,7 +43,7 @@ function toLinkStatus(statusId: string): PaymentLinkStatus {
 }
 
 /** Les codes de commande Viva sont numériques ; les anciens paiements Mollie (tr_…) ne sont plus consultables. */
-const isVivaOrder = (link: PaymentLink) => /^d+$/.test(link.externalId);
+const isVivaOrder = (link: PaymentLink) => /^\d+$/.test(link.externalId);
 
 /**
  * Délai de grâce après l'expiration de la page de paiement : une transaction commencée juste avant
@@ -255,7 +255,7 @@ export async function ensurePaymentLink(subscriptionId: number): Promise<Payment
 
 /** Paiement du site correspondant à un code de commande Viva (aucun pour une commande créée ailleurs). */
 async function findByOrderCode(orderCode: string): Promise<PaymentLink | null> {
-  if (!/^d{1,20}$/.test(orderCode)) return null;
+  if (!/^\d{1,20}$/.test(orderCode)) return null;
   return (await db.select().from(paymentLinks).where(eq(paymentLinks.externalId, orderCode)).limit(1))[0] ?? null;
 }
 
