@@ -85,7 +85,7 @@ const ar: Messages = {
     plan: { active: "نشط", inactive: "معطّل" },
     role: { client: "عميل", admin: "مسؤول" },
     notification: { sent: "أُرسل", simulated: "محاكاة", failed: "فشل", queued: "في الانتظار" },
-    channel: { email: "البريد الإلكتروني", "espace-personnel": "المساحة الشخصية", administration: "الإدارة", rappel: "صفحة التذكير", inscription: "عند التسجيل", delai: "انقضت المهلة", automatique: "تلقائي" },
+    channel: { email: "البريد الإلكتروني", "espace-personnel": "المساحة الشخصية", administration: "الإدارة", rappel: "صفحة التذكير", inscription: "تسجيل في اللحظة الأخيرة", delai: "انقضت المهلة", automatique: "تلقائي" },
   },
 
   home: {
@@ -192,6 +192,8 @@ const ar: Messages = {
   },
 
   activity: {
+    lastMinuteBadge: "⚡ اللحظة الأخيرة",
+    lastMinuteNotice: "⚡ تسجيل في اللحظة الأخيرة (قبل أقل من 48 ساعة): يُؤكَّد حضورك تلقائيًا ولا يمكن تعديله بعد ذلك. لا يُسترجع أي مبلغ في حال الغياب.",
     fromPrice: "ابتداءً من {price}",
     choosePrice: "اختر التعريفة",
     payAndRegisterChoice: "ادفع وسجّل",
@@ -274,6 +276,9 @@ const ar: Messages = {
   },
 
   payment: {
+    lastMinuteTitle: "⚡ تسجيل في اللحظة الأخيرة",
+    lastMinuteText: "تبدأ هذه الحصة بعد أقل من 48 ساعة. بالتسجيل الآن، يُؤكَّد حضورك تلقائيًا ولا يمكن تعديله (لا إلغاء ولا إبلاغ عن غياب). لا يُسترجع أي مبلغ في حال الغياب.",
+    lastMinuteAccept: "فهمت: حضوري مؤكَّد وغير قابل للتعديل، ولا يُسترجع أي مبلغ في حال الغياب.",
     legalNotice:
       "بالدفع، فإنك توافق على <terms>شروط البيع</terms>. التذاكر والحصص والاشتراكات أنشطة ترفيهية في تواريخ محددة: لا يشملها حق التراجع (المادة L221-28 الفقرة 12 من قانون الاستهلاك الفرنسي). تُعالج بياناتك وفق <privacy>سياسة الخصوصية</privacy>.",
     cancelOrder: "أخطأت: إلغاء هذا الطلب",
@@ -331,6 +336,7 @@ const ar: Messages = {
   },
 
   dashboard: {
+    lastMinuteLocked: "⚡ تسجيل في اللحظة الأخيرة: الحضور مؤكَّد وغير قابل للتعديل. لا استرجاع في حال الغياب.",
     documents: "وثائق الحصة",
     confirmBefore: "⏳ للتأكيد قبل {date}",
     confirmationsClosed: "🔒 أُغلق تأكيد الحضور (قبل الحصة بـ 48 ساعة)",
@@ -1318,6 +1324,7 @@ const ar: Messages = {
       notYou: "لست أنت؟ أعد تعيين كلمة مرورك فورًا من هنا:",
     },
     ticketConfirmed: {
+      lastMinute: "⚡ تسجيل في اللحظة الأخيرة: حضورك مؤكَّد تلقائيًا ولا يمكن تعديله. لا يُسترجع أي مبلغ في حال الغياب.",
       subject: "تم تأكيد التسجيل — {activity}",
       confirmed: "تم تأكيد تسجيلك في « {activity} ». شكرًا لك!",
       date: "• التاريخ: {value}",

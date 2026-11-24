@@ -85,7 +85,7 @@ const en: Messages = {
     plan: { active: "Active", inactive: "Disabled" },
     role: { client: "Client", admin: "Administrator" },
     notification: { sent: "Sent", simulated: "Simulated", failed: "Failed", queued: "Queued" },
-    channel: { email: "email", "espace-personnel": "personal space", administration: "administration", rappel: "reminder page", inscription: "at registration", delai: "deadline passed", automatique: "automatic" },
+    channel: { email: "email", "espace-personnel": "personal space", administration: "administration", rappel: "reminder page", inscription: "last-minute registration", delai: "deadline passed", automatique: "automatic" },
   },
 
   home: {
@@ -192,6 +192,8 @@ const en: Messages = {
   },
 
   activity: {
+    lastMinuteBadge: "⚡ Last minute",
+    lastMinuteNotice: "⚡ Last-minute registration (less than 48 h before): your attendance is automatically confirmed and cannot be changed afterwards. No refund is given if you do not attend.",
     fromPrice: "from {price}",
     choosePrice: "Choose your price",
     payAndRegisterChoice: "Pay and register",
@@ -273,6 +275,9 @@ const en: Messages = {
   },
 
   payment: {
+    lastMinuteTitle: "⚡ Last-minute registration",
+    lastMinuteText: "This session starts in less than 48 h. If you register now, your attendance is automatically confirmed and cannot be changed (neither cancelled nor reported as absent). No refund is given if you do not attend.",
+    lastMinuteAccept: "I understand: my attendance is confirmed and cannot be changed, and nothing is refunded if I do not attend.",
     legalNotice:
       "By paying, you accept our <terms>terms of sale</terms>. Tickets, sessions and memberships are leisure activities on set dates: they are not eligible for the right of withdrawal (French Consumer Code, art. L221-28 12°). Your data is processed according to our <privacy>privacy policy</privacy>.",
     cancelOrder: "I made a mistake: cancel this order",
@@ -330,6 +335,7 @@ const en: Messages = {
   },
 
   dashboard: {
+    lastMinuteLocked: "⚡ Last-minute registration: attendance confirmed, cannot be changed. No refund if you do not attend.",
     documents: "Session documents",
     confirmBefore: "⏳ Confirm before {date}",
     confirmationsClosed: "🔒 Attendance closed (48 hours before the session)",
@@ -1315,6 +1321,7 @@ const en: Messages = {
       notYou: "Wasn’t you? Reset your password immediately here:",
     },
     ticketConfirmed: {
+      lastMinute: "⚡ Last-minute registration: your attendance is automatically confirmed and can no longer be changed. No refund is given if you do not attend.",
       subject: "Registration confirmed — {activity}",
       confirmed: "Your registration for “{activity}” is confirmed. Thank you!",
       date: "• Date: {value}",

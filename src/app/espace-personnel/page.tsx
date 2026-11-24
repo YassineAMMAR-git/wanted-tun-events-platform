@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getMySessions, getMySubscriptions } from "@/lib/queries";
 import { cancelPendingAction, respondAttendanceAction } from "@/app/actions/booking";
-import { confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
+import { LAST_MINUTE_CHANNEL, confirmationDeadline, isConfirmationClosed } from "@/lib/attendance";
 import {
   ATTENDANCE_STATUS,
   SESSION_STATUS_STYLES,
@@ -351,6 +351,8 @@ export default async function DashboardPage({
                     const closed = isConfirmationClosed(row.session.startsAt);
                     // Activité sans confirmation de présence : l'inscrit est présent d'office, rien à confirmer.
                     const needsConfirmation = requiresConfirmation(row.activity);
+                    // Inscription de dernière minute : présence confirmée d'office et verrouillée.
+                    const lastMinute = row.attendance.responseChannel === LAST_MINUTE_CHANNEL;
                     return (
                       <li
                         key={row.attendance.id}
@@ -370,7 +372,9 @@ export default async function DashboardPage({
                               {formatDuration(row.session.durationMinutes, locale)})
                             </p>
                             <p className="text-xs text-zinc-500">📍 {row.session.location ?? row.activity.address}</p>
-                            {row.session.status !== "scheduled" || !needsConfirmation ? null : closed ? (
+                            {row.session.status !== "scheduled" ? null : lastMinute ? (
+                              <p className="mt-1 text-xs font-semibold text-gold-dark">{t("lastMinuteLocked")}</p>
+                            ) : !needsConfirmation ? null : closed ? (
                               <p className="mt-1 text-xs text-zinc-500">{t("confirmationsClosed")}</p>
                             ) : attendance === "pending" ? (
                               <p className="mt-1 text-xs font-semibold text-gold-dark">
@@ -389,7 +393,7 @@ export default async function DashboardPage({
                           <span className={`badge ${ATTENDANCE_STATUS[attendance].className}`}>
                             {ATTENDANCE_STATUS[attendance].dot} {tStatus(`attendance.${attendance}`)}
                           </span>
-                          {row.session.status === "scheduled" && needsConfirmation ? (
+                          {row.session.status === "scheduled" && needsConfirmation && !lastMinute ? (
                             <div className="flex gap-2">
                               {closed ? null : (
                                 <form action={respondAttendanceAction}>

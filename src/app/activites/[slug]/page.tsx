@@ -6,6 +6,7 @@ import { getActivityDetail } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth";
 import { planOffers } from "@/lib/promotions";
 import { buyTicketAction, subscribeAction } from "@/app/actions/booking";
+import { isLastMinute } from "@/lib/attendance";
 import { formatDate, formatDuration, formatPrice, formatTime, parseParisDateTime, toDateTimeLocalValue } from "@/lib/format";
 import { Card, SectionTitle } from "@/components/ui";
 
@@ -50,6 +51,8 @@ export default async function ActivityDetailPage({
   const tierPrice = (cents: number) => (cents <= 0 ? t("free") : formatPrice(cents, locale));
   const nextDate = ticketDates[0];
   const firstAvailable = ticketDates.find((date) => date.placesLeft > 0);
+  // Dates à moins de 48 h encore ouvertes : inscription de dernière minute (présence confirmée, non modifiable).
+  const lastMinuteOpen = ticketDates.some((date) => date.placesLeft > 0 && isLastMinute(date.startsAt));
   const free = !hasTiers && activity.priceCents <= 0;
   const ticketNotice =
     query.billet === "complet"
@@ -253,6 +256,9 @@ export default async function ActivityDetailPage({
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold text-zinc-900">
                             📅 {formatDate(date.startsAt, locale)} · {formatTime(date.startsAt, locale)}
+                            {!full && isLastMinute(date.startsAt) ? (
+                              <span className="ms-2 text-xs font-bold text-amber-700">{t("lastMinuteBadge")}</span>
+                            ) : null}
                           </span>
                           <span className="block truncate text-xs text-zinc-600">
                             📍 {date.location || address}
@@ -270,6 +276,11 @@ export default async function ActivityDetailPage({
                     );
                   })}
                 </fieldset>
+                {lastMinuteOpen ? (
+                  <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-gold-dark">
+                    {t("lastMinuteNotice")}
+                  </p>
+                ) : null}
                 <button className="btn btn-primary w-full" type="submit" disabled={!firstAvailable}>
                   {!firstAvailable
                     ? t("soldOut")
@@ -471,6 +482,9 @@ export default async function ActivityDetailPage({
                           <button className="btn btn-primary btn-sm w-full" type="submit">
                             {t("bookSession", { price: formatPrice(activity.priceCents, locale) })}
                           </button>
+                          {isLastMinute(session.startsAt) ? (
+                            <p className="mt-1.5 text-[11px] leading-snug text-gold-dark">{t("lastMinuteNotice")}</p>
+                          ) : null}
                         </form>
                       ) : (
                         <p className="mt-2 text-center text-xs font-semibold text-rose-700">{t("soldOut")}</p>

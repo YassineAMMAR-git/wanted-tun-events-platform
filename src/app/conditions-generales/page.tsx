@@ -103,6 +103,12 @@ export default async function TermsPage() {
             cette échéance, vous êtes compté(e) absent(e) pour l’organisation de la séance.
           </li>
           <li>
+            Inscription de dernière minute : tant qu’il reste des places, vous pouvez vous inscrire à une séance jusqu’à
+            son heure de début, y compris moins de {CONFIRMATION_CLOSE_HOURS} heures avant. Votre présence est alors
+            automatiquement confirmée et ne peut plus être modifiée (ni annulée, ni signalée absente). En cas d’absence,
+            aucun remboursement n’est effectué.
+          </li>
+          <li>
             Une séance d’abonnement non utilisée pendant sa durée de validité ne donne pas lieu à remboursement, sauf
             disposition contraire indiquée sur l’offre.
           </li>

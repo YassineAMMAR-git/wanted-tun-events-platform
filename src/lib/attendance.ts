@@ -15,3 +15,14 @@ export function confirmationDeadline(startsAt: Date): Date {
 export function isConfirmationClosed(startsAt: Date, reference: Date = new Date()): boolean {
   return reference.getTime() >= confirmationDeadline(startsAt).getTime();
 }
+
+/**
+ * Inscription de dernière minute : moins de 48 h avant la séance, tant qu'elle n'a pas commencé (s'il reste des places).
+ * La présence est alors confirmée d'office et ne peut plus être modifiée par le client ; rien n'est remboursé en cas d'absence.
+ */
+export function isLastMinute(startsAt: Date, reference: Date = new Date()): boolean {
+  return isConfirmationClosed(startsAt, reference) && startsAt.getTime() > reference.getTime();
+}
+
+/** Canal enregistré sur une présence prise à la dernière minute (présence confirmée et verrouillée). */
+export const LAST_MINUTE_CHANNEL = "inscription";

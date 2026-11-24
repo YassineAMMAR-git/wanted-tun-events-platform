@@ -12,7 +12,7 @@ import {
   type Subscription,
 } from "@/db/schema";
 import { randomToken } from "@/lib/auth";
-import { CONFIRMATION_CLOSE_HOURS, isConfirmationClosed } from "@/lib/attendance";
+import { CONFIRMATION_CLOSE_HOURS, LAST_MINUTE_CHANNEL, isConfirmationClosed, isLastMinute } from "@/lib/attendance";
 import { AUTO_CONFIRM_CHANNEL, requiresConfirmation } from "@/lib/attendance-confirmation";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { formatDateTime } from "@/lib/format";
@@ -29,7 +29,7 @@ export function newAttendanceState(startsAt: Date, confirmAttendance = true) {
     return { status: "confirmed" as const, respondedAt: new Date(), responseChannel: AUTO_CONFIRM_CHANNEL };
   }
   return isConfirmationClosed(startsAt)
-    ? { status: "confirmed" as const, respondedAt: new Date(), responseChannel: "inscription" }
+    ? { status: "confirmed" as const, respondedAt: new Date(), responseChannel: LAST_MINUTE_CHANNEL }
     : { status: "pending" as const };
 }
 
@@ -316,6 +316,7 @@ export async function activateSubscription(subscriptionId: number): Promise<void
         ...(info.session ? [t("emails.ticketConfirmed.date", { value: formatDateTime(info.session.startsAt, locale) })] : []),
         ...(place ? [t("emails.ticketConfirmed.place", { value: place })] : []),
         t("emails.ticketConfirmed.reference", { id: subscription.id }),
+        ...(info.session && isLastMinute(info.session.startsAt) ? ["", t("emails.ticketConfirmed.lastMinute")] : []),
         "",
         t("emails.ticketConfirmed.follow"),
         `${appUrl()}/espace-personnel`,
@@ -401,6 +402,7 @@ export async function respondToAttendance(
         id: attendances.id,
         startsAt: sessions.startsAt,
         sessionStatus: sessions.status,
+        responseChannel: attendances.responseChannel,
         confirmAttendance: activities.confirmAttendance,
       })
       .from(attendances)
@@ -416,6 +418,8 @@ export async function respondToAttendance(
   if (!row || row.sessionStatus !== "scheduled" || row.startsAt.getTime() <= Date.now()) return "invalid";
   // Activité sans confirmation de présence : l'inscrit est présent d'office, ni confirmation ni absence à enregistrer.
   if (!requiresConfirmation(row)) return "invalid";
+  // Inscription de dernière minute : présence confirmée d'office, que le client ne peut plus modifier.
+  if (row.responseChannel === LAST_MINUTE_CHANNEL) return "invalid";
   if (response === "confirmed" && isConfirmationClosed(row.startsAt)) return "closed";
 
   await db

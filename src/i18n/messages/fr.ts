@@ -86,7 +86,7 @@ const fr = {
     plan: { active: "Active", inactive: "Désactivée" },
     role: { client: "Client", admin: "Administrateur" },
     notification: { sent: "Envoyé", simulated: "Simulé", failed: "Échec", queued: "En file" },
-    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration", rappel: "page de rappel", inscription: "à l’inscription", delai: "délai dépassé", automatique: "automatique" },
+    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration", rappel: "page de rappel", inscription: "inscription de dernière minute", delai: "délai dépassé", automatique: "automatique" },
   },
 
   home: {
@@ -194,6 +194,8 @@ const fr = {
   },
 
   activity: {
+    lastMinuteBadge: "⚡ Dernière minute",
+    lastMinuteNotice: "⚡ Inscription de dernière minute (moins de 48 h avant) : votre présence est automatiquement confirmée et ne pourra plus être modifiée. En cas d’absence, rien n’est remboursé.",
     fromPrice: "à partir de {price}",
     choosePrice: "Choisissez votre tarif",
     payAndRegisterChoice: "Payer et s’inscrire",
@@ -275,6 +277,9 @@ const fr = {
   },
 
   payment: {
+    lastMinuteTitle: "⚡ Inscription de dernière minute",
+    lastMinuteText: "Cette séance commence dans moins de 48 h. En vous inscrivant maintenant, votre présence est automatiquement confirmée et ne pourra plus être modifiée (ni annulée, ni signalée absente). En cas d’absence, rien n’est remboursé.",
+    lastMinuteAccept: "J’ai compris : ma présence est confirmée et non modifiable, et rien n’est remboursé en cas d’absence.",
     legalNotice:
       "En payant, vous acceptez nos <terms>conditions générales de vente</terms>. Billets, séances et abonnements portent sur des activités de loisirs à date déterminée : ils ne bénéficient pas du droit de rétractation (art. L221-28 12° du Code de la consommation). Vos données sont traitées selon notre <privacy>politique de confidentialité</privacy>.",
     cancelOrder: "Je me suis trompé : annuler cette commande",
@@ -332,6 +337,7 @@ const fr = {
   },
 
   dashboard: {
+    lastMinuteLocked: "⚡ Inscription de dernière minute : présence confirmée, non modifiable. Aucun remboursement en cas d’absence.",
     documents: "Documents de la séance",
     confirmBefore: "⏳ À confirmer avant le {date}",
     confirmationsClosed: "🔒 Présences clôturées (48 h avant la séance)",
@@ -1322,6 +1328,7 @@ const fr = {
       notYou: "Ce n’est pas vous ? Réinitialisez immédiatement votre mot de passe ici :",
     },
     ticketConfirmed: {
+      lastMinute: "⚡ Inscription de dernière minute : votre présence est automatiquement confirmée et ne peut plus être modifiée. En cas d’absence, rien n’est remboursé.",
       subject: "Inscription confirmée — {activity}",
       confirmed: "Votre inscription à « {activity} » est confirmée. Merci !",
       date: "• Date : {value}",

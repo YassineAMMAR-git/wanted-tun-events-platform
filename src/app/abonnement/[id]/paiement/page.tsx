@@ -21,6 +21,7 @@ import { Card } from "@/components/ui";
 import { PaymentWatcher } from "@/components/payment-watcher";
 import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
 import { planPackSessions } from "@/lib/subscriptions";
+import { isLastMinute } from "@/lib/attendance";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,10 @@ export default async function PaymentPage({
     ticket &&
     subscription.paymentStatus !== "paid" &&
     (!row.session || row.session.status !== "scheduled" || isPast(row.session.startsAt));
+
+  // Billet à moins de 48 h de la séance : inscription de dernière minute, présence confirmée et non modifiable.
+  const lastMinute =
+    ticket && subscription.paymentStatus !== "paid" && !ticketClosed && Boolean(row.session) && isLastMinute(row.session!.startsAt);
 
   // Commande annulée par le client avant paiement.
   const cancelled = subscription.status === "cancelled" && subscription.paymentStatus !== "paid";
@@ -175,6 +180,13 @@ export default async function PaymentPage({
           ))}
         </dl>
 
+        {lastMinute ? (
+          <div role="note" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <p className="text-sm font-bold text-gold-dark">{t("lastMinuteTitle")}</p>
+            <p className="mt-1 text-sm text-zinc-700">{t("lastMinuteText")}</p>
+          </div>
+        ) : null}
+
         {plan?.extraInfo ? (
           <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">ℹ️ {plan.extraInfo}</p>
         ) : null}
@@ -268,6 +280,12 @@ export default async function PaymentPage({
             ) : (
               <form action={startPaymentAction}>
                 <input type="hidden" name="subscriptionId" value={subscription.id} />
+                {lastMinute ? (
+                  <label className="mb-3 flex items-start gap-2 text-sm text-zinc-800">
+                    <input type="checkbox" name="lastMinuteAccepted" required className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" />
+                    {t("lastMinuteAccept")}
+                  </label>
+                ) : null}
                 <button className="btn btn-primary w-full" type="submit">
                   🔒 {notCompleted ? t("onlineRetry", { price }) : t("onlinePay", { price })}
                 </button>
