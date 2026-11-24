@@ -239,6 +239,14 @@ export default async function AdminActivityDetail({
             <input id="capacity" name="capacity" type="number" min={1} defaultValue={activity.capacity} className="input" />
           </div>
           <div className="sm:col-span-2">
+            <span className="label">{t("confirmAttendance")}</span>
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="confirmAttendance" defaultChecked={activity.confirmAttendance !== false} className="h-4 w-4" />
+              {t("confirmAttendanceLabel")}
+            </label>
+            <p className="mt-1 text-xs text-zinc-500">{t("confirmAttendanceHint")}</p>
+          </div>
+          <div className="sm:col-span-2">
             <label className="label" htmlFor="ticketUrl">
               {t("ticketUrl")}
             </label>

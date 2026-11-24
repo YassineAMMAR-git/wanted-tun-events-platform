@@ -20,6 +20,7 @@ import {
 } from "@/lib/format";
 import { Card, EmptyState, Progress, SectionTitle, Stat } from "@/components/ui";
 import { formatFileSize } from "@/lib/session-documents";
+import { requiresConfirmation } from "@/lib/attendance-confirmation";
 
 /** Boutons de téléchargement des PDF joints à une séance (cours, note…). */
 function SessionDocuments({
@@ -348,6 +349,8 @@ export default async function DashboardPage({
                     const sessionStatus = toSessionStatus(row.session.status);
                     // Présences clôturées 48 h avant : plus de confirmation ; une absence peut encore être signalée.
                     const closed = isConfirmationClosed(row.session.startsAt);
+                    // Activité sans confirmation de présence : l'inscrit est présent d'office, rien à confirmer.
+                    const needsConfirmation = requiresConfirmation(row.activity);
                     return (
                       <li
                         key={row.attendance.id}
@@ -367,7 +370,7 @@ export default async function DashboardPage({
                               {formatDuration(row.session.durationMinutes, locale)})
                             </p>
                             <p className="text-xs text-zinc-500">📍 {row.session.location ?? row.activity.address}</p>
-                            {row.session.status !== "scheduled" ? null : closed ? (
+                            {row.session.status !== "scheduled" || !needsConfirmation ? null : closed ? (
                               <p className="mt-1 text-xs text-zinc-500">{t("confirmationsClosed")}</p>
                             ) : attendance === "pending" ? (
                               <p className="mt-1 text-xs font-semibold text-gold-dark">
@@ -388,7 +391,7 @@ export default async function DashboardPage({
                           </span>
                           {row.session.status === "scheduled" ? (
                             <div className="flex gap-2">
-                              {closed ? null : (
+                              {closed || !needsConfirmation ? null : (
                                 <form action={respondAttendanceAction}>
                                   <input type="hidden" name="attendanceId" value={row.attendance.id} />
                                   <input type="hidden" name="response" value="confirmed" />

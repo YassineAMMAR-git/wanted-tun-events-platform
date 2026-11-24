@@ -198,6 +198,11 @@ export const activities = pgTable(
     imageUrl: text("image_url"),
     /** Billetterie externe (facultatif) : si renseignée, la réservation se fait sur ce site et non sur le nôtre. */
     ticketUrl: text("ticket_url"),
+    /**
+     * Le client doit-il confirmer sa présence à chaque séance ? Non (false) : tout inscrit est marqué présent d'office.
+     * Vide sur les activités antérieures à ce champ : renseigné au démarrage (voir src/lib/schema-upgrades.ts).
+     */
+    confirmAttendance: boolean("confirm_attendance"),
     status: varchar("status", { length: 16 }).notNull().default("active"),
     translations: jsonb("translations")
       .$type<ContentTranslations<(typeof ACTIVITY_TRANSLATABLE)[number]>>()

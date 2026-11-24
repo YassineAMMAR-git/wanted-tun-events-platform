@@ -31,7 +31,7 @@ import { TranslationFields } from "@/components/translation-fields";
 
 export const dynamic = "force-dynamic";
 
-const RESPONSE_CHANNELS = ["email", "espace-personnel", "administration"] as const;
+const RESPONSE_CHANNELS = ["email", "espace-personnel", "administration", "inscription", "delai", "automatique"] as const;
 const toChannel = (value: string | null) =>
   (RESPONSE_CHANNELS as readonly string[]).includes(value ?? "") ? (value as (typeof RESPONSE_CHANNELS)[number]) : "email";
 

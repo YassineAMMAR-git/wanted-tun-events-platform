@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { randomToken } from "@/lib/auth";
 import { CONFIRMATION_CLOSE_HOURS, isConfirmationClosed } from "@/lib/attendance";
+import { AUTO_CONFIRM_CHANNEL, requiresConfirmation } from "@/lib/attendance-confirmation";
 import { appUrl, logAndSend } from "@/lib/mailer";
 import { formatDateTime } from "@/lib/format";
 import { localize } from "@/lib/i18n/content";
@@ -21,8 +22,12 @@ import { translatorFor } from "@/i18n/translator";
 /**
  * Statut d'une présence à sa création. Une inscription faite alors que les présences sont déjà clôturées
  * (achat de dernière minute, ajout par l'administration) vaut confirmation : le participant vient de s'engager.
+ * Activité sans confirmation de présence : l'inscrit est marqué présent d'office.
  */
-export function newAttendanceState(startsAt: Date) {
+export function newAttendanceState(startsAt: Date, confirmAttendance = true) {
+  if (!confirmAttendance) {
+    return { status: "confirmed" as const, respondedAt: new Date(), responseChannel: AUTO_CONFIRM_CHANNEL };
+  }
   return isConfirmationClosed(startsAt)
     ? { status: "confirmed" as const, respondedAt: new Date(), responseChannel: "inscription" }
     : { status: "pending" as const };
@@ -83,6 +88,14 @@ export async function packSlotsLeft(subscriptionId: number, sessionsIncluded: nu
 }
 
 type PackParams = { userId: number; activityId: number; subscriptionId: number; sessionsIncluded: number };
+
+/** L'activité demande-t-elle la confirmation de présence ? */
+async function activityRequiresConfirmation(activityId: number): Promise<boolean> {
+  const row = (
+    await db.select({ confirmAttendance: activities.confirmAttendance }).from(activities).where(eq(activities.id, activityId)).limit(1)
+  )[0];
+  return row ? requiresConfirmation(row) : true;
+}
 
 /**
  * Séances qu'un abonnement recevrait maintenant : les prochaines séances de l'activité encore ouvertes à la
@@ -146,6 +159,7 @@ export async function planPackSessions(
 export async function ensureAttendances(params: PackParams): Promise<number> {
   const { sessions: missing } = await planPackSessions(params);
   if (missing.length === 0) return 0;
+  const confirm = await activityRequiresConfirmation(params.activityId);
 
   await db
     .insert(attendances)
@@ -154,7 +168,7 @@ export async function ensureAttendances(params: PackParams): Promise<number> {
         sessionId: session.id,
         userId: params.userId,
         subscriptionId: params.subscriptionId,
-        ...newAttendanceState(session.startsAt),
+        ...newAttendanceState(session.startsAt, confirm),
         token: randomToken(),
       })),
     )
@@ -180,7 +194,7 @@ export async function grantAttendances(subscription: Subscription): Promise<void
         sessionId: subscription.sessionId,
         userId: subscription.userId,
         subscriptionId: subscription.id,
-        ...newAttendanceState(session.startsAt),
+        ...newAttendanceState(session.startsAt, await activityRequiresConfirmation(subscription.activityId)),
         token: randomToken(),
       })
       .onConflictDoNothing();

@@ -36,6 +36,7 @@ import {
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
+import { autoConfirmAttendances } from "@/lib/attendance-confirmation";
 import {
   formatDate,
   formatDateTime,
@@ -318,6 +319,8 @@ function activityValues(formData: FormData) {
     // Photo envoyée (/media/…) ou ancienne adresse http(s) ; toute autre valeur est ignorée.
     imageUrl: safeLink(str(formData, "imageUrl")),
     ticketUrl: externalLink(str(formData, "ticketUrl")),
+    // Case décochée : les inscrits sont marqués présents d'office, sans bouton de confirmation.
+    confirmAttendance: bool(formData, "confirmAttendance"),
     translations: readTranslations(formData, ACTIVITY_TRANSLATABLE),
   };
 }
@@ -415,6 +418,8 @@ export async function updateActivityAction(formData: FormData): Promise<void> {
     .update(activities)
     .set({ ...values, status: str(formData, "status") === "hidden" ? "hidden" : "active" })
     .where(eq(activities.id, id));
+  // Confirmation de présence désactivée : les inscrits actuels sont marqués présents eux aussi.
+  if (!values.confirmAttendance) await autoConfirmAttendances([id]);
   await syncTicketPrices(id, formData);
   revalidatePath("/admin/activites");
   redirect(withMessage(`/admin/activites/${id}`, "ok", "activityUpdated"));

@@ -85,7 +85,7 @@ const en: Messages = {
     plan: { active: "Active", inactive: "Disabled" },
     role: { client: "Client", admin: "Administrator" },
     notification: { sent: "Sent", simulated: "Simulated", failed: "Failed", queued: "Queued" },
-    channel: { email: "email", "espace-personnel": "personal space", administration: "administration", rappel: "reminder page", inscription: "at registration", delai: "deadline passed" },
+    channel: { email: "email", "espace-personnel": "personal space", administration: "administration", rappel: "reminder page", inscription: "at registration", delai: "deadline passed", automatique: "automatic" },
   },
 
   home: {
@@ -700,6 +700,9 @@ const en: Messages = {
     },
     activities: {
       ticketUrl: "External ticketing link (optional)",
+      confirmAttendance: "Attendance confirmation",
+      confirmAttendanceLabel: "The client must confirm their attendance",
+      confirmAttendanceHint: "Checked: the client confirms their attendance before each session (otherwise they are marked absent 48 h before). Unchecked: every registered client is automatically marked present, with no confirmation button.",
       ticketUrlHint: "If the event is booked on another ticketing site, paste its link here: the booking button will send the client there. Leave empty for payment on our site.",
       kind: "Event type",
       kindSingle: "One-off event (concert, evening…) — one date, registration by ticket",
@@ -753,6 +756,9 @@ const en: Messages = {
       duplicateHint: "The fields are taken from the copied session; the date is suggested one week later. Change what needs changing, then add the session.",
       duplicateCancel: "Start from an empty form",
       ticketUrl: "External ticketing link (optional)",
+      confirmAttendance: "Attendance confirmation",
+      confirmAttendanceLabel: "The client must confirm their attendance",
+      confirmAttendanceHint: "Checked: the client confirms their attendance before each session (otherwise they are marked absent 48 h before). Unchecked: every registered client is automatically marked present, with no confirmation button.",
       ticketUrlHint: "If set, booking takes place on that site: the button sends the client there and nothing is sold on our site. Leave empty for payment on our site.",
       kind: "Event type",
       kindSingle: "One-off event (concert, evening…) — one date, registration by ticket",

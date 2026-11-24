@@ -86,7 +86,7 @@ const fr = {
     plan: { active: "Active", inactive: "Désactivée" },
     role: { client: "Client", admin: "Administrateur" },
     notification: { sent: "Envoyé", simulated: "Simulé", failed: "Échec", queued: "En file" },
-    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration", rappel: "page de rappel", inscription: "à l’inscription", delai: "délai dépassé" },
+    channel: { email: "e-mail", "espace-personnel": "espace personnel", administration: "administration", rappel: "page de rappel", inscription: "à l’inscription", delai: "délai dépassé", automatique: "automatique" },
   },
 
   home: {
@@ -704,6 +704,9 @@ const fr = {
     },
     activities: {
       ticketUrl: "Lien de billetterie externe (facultatif)",
+      confirmAttendance: "Confirmation de présence",
+      confirmAttendanceLabel: "Le client doit confirmer sa présence",
+      confirmAttendanceHint: "Coché : le client confirme sa présence avant chaque séance (sinon il est compté absent 48 h avant). Décoché : tout client inscrit est automatiquement marqué présent, sans bouton de confirmation.",
       ticketUrlHint: "Si l’événement se réserve sur un autre site de billetterie, collez son lien ici : le bouton de réservation y enverra le client. Laissez vide pour un paiement sur notre site.",
       kind: "Type d’événement",
       kindSingle: "Événement unique (concert, soirée…) — une date, inscription par billet",
@@ -757,6 +760,9 @@ const fr = {
       duplicateHint: "Les champs reprennent la séance copiée ; la date est proposée une semaine plus tard. Modifiez ce qui doit l’être, puis ajoutez la séance.",
       duplicateCancel: "Repartir d’un formulaire vide",
       ticketUrl: "Lien de billetterie externe (facultatif)",
+      confirmAttendance: "Confirmation de présence",
+      confirmAttendanceLabel: "Le client doit confirmer sa présence",
+      confirmAttendanceHint: "Coché : le client confirme sa présence avant chaque séance (sinon il est compté absent 48 h avant). Décoché : tout client inscrit est automatiquement marqué présent, sans bouton de confirmation.",
       ticketUrlHint: "Si renseigné, la réservation se fait sur ce site : le bouton y envoie le client et rien n’est vendu sur notre site. Laissez vide pour un paiement sur notre site.",
       kind: "Type d’événement",
       kindSingle: "Événement unique (concert, soirée…) — une date, inscription par billet",
