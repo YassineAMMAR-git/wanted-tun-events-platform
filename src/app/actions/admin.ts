@@ -844,12 +844,17 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
       .set({ status: "cancelled", paymentStatus: "cancelled" })
       .where(eq(subscriptions.id, id));
   } else if (action === "markPaid") {
+    const before = (
+      await db.select({ paymentStatus: subscriptions.paymentStatus }).from(subscriptions).where(eq(subscriptions.id, id)).limit(1)
+    )[0];
     const [updated] = await db
       .update(subscriptions)
       .set({ paymentStatus: "paid", status: "active" })
       .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
       .returning();
-    if (updated) await grantAttendances(updated);
+    // Paiement validé à la main = achat : comme en ligne, une séance à moins de 48 h peut faire partie du pack.
+    // Pas pour une commande déjà payée (ce serait un complément de pack, jamais pris à la dernière minute).
+    if (updated) await grantAttendances(updated, { lastMinute: before?.paymentStatus !== "paid" });
   } else if (action === "extend") {
     // Une séance offerte : le pack s'agrandit d'une séance, et l'abonnement repart s'il était terminé.
     const [updated] = await db
