@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  *  - abonnement : son prix divisé par le nombre de séances du pack (4 séances à 100 € → 25 € par séance).
  *  - ajout manuel hors abonnement : le montant saisi à l'ajout (prix de l'activité par défaut, 0 si offert).
  * Une absence compte quand même (la séance est décomptée du pack). Ne comptent pas : une séance annulée ou
- * reportée, un abonnement ajouté par l'administration ou jamais payé.
+ * reportée, un abonnement jamais payé. Un abonnement ajouté par l'administration compte au prix de sa formule.
  */
 const SESSION_REVENUE = sql<number>`coalesce((
   select round(sum(
@@ -35,7 +35,6 @@ const SESSION_REVENUE = sql<number>`coalesce((
   where a.session_id = ${sessions.id}
     and ${sessions.status} = 'scheduled'
     and sub.payment_status = 'paid'
-    and coalesce(sub.payment_reference, '') <> 'administration'
 ), 0)::int + coalesce((
   select sum(m.amount_cents) from attendances m
   where m.session_id = ${sessions.id} and m.subscription_id is null and ${sessions.status} = 'scheduled'
