@@ -19,6 +19,7 @@ import { localize } from "@/lib/i18n/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { Card } from "@/components/ui";
 import { PaymentWatcher } from "@/components/payment-watcher";
+import { AcceptAndSubmit } from "@/components/accept-and-submit";
 import { latestPaymentLink, onlinePaymentsEnabled } from "@/lib/viva/payments";
 import { planPackSessions } from "@/lib/subscriptions";
 import { isLastMinute } from "@/lib/attendance";
@@ -287,15 +288,9 @@ export default async function PaymentPage({
             ) : (
               <form action={startPaymentAction}>
                 <input type="hidden" name="subscriptionId" value={subscription.id} />
-                {lastMinute ? (
-                  <label className="mb-3 flex items-start gap-2 text-sm text-zinc-800">
-                    <input type="checkbox" name="lastMinuteAccepted" required className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" />
-                    {t("lastMinuteAccept")}
-                  </label>
-                ) : null}
-                <button className="btn btn-primary w-full" type="submit">
+                <AcceptAndSubmit name="lastMinuteAccepted" requireAccept={lastMinute} acceptLabel={t("lastMinuteAccept")}>
                   🔒 {notCompleted ? t("onlineRetry", { price }) : t("onlinePay", { price })}
-                </button>
+                </AcceptAndSubmit>
                 <p className="mt-2 text-center text-xs text-zinc-600">{verifying ? t("onlineVerifying") : t("onlineHint")}</p>
                 {verifying ? (
                   <div className="mt-2">
