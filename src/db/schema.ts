@@ -46,10 +46,17 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    /** Le client ne veut plus recevoir les annonces de nouvelles séances ou dates (lien de désinscription). */
+    announcementsOptOut: boolean("announcements_opt_out").notNull().default(false),
+    /** Jeton du lien de désinscription des annonces, créé au premier envoi. */
+    unsubscribeToken: varchar("unsubscribe_token", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("users_email_unique").on(table.email)],
+  (table) => [
+    uniqueIndex("users_email_unique").on(table.email),
+    uniqueIndex("users_unsubscribe_token_unique").on(table.unsubscribeToken),
+  ],
 );
 
 export const USER_ROLES = ["client", "admin"] as const;

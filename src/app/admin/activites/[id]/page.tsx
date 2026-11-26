@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { CATEGORY_TRANSLATABLE, activities, categories, plans, sessions, ticketPrices } from "@/db/schema";
 import { ticketsSold } from "@/lib/subscriptions";
+import { announcementRecipientsCount } from "@/lib/announcements";
 import {
   createPlanAction,
   createSessionAction,
@@ -36,6 +37,8 @@ import { isRecurring } from "@/lib/memberships";
 import { loadPromotions, promoPlanOptions } from "@/lib/promotions";
 
 export const dynamic = "force-dynamic";
+/** Annonce d'une nouvelle séance : les e-mails partent après la réponse, dans la limite de cette durée. */
+export const maxDuration = 300;
 
 export default async function AdminActivityDetail({
   params,
@@ -90,6 +93,7 @@ export default async function AdminActivityDetail({
   // Billets payés par date : billets d'un événement unique, ou séances achetées à l'unité.
   const sold = await ticketsSold(sessionList.map((session) => session.id));
   const totalSold = [...sold.values()].reduce((total, count) => total + count, 0);
+  const announceCount = activity.status === "active" ? await announcementRecipientsCount() : 0;
   const d = (key: "sessionsTitle" | "sessionsSubtitle" | "addSession" | "noSessions" | "startsAt" | "sessionsEyebrow") =>
     memberships ? t(key) : t(`event.${key}`);
 
@@ -359,6 +363,20 @@ export default async function AdminActivityDetail({
                 className="input"
               />
             </div>
+            <label className="flex items-start gap-2 text-sm text-zinc-800 sm:col-span-2 lg:col-span-3">
+              <input
+                type="checkbox"
+                name="notifyClients"
+                disabled={activity.status !== "active" || announceCount === 0}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
+              />
+              <span>
+                {t("notifyClients")}
+                <span className="block text-xs text-zinc-500">
+                  {activity.status !== "active" ? t("notifyClientsHidden") : t("notifyClientsHint", { count: announceCount })}
+                </span>
+              </span>
+            </label>
             <div className="lg:col-span-3">
               <button className="btn btn-primary" type="submit">
                 {d("addSession")}

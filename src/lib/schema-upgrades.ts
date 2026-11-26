@@ -7,6 +7,11 @@ import { autoConfirmAttendances } from "@/lib/attendance-confirmation";
  * le code peut être déployé sans lancer « drizzle-kit push » à la main. Chaque étape est sans effet si elle est déjà faite.
  */
 export async function runSchemaUpgrades(): Promise<void> {
+  // Annonces de nouvelles séances : désinscription par lien.
+  await db.execute(sql`alter table users add column if not exists announcements_opt_out boolean not null default false`);
+  await db.execute(sql`alter table users add column if not exists unsubscribe_token varchar(64)`);
+  await db.execute(sql`create unique index if not exists users_unsubscribe_token_unique on users (unsubscribe_token)`);
+
   // Confirmation de présence choisie activité par activité.
   await db.execute(sql`alter table activities add column if not exists confirm_attendance boolean`);
   // Activités antérieures à ce choix : les excursions et séjours n'ont plus de confirmation, les autres la gardent.

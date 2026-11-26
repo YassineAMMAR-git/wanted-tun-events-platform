@@ -2,6 +2,7 @@
 
 import "server-only";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -37,6 +38,7 @@ import {
   packSlotsLeft,
 } from "@/lib/subscriptions";
 import { runReminderJob } from "@/lib/reminders";
+import { announceNewSession } from "@/lib/announcements";
 import { cancelOpenPaymentLinks } from "@/lib/viva/payments";
 import { autoConfirmAttendances, requiresConfirmation } from "@/lib/attendance-confirmation";
 import {
@@ -442,7 +444,7 @@ export async function createSessionAction(formData: FormData): Promise<void> {
   const startsAt = parseParisDateTime(str(formData, "startsAt"));
   if (!activityId || !startsAt) redirect(withMessage(`/admin/activites/${activityId}`, "erreur", "dateRequired"));
 
-  await db.insert(sessions).values({
+  const [created] = await db.insert(sessions).values({
     activityId,
     title: str(formData, "title") || null,
     startsAt,
@@ -451,12 +453,23 @@ export async function createSessionAction(formData: FormData): Promise<void> {
     notes: str(formData, "notes") || null,
     translations: readTranslations(formData, SESSION_TRANSLATABLE),
     status: "scheduled",
-  });
+  }).returning({ id: sessions.id });
 
   // Les abonnés à qui il reste des séances dans leur pack y sont inscrits.
   await fillMembershipSessions(activityId);
+
+  // Case cochée : tous les clients sont prévenus par e-mail, en arrière-plan (l'administration n'attend pas les envois).
+  // Rien pour une activité masquée ou une date passée (voir announceNewSession).
+  const announce = str(formData, "notifyClients") === "on" && created !== undefined;
+  if (announce) {
+    after(() =>
+      announceNewSession(created.id)
+        .then(({ sent, failed }) => console.info(`[annonce] séance ${created.id} : ${sent} envoyé(s), ${failed} échec(s)`))
+        .catch((error) => console.error("[annonce] envoi impossible", error)),
+    );
+  }
   revalidatePath("/admin/seances");
-  redirect(withMessage(`/admin/activites/${activityId}`, "ok", "sessionAdded"));
+  redirect(withMessage(`/admin/activites/${activityId}`, "ok", announce ? "sessionAddedAnnounced" : "sessionAdded"));
 }
 
 export async function updateSessionAction(formData: FormData): Promise<void> {
