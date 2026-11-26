@@ -46,7 +46,10 @@ type PaymentFilters = { activityId: number | null; search: string; status: Statu
 
 /** Une page de paiements filtrés, du plus récent au plus ancien, et leur nombre total. */
 async function loadPayments(rawPage: string | undefined, filters: PaymentFilters) {
-  const conditions: SQL[] = [];
+  // Une ligne par commande : sa dernière tentative de paiement (un client peut rouvrir la page plusieurs fois).
+  const conditions: SQL[] = [
+    sql`${paymentLinks.id} = (select max(pl.id) from payment_links pl where pl.subscription_id = ${subscriptions.id})`,
+  ];
   if (filters.activityId) conditions.push(eq(subscriptions.activityId, filters.activityId));
   if (filters.status) conditions.push(STATUS_FILTERS[filters.status]());
   if (filters.search) {
@@ -60,7 +63,7 @@ async function loadPayments(rawPage: string | undefined, filters: PaymentFilters
       )!,
     );
   }
-  const filter = conditions.length > 0 ? and(...conditions) : undefined;
+  const filter = and(...conditions);
   try {
     const [{ total }] = await db
       .select({ total: sql<number>`count(*)::int` })
@@ -84,7 +87,7 @@ async function loadPayments(rawPage: string | undefined, filters: PaymentFilters
       .innerJoin(activities, eq(activities.id, subscriptions.activityId))
       .leftJoin(plans, eq(plans.id, subscriptions.planId))
       .where(filter)
-      .orderBy(desc(paymentLinks.createdAt), desc(paymentLinks.id))
+      .orderBy(desc(subscriptions.createdAt), desc(subscriptions.id))
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE);
     return { rows, total, page, pageCount };
@@ -195,8 +198,8 @@ export default async function AdminPaymentsPage({
               </thead>
               <tbody>
                 {recent.map(({ link, subscription, user, planName, activityName }) => (
-                  <tr key={link.id}>
-                    <td className="whitespace-nowrap">{formatDateTime(link.createdAt, locale)}</td>
+                  <tr key={subscription.id}>
+                    <td className="whitespace-nowrap">{formatDateTime(subscription.createdAt, locale)}</td>
                     <td>
                       {user.firstName} {user.lastName}
                       <span className="block text-xs text-zinc-500" dir="ltr">
