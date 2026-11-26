@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { ACTIVITY_TRANSLATABLE, activities, paymentLinks, plans, subscriptions, users } from "@/db/schema";
@@ -16,13 +16,30 @@ export const dynamic = "force-dynamic";
 /** Nombre de paiements affichés par page. */
 const PAGE_SIZE = 10;
 
-/** Filtre « statut » de l'URL → statuts du paiement en ligne regroupés. */
+/** Filtre « statut » de l'URL → statut de paiement de la commande (même règle que la colonne « Abonnement »). */
 const STATUS_FILTERS = {
-  paye: ["paid"],
-  attente: ["open", "processing"],
-  expire: ["expired", "canceled"],
-} as const;
+  paye: () => eq(subscriptions.paymentStatus, "paid"),
+  attente: () => and(eq(subscriptions.paymentStatus, "pending"), ne(subscriptions.status, "cancelled"))!,
+  annule: () =>
+    and(
+      ne(subscriptions.paymentStatus, "paid"),
+      or(eq(subscriptions.paymentStatus, "cancelled"), eq(subscriptions.status, "cancelled")),
+    )!,
+} satisfies Record<string, () => SQL>;
 type StatusFilter = keyof typeof STATUS_FILTERS;
+
+/** Statut affiché : payé, annulé (commande annulée sans paiement) ou en attente. */
+function orderStatus(subscription: { status: string; paymentStatus: string }): "paid" | "cancelled" | "pending" {
+  if (subscription.paymentStatus === "paid") return "paid";
+  if (subscription.paymentStatus === "cancelled" || subscription.status === "cancelled") return "cancelled";
+  return "pending";
+}
+
+const ORDER_STATUS_STYLE = {
+  paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  pending: "border-amber-200 bg-amber-50 text-gold-dark",
+  cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+} as const;
 const isStatusFilter = (value: string | undefined): value is StatusFilter => !!value && value in STATUS_FILTERS;
 
 type PaymentFilters = { activityId: number | null; search: string; status: StatusFilter | null };
@@ -31,7 +48,7 @@ type PaymentFilters = { activityId: number | null; search: string; status: Statu
 async function loadPayments(rawPage: string | undefined, filters: PaymentFilters) {
   const conditions: SQL[] = [];
   if (filters.activityId) conditions.push(eq(subscriptions.activityId, filters.activityId));
-  if (filters.status) conditions.push(inArray(paymentLinks.status, [...STATUS_FILTERS[filters.status]]));
+  if (filters.status) conditions.push(STATUS_FILTERS[filters.status]());
   if (filters.search) {
     const like = `%${filters.search}%`;
     conditions.push(
@@ -76,14 +93,6 @@ async function loadPayments(rawPage: string | undefined, filters: PaymentFilters
     return null;
   }
 }
-
-const LINK_STATUS_STYLE: Record<string, string> = {
-  paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  open: "border-amber-200 bg-amber-50 text-gold-dark",
-  processing: "border-sky-200 bg-sky-50 text-sky-700",
-  expired: "border-zinc-200 bg-zinc-100 text-zinc-600",
-  canceled: "border-zinc-200 bg-zinc-100 text-zinc-600",
-};
 
 export default async function AdminPaymentsPage({
   searchParams,
@@ -181,7 +190,6 @@ export default async function AdminPaymentsPage({
                   <th>{t("colClient")}</th>
                   <th>{t("colPlan")}</th>
                   <th>{t("colAmount")}</th>
-                  <th>{t("colLink")}</th>
                   <th>{t("colSubscription")}</th>
                 </tr>
               </thead>
@@ -213,16 +221,17 @@ export default async function AdminPaymentsPage({
                       )}
                     </td>
                     <td className="whitespace-nowrap">{formatPrice(link.amountCents, locale)}</td>
-                    <td>
-                      <span className={`badge ${LINK_STATUS_STYLE[link.status] ?? LINK_STATUS_STYLE.expired}`}>
-                        {t(`linkStatus.${link.status in LINK_STATUS_STYLE ? link.status : "expired"}` as "linkStatus.paid")}
+                    <td className="text-xs whitespace-nowrap text-zinc-600">
+                      #{subscription.id}{" "}
+                      <span className={`badge ${ORDER_STATUS_STYLE[orderStatus(subscription)]}`}>
+                        {
+                          {
+                            paid: t("subPaid"),
+                            pending: t("subPending"),
+                            cancelled: t("subCancelled"),
+                          }[orderStatus(subscription)]
+                        }
                       </span>
-                      <span className="block text-[11px] text-zinc-500" dir="ltr">
-                        {link.externalId}
-                      </span>
-                    </td>
-                    <td className="text-xs text-zinc-600">
-                      #{subscription.id} · {subscription.paymentStatus === "paid" ? t("subPaid") : t("subPending")}
                     </td>
                   </tr>
                 ))}
