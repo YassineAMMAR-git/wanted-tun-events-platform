@@ -4,6 +4,7 @@ import { reconcilePendingPayments } from "@/lib/viva/payments";
 import { deleteOrphanImages } from "@/lib/media";
 import { purgeExpiredPersonalData } from "@/lib/privacy";
 import { secretsMatch } from "@/lib/auth/tokens";
+import { rebalanceAllPacks } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,8 @@ export const dynamic = "force-dynamic";
  * Tâche planifiée : rappels automatiques J-2 (48 h avant chaque séance)
  * + expiration des abonnements arrivés à échéance
  * + filet de sécurité des paiements Viva (paiements payés dont le webhook aurait été manqué)
- * + suppression des photos qui ne sont plus utilisées.
+ * + suppression des photos qui ne sont plus utilisées
+ * + packs de séances remis au juste compte (filet de sécurité).
  *
  * À appeler par un cron (par exemple toutes les heures) :
  *   curl -H "x-cron-secret: $CRON_SECRET" https://…/api/cron/reminders
@@ -33,6 +35,7 @@ export async function GET(request: Request) {
   await ensureSeeded();
 
   try {
+    await rebalanceAllPacks().catch((error) => console.error("[packs] remise au juste compte impossible", error));
     const result = await runReminderJob();
     const payments = await reconcilePendingPayments();
     const imagesDeleted = await deleteOrphanImages().catch((error) => {

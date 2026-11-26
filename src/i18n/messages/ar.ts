@@ -1274,6 +1274,7 @@ const ar: Messages = {
       sessionUpdated: "تم تعديل الحصة.",
       sessionStatusUpdated: "تم تحديث حالة الحصة.",
       sessionDeleted: "تم حذف الحصة.",
+      sessionDeletePast: "هذه الحصة جرت بالفعل: هي محسوبة من باقات المشتركين فيها ولا يمكن حذفها. إذا لم تُعقد، اجعلها « ملغاة »: يسترجع كل مشترك حصته.",
       attendanceUpdated: "تم تحديث الحالة.",
       participantAdded: "تمت إضافة المشارك.",
       participantRemoved: "تمت إزالة المشارك.",

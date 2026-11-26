@@ -1271,6 +1271,7 @@ const en: Messages = {
       sessionUpdated: "Session updated.",
       sessionStatusUpdated: "Session status updated.",
       sessionDeleted: "Session deleted.",
+      sessionDeletePast: "This session has already taken place: it counts towards its members’ packs and cannot be deleted. If it did not take place, set it to “Cancelled”: each member then gets the session back.",
       attendanceUpdated: "Status updated.",
       participantAdded: "Participant added.",
       participantRemoved: "Participant removed.",

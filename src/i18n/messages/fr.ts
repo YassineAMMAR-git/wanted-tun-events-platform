@@ -1278,6 +1278,7 @@ const fr = {
       sessionUpdated: "Séance modifiée.",
       sessionStatusUpdated: "Statut de la séance mis à jour.",
       sessionDeleted: "Séance supprimée.",
+      sessionDeletePast: "Cette séance a déjà eu lieu : elle est décomptée des packs de ses abonnés et ne peut pas être supprimée. Si elle n’a pas eu lieu, passez-la en « Annulée » : chaque abonné récupère alors sa séance.",
       attendanceUpdated: "Statut mis à jour.",
       participantAdded: "Participant ajouté.",
       participantRemoved: "Participant retiré.",

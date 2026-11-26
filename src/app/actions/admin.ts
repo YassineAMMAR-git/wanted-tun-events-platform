@@ -3,7 +3,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   ACTIVITY_TRANSLATABLE,
@@ -482,8 +482,9 @@ export async function updateSessionAction(formData: FormData): Promise<void> {
     .returning();
   // Date, lieu, durée, intitulé, informations ou statut modifiés : les inscrits sont prévenus par e-mail.
   if (before && updated) await notifySessionChange(before.session, updated, before.activity);
-  // Séance annulée ou reportée d'ici : elle n'est plus décomptée, les abonnés sont inscrits à la suivante.
-  if (activityId) await fillMembershipSessions(activityId);
+  // Packs remis au juste compte : séance annulée ou reportée remplacée par la suivante ; séance reprogrammée
+  // reprise par ses abonnés, qui rendent alors leur séance de remplacement.
+  if (updated) await fillMembershipSessions(updated.activityId, { changedSessionId: id });
   revalidatePath("/admin/seances");
   redirect(withMessage(backTo, "ok", "sessionUpdated"));
 }
@@ -610,8 +611,8 @@ export async function setSessionStatusAction(formData: FormData): Promise<void> 
   // Annulation, report ou reprogrammation : les inscrits sont prévenus par e-mail.
   if (row && updated) await notifySessionChange(row.session, updated, row.activity);
 
-  // Une séance annulée ou reportée n'est pas décomptée des packs : les abonnés sont inscrits à la suivante.
-  if (row) await fillMembershipSessions(row.session.activityId);
+  // Packs remis au juste compte (séance annulée, reportée ou reprogrammée) : voir fillMembershipSessions.
+  if (row) await fillMembershipSessions(row.session.activityId, { changedSessionId: id });
 
   revalidatePath(redirectTo);
   redirect(withMessage(redirectTo, "ok", "sessionStatusUpdated"));
@@ -621,8 +622,25 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = num(formData, "id");
   const activityId = num(formData, "activityId");
-  await db.delete(sessions).where(eq(sessions.id, id));
-  if (activityId) await fillMembershipSessions(activityId);
+  const back = activityId ? `/admin/activites/${activityId}` : "/admin/seances";
+  // Une séance passée est décomptée des packs de ses abonnés : la supprimer leur rendrait une séance.
+  // Si elle n'a pas eu lieu, il faut l'annuler (elle est alors remplacée par la suivante).
+  const [counted] = await db
+    .select({ id: attendances.id })
+    .from(attendances)
+    .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+    .where(
+      and(
+        eq(attendances.sessionId, id),
+        isNotNull(attendances.subscriptionId),
+        eq(sessions.status, "scheduled"),
+        lte(sessions.startsAt, new Date()),
+      ),
+    )
+    .limit(1);
+  if (counted) redirect(withMessage(back, "erreur", "sessionDeletePast"));
+  const [deleted] = await db.delete(sessions).where(eq(sessions.id, id)).returning({ activityId: sessions.activityId });
+  if (deleted) await fillMembershipSessions(deleted.activityId);
   redirect(withMessage(activityId ? `/admin/activites/${activityId}` : "/admin/seances", "ok", "sessionDeleted"));
 }
 
@@ -753,7 +771,15 @@ export async function removeParticipantAction(formData: FormData): Promise<void>
   await requireAdmin();
   const id = num(formData, "id");
   const sessionId = num(formData, "sessionId");
-  await db.delete(attendances).where(eq(attendances.id, id));
+  const [removed] = await db
+    .delete(attendances)
+    .where(eq(attendances.id, id))
+    .returning({ subscriptionId: attendances.subscriptionId, userId: attendances.userId });
+  // Séance prise sur un pack : elle n'est plus décomptée, le client est inscrit à une autre séance (pas celle-ci).
+  if (removed?.subscriptionId) {
+    const [session] = await db.select({ activityId: sessions.activityId }).from(sessions).where(eq(sessions.id, sessionId)).limit(1);
+    if (session) await fillMembershipSessions(session.activityId, { skipSessionId: sessionId, userId: removed.userId });
+  }
   redirect(withMessage(`/admin/seances/${sessionId}`, "ok", "participantRemoved"));
 }
 
@@ -857,6 +883,8 @@ export async function setSubscriptionStatusAction(formData: FormData): Promise<v
       .set({ status: "cancelled", paymentStatus: "cancelled" })
       .where(eq(subscriptions.id, id));
     await cancelOpenPaymentLinks(id);
+    // Commande annulée : ses séances à venir sont libérées (elles ne sont plus à elle).
+    await releaseUpcomingAttendances(id);
   } else if (action === "markPaid") {
     const before = (
       await db.select({ paymentStatus: subscriptions.paymentStatus }).from(subscriptions).where(eq(subscriptions.id, id)).limit(1)

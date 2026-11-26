@@ -98,7 +98,49 @@ type PackParams = {
    * (séance ajoutée, annulée…) : le client ne se retrouve pas inscrit d'office à une séance imminente.
    */
   lastMinute?: boolean;
+  /** Séance modifiée à l'instant (reprogrammée…) : en cas de séance en trop, c'est une autre qui est retirée. */
+  keepSessionId?: number;
+  /** Séance d'où l'administration vient de retirer le client : elle ne lui est pas réattribuée tout de suite. */
+  skipSessionId?: number;
 };
+
+/**
+ * Un pack ne détient jamais plus de séances que payé. Il peut en avoir trop quand une séance annulée ou reportée
+ * (remplacée par la suivante) est reprogrammée, ou si deux mises à jour se croisent : les séances en trop sont
+ * libérées, en commençant par les plus lointaines, jamais une séance déjà commencée. La séance `keepSessionId`
+ * (celle que l'administration vient de reprogrammer) est retirée en dernier : le client garde sa séance d'origine
+ * et perd la séance de remplacement. Renvoie le nombre de séances libérées.
+ */
+export async function trimExcessPackSessions(
+  subscriptionId: number,
+  sessionsIncluded: number,
+  keepSessionId?: number,
+): Promise<number> {
+  const held = await db
+    .select({ id: attendances.id, sessionId: attendances.sessionId, startsAt: sessions.startsAt })
+    .from(attendances)
+    .innerJoin(sessions, eq(sessions.id, attendances.sessionId))
+    .where(and(eq(attendances.subscriptionId, subscriptionId), eq(sessions.status, "scheduled")));
+  const excess = held.length - sessionsIncluded;
+  if (excess <= 0) return 0;
+  const now = Date.now();
+  const removable = held
+    .filter((row) => row.startsAt.getTime() > now)
+    .sort(
+      (a, b) =>
+        Number(a.sessionId === keepSessionId) - Number(b.sessionId === keepSessionId) ||
+        b.startsAt.getTime() - a.startsAt.getTime(),
+    )
+    .slice(0, excess);
+  if (removable.length === 0) return 0;
+  await db.delete(attendances).where(
+    inArray(
+      attendances.id,
+      removable.map((row) => row.id),
+    ),
+  );
+  return removable.length;
+}
 
 /**
  * Prix proposé pour une place ajoutée à la main par l'administration (hors abonnement) : prix de l'activité,
@@ -179,7 +221,7 @@ export async function planPackSessions(
   for (const session of upcoming) {
     if (chosen.length === slots) break;
     // Une séance où le client est déjà inscrit autrement (billet, ajout manuel) n'est pas prise sur le pack.
-    if (known.has(session.id)) continue;
+    if (known.has(session.id) || session.id === params.skipSessionId) continue;
     if ((taken.get(session.id) ?? 0) < capacity) chosen.push(session);
     else if (chosen.length === 0) fullBefore += 1;
   }
@@ -188,6 +230,8 @@ export async function planPackSessions(
 
 /** Inscrit un abonné aux séances que son pack lui attribue (voir planPackSessions). */
 export async function ensureAttendances(params: PackParams): Promise<number> {
+  // D'abord les séances en trop, pour que le pack soit compté juste avant d'être complété.
+  await trimExcessPackSessions(params.subscriptionId, params.sessionsIncluded, params.keepSessionId);
   const { sessions: missing } = await planPackSessions(params);
   if (missing.length === 0) return 0;
   const confirm = await activityRequiresConfirmation(params.activityId);
@@ -212,7 +256,10 @@ export async function ensureAttendances(params: PackParams): Promise<number> {
  * Présences auxquelles donne droit une souscription payée :
  * les prochaines séances ouvertes pour un abonnement, la seule date achetée pour un billet.
  */
-export async function grantAttendances(subscription: Subscription, options: { lastMinute?: boolean } = {}): Promise<void> {
+export async function grantAttendances(
+  subscription: Subscription,
+  options: Pick<PackParams, "lastMinute" | "keepSessionId" | "skipSessionId"> = {},
+): Promise<void> {
   if (subscription.kind === "ticket") {
     if (!subscription.sessionId) return;
     const session = (
@@ -236,7 +283,7 @@ export async function grantAttendances(subscription: Subscription, options: { la
     activityId: subscription.activityId,
     subscriptionId: subscription.id,
     sessionsIncluded: subscription.sessionsIncluded,
-    lastMinute: options.lastMinute,
+    ...options,
   });
 }
 
@@ -401,23 +448,66 @@ export async function activateSubscription(subscriptionId: number): Promise<void
 }
 
 /**
- * Complète les packs des abonnés d'une activité : à appeler quand ses séances changent (séance ajoutée,
- * annulée, reportée ou supprimée). Les abonnés à qui il reste des séances à attribuer sont inscrits aux
- * prochaines séances ouvertes, les plus anciens abonnements d'abord. Les billets restent liés à leur date.
+ * Remet au juste compte les packs des abonnés d'une activité : à appeler après tout changement de ses séances
+ * (ajout, date, annulation, report, reprogrammation, suppression) ou de leurs inscrits. Chaque pack détient
+ * exactement ses séances payées :
+ *  - un pack terminé dont une séance vient d'être annulée ou reportée (`changedSessionId`) redevient actif ;
+ *  - les séances en trop sont libérées (voir trimExcessPackSessions) ;
+ *  - celles qui manquent sont attribuées aux prochaines séances ouvertes, les plus anciens abonnements d'abord.
+ * Les billets restent liés à leur date.
  */
-export async function fillMembershipSessions(activityId: number): Promise<void> {
-  const actives = await db
+export async function fillMembershipSessions(
+  activityId: number,
+  options: { changedSessionId?: number; skipSessionId?: number; userId?: number } = {},
+): Promise<void> {
+  const { changedSessionId, skipSessionId, userId } = options;
+  // Seuls les packs qui ont une séance sur la séance modifiée peuvent repartir : un ancien abonnement terminé
+  // pour une autre raison n'est jamais réactivé.
+  if (changedSessionId) {
+    await db
+      .update(subscriptions)
+      .set({ status: "active" })
+      .where(
+        and(
+          eq(subscriptions.activityId, activityId),
+          eq(subscriptions.kind, "membership"),
+          eq(subscriptions.status, "expired"),
+          eq(subscriptions.paymentStatus, "paid"),
+          sql`exists (select 1 from attendances a where a.subscription_id = ${subscriptions.id} and a.session_id = ${changedSessionId})`,
+          sql`${PACK_SESSIONS_USED} < ${subscriptions.sessionsIncluded}`,
+        ),
+      );
+  }
+
+  const packs = await db
     .select()
     .from(subscriptions)
     .where(
       and(
         eq(subscriptions.activityId, activityId),
         eq(subscriptions.kind, "membership"),
-        eq(subscriptions.status, "active"),
+        inArray(subscriptions.status, ["active", "expired"]),
+        userId ? eq(subscriptions.userId, userId) : undefined,
       ),
     )
-    .orderBy(asc(subscriptions.createdAt));
-  for (const subscription of actives) await grantAttendances(subscription);
+    .orderBy(asc(subscriptions.createdAt), asc(subscriptions.id));
+  for (const subscription of packs) {
+    if (subscription.status === "active") {
+      await grantAttendances(subscription, { keepSessionId: changedSessionId, skipSessionId });
+    } else {
+      // Pack terminé : rien à attribuer, mais aucune séance à venir en trop.
+      await trimExcessPackSessions(subscription.id, subscription.sessionsIncluded, changedSessionId);
+    }
+  }
+}
+
+/** Remet au juste compte les packs de toutes les activités (tâche quotidienne et démarrage du serveur). */
+export async function rebalanceAllPacks(): Promise<void> {
+  const rows = await db
+    .selectDistinct({ activityId: subscriptions.activityId })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.kind, "membership"), inArray(subscriptions.status, ["active", "expired"])));
+  for (const row of rows) await fillMembershipSessions(row.activityId);
 }
 
 /** Termine les abonnements dont toutes les séances ont eu lieu, et les billets dont la date est passée. */
